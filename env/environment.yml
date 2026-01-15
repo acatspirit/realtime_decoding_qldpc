@@ -1,0 +1,23 @@
+name: realtime_decoding
+channels:
+  - conda-forge
+dependencies:
+  - python=3.14
+  # Core scientific stack
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - numba
+  - llvmlite
+
+  # Jupyter
+  - jupyter
+  - ipykernel
+
+  # QEC stack (compiled, fast)
+  - stim
+  - pip
+  - pip:
+    - pymatching
+    - qldpc

@@ -3,24 +3,25 @@ Develop realtime decoding algorithms based on hard/soft decoding framework in ar
 
 
 ## Setup (HPC / local)
-
+```bash
 conda env remove -n realtime_decoding -y || true
 conda env create -f env/environment.yml
 conda activate realtime_decoding
 pip install -e .
-
+```
 For the relay-bp package, install rust with the first line then do the following:
-
+```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 mkdir -p ~/external_repos
 cd ~/external_repos
 git clone https://github.com/trmue/relay.git
 cd relay
 pip install ".[stim]"
-
+```
 ### On the HPC only...
+```bash
 pip install cudaq
-
+```
 ### What goes where (important)
 
 #### `src/realtime_decoding/`
@@ -40,3 +41,4 @@ pip install cudaq
 Example:
 ```python
 from realtime_decoding.decoding import my_decoder
+```

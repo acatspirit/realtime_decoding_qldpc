@@ -21,3 +21,4 @@ dependencies:
   - pip:
     - pymatching
     - qldpc
+    - quits

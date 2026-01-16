@@ -9,6 +9,17 @@ conda env create -f env/environment.yml
 conda activate realtime_decoding
 pip install -e .
 
+For the relay-bp package, install rust with the first line then do the following:
+
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+mkdir -p ~/external_repos
+cd ~/external_repos
+git clone https://github.com/trmue/relay.git
+cd relay
+pip install ".[stim]"
+
+### On the HPC only...
+pip install cudaq
 
 ### What goes where (important)
 

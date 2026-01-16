@@ -2,7 +2,7 @@ name: realtime_decoding
 channels:
   - conda-forge
 dependencies:
-  - python=3.14
+  - python=3.12
   # Core scientific stack
   - numpy
   - scipy
@@ -22,3 +22,4 @@ dependencies:
     - pymatching
     - qldpc
     - quits
+    - tesseract-decoder

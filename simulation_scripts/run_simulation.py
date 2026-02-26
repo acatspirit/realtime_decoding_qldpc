@@ -1,9 +1,8 @@
-from realtime_decoding.decoding import dummy_decoder
+from realtime_decoding.decoding import get_log_error_CL_BP_MWPM, get_log_error_CL_MWPM
 
 def main():
-    syndrome = [0, 1, 0, 1]
-    result = dummy_decoder(syndrome)
-    print("Decoder result:", result)
+    
+    
 
 if __name__ == "__main__":
     main()

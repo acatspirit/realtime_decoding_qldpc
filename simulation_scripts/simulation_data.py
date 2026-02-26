@@ -12,7 +12,7 @@ from realtime_decoding.decoding import (
 # Parameters
 # -------------------------
 
-num_shots = 1_000_000
+num_shots = 1
 max_iter = 30
 t = 0.9
 memory_type = "X"

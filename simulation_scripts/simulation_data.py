@@ -15,7 +15,7 @@ from realtime_decoding.decoding import (
 num_shots = 1
 max_iter = 30
 t = 0.9
-memory_type = "X"
+memory_type = "x"
 
 d_list = [5, 7, 9, 13]
 p_list = np.linspace(0.005, 0.013, 10)

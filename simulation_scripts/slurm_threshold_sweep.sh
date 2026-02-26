@@ -9,4 +9,4 @@
 
 # 4 d values × 10 p values = 40 jobs
 
-python simulation_scripts/run_threshold_sweep.py
+python simulation_scripts/simulation_data.py

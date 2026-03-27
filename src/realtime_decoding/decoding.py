@@ -40,6 +40,8 @@ def get_log_error_CL_BP_MWPM(p,d,t,max_iter, memory_type, shots):
     num_errors = 0
 
     for k in range(shots):
+        if k % 1000 == 0:
+            print(f"Shot {k}/{shots} BP+MWPM", flush=True)
         dem = circuit.detector_error_model() # not sure whether I should be decomposing errors etc
         detector_error_matrix, observables_matrix,priors = detector_error_model_to_matrix(dem)
         sampler = circuit.compile_detector_sampler()

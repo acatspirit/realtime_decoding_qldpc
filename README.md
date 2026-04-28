@@ -18,6 +18,16 @@ git clone https://github.com/trmue/relay.git
 cd relay
 pip install ".[stim]"
 ```
+
+for the ldpc-post-selection git
+
+```bash
+git clone --recurse-submodules https://github.com/seokhyung-lee/ldpc-post-selection.git
+cd ldpc-post-selection
+pip install -e .
+# Optional: install codes used for the numerical analyses in our paper.
+pip install -e ./simulations
+```
 ### On the HPC only...
 ```bash
 pip install cudaq

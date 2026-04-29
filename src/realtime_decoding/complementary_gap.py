@@ -49,8 +49,68 @@ def get_detector_inds_for_sc(d,rds):
     return X_det_inds,Z_det_inds,X_det_inds_LB,X_det_inds_RB,X_dets_inds_LB_per_rd,X_dets_inds_RB_per_rd
 
 
+from collections import defaultdict
 
-def get_complementary_gap(matching, detection_events, obs_flips, nodes_to_LB_X, nodes_to_RB_X):
+def get_boundary_detectors(circuit, side="left", z_parity=0):
+    """
+    Returns IDs of boundary stabilizers with fixed top/bottom orientation.
+    side: "left", "right", "top", or "bottom"
+    z_parity: 0 or 2 (The value of (x+y)%4 that identifies a Z-stabilizer)
+    """
+    detector_coords = circuit.get_detector_coordinates()
+    if not detector_coords:
+        return []
+
+    # 1. Determine target type for the requested side
+    # Z-type for Left/Right; X-type for Top/Bottom
+    if side in ["left", "right"]:
+        target_parity = z_parity
+    else:
+        target_parity = (z_parity + 2) % 4  # X is the opposite parity
+
+    # 2. Filter detectors by the target parity
+    filtered_detectors = {}
+    for det_id, coords in detector_coords.items():
+        x, y = round(coords[0]), round(coords[1])
+        if (x + y) % 4 == target_parity:
+            filtered_detectors[det_id] = (x, y)
+    
+    if not filtered_detectors:
+        return []
+
+    # 3. Group by row (y) or column (x) to find the absolute edge
+    groups = defaultdict(list)
+    if side in ["left", "right"]:
+        for det_id, (x, y) in filtered_detectors.items():
+            groups[y].append((x, det_id))
+    else: # top or bottom
+        for det_id, (x, y) in filtered_detectors.items():
+            groups[x].append((y, det_id))
+
+    # 4. Pick the extreme detector for each row/column
+    # Left: min x | Right: max x | Top: max y | Bottom: min y
+    if side == "left":
+        find_extreme = min
+    elif side == "right":
+        find_extreme = max
+    elif side == "top":
+        find_extreme = max  # Fixed: Use max for Top
+    elif side == "bottom":
+        find_extreme = min  # Fixed: Use min for Bottom
+    else:
+        raise ValueError("Side must be 'left', 'right', 'top', or 'bottom'.")
+
+    boundary_ids = []
+    for axis_key in groups:
+        extreme_val = find_extreme(val for val, det_id in groups[axis_key])
+        for val, det_id in groups[axis_key]:
+            if val == extreme_val:
+                boundary_ids.append(det_id)
+                
+    return boundary_ids
+
+
+def get_complementary_gap(circuit, detection_events, obs_flips, basis):
     '''
     Get the complementary gap for surface code (X memory). Note depending on the memory experiment,
     nodes from left/right boundary will need to turn into nodes from top/right boundary.
@@ -59,8 +119,6 @@ def get_complementary_gap(matching, detection_events, obs_flips, nodes_to_LB_X, 
     matching: the pymatching graph
     detection_events: the detection events
     obs_flips: the observable flips
-    nodes_to_LB_X: the detector nodes to the left boundary (list of ints)
-    nodes_to_RB_X: the detector nodes close to the right boundary (list of ints)
 
     Outputs:
     Gap:                complementary gap
@@ -69,12 +127,22 @@ def get_complementary_gap(matching, detection_events, obs_flips, nodes_to_LB_X, 
     '''    
     
     num_shots = np.shape(detection_events)[0]
+    dem = circuit.detector_error_model()
+    matching = Matching.from_detector_error_model(dem)
     all_edges = matching.edges()
     Comp_matching = Matching()
 
-
-    LB = max(nodes_to_RB_X)+1
-    RB = LB+1
+    if basis == 'x': # in stim, XL runs top to bottom
+        b1_nodes = get_boundary_detectors(circuit, "top")
+        b2_nodes = get_boundary_detectors(circuit, "bottom")
+    elif basis == 'z':
+        b1_nodes = get_boundary_detectors(circuit, "left")
+        b2_nodes = get_boundary_detectors(circuit, "right")
+    else:
+        ValueError("Improper choice of basis")
+    
+    b1 = max(b2_nodes)+1
+    b2 = b1+1
     
     for edge in all_edges:
         node1 = edge[0]
@@ -89,10 +157,10 @@ def get_complementary_gap(matching, detection_events, obs_flips, nodes_to_LB_X, 
         else: 
             
             #Match to LB
-            if node1 in nodes_to_LB_X:
-                node2 = LB 
-            if node1 in nodes_to_RB_X:
-                node2 = RB 
+            if node1 in b1_nodes:
+                node2 = b1 
+            if node1 in b2_nodes:
+                node2 = b2 
 
             if node2 is None: #If it remained a None, then node1 \in Z_nodes - None
 
@@ -109,11 +177,12 @@ def get_complementary_gap(matching, detection_events, obs_flips, nodes_to_LB_X, 
                                 error_probability=edge[2]['error_probability'])            
             
     
-    Comp_matching.set_boundary_nodes({RB})      
+    Comp_matching.set_boundary_nodes({b2})      
             
     
     pred_reg, W_reg = matching.decode_batch(detection_events,return_weights=True) #This is the regular matching
-
+    print(matching.num_detectors)
+    print(Comp_matching.num_detectors)
     new_array = np.zeros((num_shots,1),dtype=int)
     det0      = np.hstack((detection_events,new_array)) #set boundary to 0 (will not match)
     

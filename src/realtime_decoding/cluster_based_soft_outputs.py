@@ -4,9 +4,10 @@ from ldpc_post_selection.cluster_tools import compute_cluster_norm_fraction
 import stim
 import numpy as np
 from tqdm import tqdm
+import collections
 
 def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cluster_method: str, order, 
-                                                       det_events, obs_flips):
+                                                       det_events, obs_flips, max_iter=30, bp_method = "minimum_sum", lsd_method="LSD_0", lsd_order=0, ms_scaling_factor=1.0 ):
     '''
     Get cluster size or cluster llr soft output from bplsd decoder. Note that if we run Z-memory (X-memory) we need to 
     restrict the circuit to Z (X) detectors only to get the confidence based only on the memory type we correct.
@@ -41,11 +42,11 @@ def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cl
     #Some of these parameters can change
     bplsd = SoftOutputsBpLsdDecoder(
         circuit=circuit,
-        max_iter=30,
-        bp_method="minimum_sum",
-        lsd_method="LSD_0",
-        lsd_order=0,
-        ms_scaling_factor=1.0,
+        max_iter=max_iter,
+        bp_method=bp_method,
+        lsd_method=lsd_method,
+        lsd_order=lsd_order,
+        ms_scaling_factor=ms_scaling_factor,
     )
 
 
@@ -61,6 +62,35 @@ def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cl
         fails.append(fail)
         norm_fracs.append(norm_frac)
 
-    return fails, norm_fracs
+    # errors = fails here, just use the comp gap conditioned failure directly 
+
+    # Classify all shots by their error + gap.
+    custom_counts = collections.Counter()
+    norm_fracs  = np.round(norm_fracs).astype(dtype=np.int64)
+    for k in range(len(norm_fracs)):
+        g = norm_fracs[k]
+        key = f'E{g}' if fails[k] else f'C{g}'
+        custom_counts[key] += 1/shots
+
+    # P_L(e | g) = E_g / (E_g + C_g) -> frac conditioned logical error rate
+
+    frac_conditioned_PL = {}
+
+    # collect all gap values that appear
+    gaps = set()
+    for key in custom_counts:
+        gaps.add(int(key[1:]))
+
+    for g in gaps:
+        E = custom_counts.get(f'E{g}', 0.0)
+        C = custom_counts.get(f'C{g}', 0.0)
+
+        if E + C > 0:
+            frac_conditioned_PL[g] = E / (E + C)
+        else:
+            frac_conditioned_PL[g] = np.nan
+
+    return fails, norm_fracs, frac_conditioned_PL
+
 
 

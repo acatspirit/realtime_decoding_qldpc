@@ -3,6 +3,52 @@ import collections
 import numpy as np
 from pymatching import Matching
 
+def get_detector_inds_for_sc(d,rds):
+    #Get the detector indices which are L/R boundary (X)
+    
+    rds_eff = rds+1
+    n_anc   = d**2-1
+
+
+    X_det_inds = []
+    Z_det_inds = []
+
+    X_det_inds_LB = []
+    X_det_inds_RB = []
+
+    X_dets_inds_LB_per_rd = []
+    X_dets_inds_RB_per_rd = []
+
+    for rd in range(rds_eff):
+
+        
+        for k in range(n_anc//2): 
+            X_det_inds.append(k+n_anc*rd)
+            
+        temp_X_LB = []
+        temp_X_RB = []
+        for k in range(n_anc//4): #LB
+            X_det_inds_LB.append(k+n_anc*rd) 
+            temp_X_LB.append(k+n_anc*rd)
+
+        for k in range(n_anc//4,n_anc//2):
+            X_det_inds_RB.append(k+n_anc*rd) 
+            temp_X_RB.append(k+n_anc*rd) 
+
+
+        X_dets_inds_LB_per_rd.append(temp_X_LB)
+        X_dets_inds_RB_per_rd.append(temp_X_RB)
+        
+
+        if rd == rds_eff-1:
+            break
+
+        for k in range(n_anc//2,n_anc):
+            Z_det_inds.append(k + n_anc*rd)
+
+    return X_det_inds,Z_det_inds,X_det_inds_LB,X_det_inds_RB,X_dets_inds_LB_per_rd,X_dets_inds_RB_per_rd
+
+
 
 def get_complementary_gap(matching, detection_events, obs_flips, nodes_to_LB_X, nodes_to_RB_X):
     '''
@@ -85,6 +131,9 @@ def get_complementary_gap(matching, detection_events, obs_flips, nodes_to_LB_X, 
 
     #Unsigned gap
     Gap = []
+    W_min = np.zeros(W_reg.shape)
+    W_comp = np.zeros(W_reg.shape)
+    pred_min = np.zeros(pred0.shape)
     for k in range(num_shots):
         if W1[k]<W0[k]:
             
@@ -95,10 +144,22 @@ def get_complementary_gap(matching, detection_events, obs_flips, nodes_to_LB_X, 
     Signed_Gap   = []
 
     for k in range(num_shots):
-        if pred0[k]==obs_flips[k]:
-            Signed_Gap.append( (W1[k]-W0[k]) * decibels_per_w)
+
+        # check whether min path belongs to nodes off / on
+        if pred_reg[k] == pred0[k]:
+            pred_min[k] = pred0[k]
+            W_min[k] = W0[k]
+            W_comp[k] = W1[k]
         else:
-            Signed_Gap.append( (W0[k]-W1[k]) * decibels_per_w)
+            pred_min[k] = pred1[k]
+            W_min[k] = W1[k]
+            W_comp[k] = W0[k]
+
+
+        if pred_min[k]==obs_flips[k]:
+            Signed_Gap.append( (W_comp[k]-W_min[k]) * decibels_per_w)
+        else:
+            Signed_Gap.append( (W_min[k]-W_comp[k]) * decibels_per_w)
 
 
     errors = np.any(pred_reg != obs_flips, axis=1)

@@ -58,7 +58,9 @@ def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cl
         correction, _, _, soft_outputs = decoder.decode(det_events[i_sample])
         obs_correction = correction @ decoder.obs_matrix.T % 2
         fail = np.any(obs_flips[i_sample] != obs_correction)
+        # print(soft_outputs[cluster_method])
         norm_frac = compute_cluster_norm_fraction(soft_outputs[cluster_method], order)
+        # print("norm frac", norm_frac)
         fails.append(fail)
         norm_fracs.append(norm_frac)
 
@@ -66,7 +68,7 @@ def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cl
 
     # Classify all shots by their error + gap.
     custom_counts = collections.Counter()
-    norm_fracs  = np.round(norm_fracs).astype(dtype=np.int64)
+    # norm_fracs  = np.round(norm_fracs).astype(dtype=np.int64)
     for k in range(len(norm_fracs)):
         g = norm_fracs[k]
         key = f'E{g}' if fails[k] else f'C{g}'
@@ -79,7 +81,7 @@ def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cl
     # collect all gap values that appear
     gaps = set()
     for key in custom_counts:
-        gaps.add(int(key[1:]))
+        gaps.add(float(key[1:]))
 
     for g in gaps:
         E = custom_counts.get(f'E{g}', 0.0)

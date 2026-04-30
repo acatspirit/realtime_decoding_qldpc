@@ -7,7 +7,7 @@ from tqdm import tqdm
 import collections
 
 def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cluster_method: str, order, 
-                                                       det_events, obs_flips, max_iter=30, bp_method = "minimum_sum", lsd_method="LSD_0", lsd_order=0, ms_scaling_factor=1.0 ):
+                                                       det_events, obs_flips, decoder=None,max_iter=30, bp_method = "minimum_sum", lsd_method="LSD_0", lsd_order=0, ms_scaling_factor=1.0 ):
     '''
     Get cluster size or cluster llr soft output from bplsd decoder. Note that if we run Z-memory (X-memory) we need to 
     restrict the circuit to Z (X) detectors only to get the confidence based only on the memory type we correct.
@@ -38,16 +38,16 @@ def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cl
     #         det_ids_to_remove.append(det_id)
     # circuit = remove_detectors_from_circuit(circuit, det_ids_to_remove)
 
-    
-    #Some of these parameters can change
-    bplsd = SoftOutputsBpLsdDecoder(
-        circuit=circuit,
-        max_iter=max_iter,
-        bp_method=bp_method,
-        lsd_method=lsd_method,
-        lsd_order=lsd_order,
-        ms_scaling_factor=ms_scaling_factor,
-    )
+    if not decoder:
+        #Some of these parameters can change
+        decoder = SoftOutputsBpLsdDecoder(
+            circuit=circuit,
+            max_iter=max_iter,
+            bp_method=bp_method,
+            lsd_method=lsd_method,
+            lsd_order=lsd_order,
+            ms_scaling_factor=ms_scaling_factor,
+        )
 
 
     fails = []
@@ -55,8 +55,8 @@ def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cl
     shots = np.shape(det_events)[0]
 
     for i_sample in tqdm(list(range(shots))):
-        correction, _, _, soft_outputs = bplsd.decode(det_events[i_sample])
-        obs_correction = correction @ bplsd.obs_matrix.T % 2
+        correction, _, _, soft_outputs = decoder.decode(det_events[i_sample])
+        obs_correction = correction @ decoder.obs_matrix.T % 2
         fail = np.any(obs_flips[i_sample] != obs_correction)
         norm_frac = compute_cluster_norm_fraction(soft_outputs[cluster_method], order)
         fails.append(fail)

@@ -127,23 +127,26 @@ def get_complementary_gap(circuit, detection_events, obs_flips, basis):
     '''    
     
     num_shots = np.shape(detection_events)[0]
+    num_detectors = circuit.num_detectors # gemini suggestion
     dem = circuit.detector_error_model()
     matching = Matching.from_detector_error_model(dem)
     all_edges = matching.edges()
     Comp_matching = Matching()
 
     if basis == 'x': # in stim, XL runs top to bottom
-        b1_nodes = get_boundary_detectors(circuit, "top")
-        b2_nodes = get_boundary_detectors(circuit, "bottom")
+        b1_nodes = get_boundary_detectors(circuit, "bottom")
+        b2_nodes = get_boundary_detectors(circuit, "top")
     elif basis == 'z':
-        b1_nodes = get_boundary_detectors(circuit, "left")
-        b2_nodes = get_boundary_detectors(circuit, "right")
+        b1_nodes = get_boundary_detectors(circuit, "right")
+        b2_nodes = get_boundary_detectors(circuit, "left")
     else:
         ValueError("Improper choice of basis")
     
-    b1 = max(b2_nodes)+1
-    b2 = b1+1
-    
+    # b1 = max(b2_nodes)+1
+    # b2 = b1+1
+    b1 = num_detectors
+    b2 = num_detectors + 1
+
     for edge in all_edges:
         node1 = edge[0]
         node2 = edge[1]
@@ -153,7 +156,8 @@ def get_complementary_gap(circuit, detection_events, obs_flips, basis):
             Comp_matching.add_edge(node1=node1,node2=node2,
                                fault_ids = edge[2]['fault_ids'],
                                weight=edge[2]['weight'],
-                               error_probability=edge[2]['error_probability'])
+                               error_probability=edge[2]['error_probability'],
+                               merge_strategy='replace')
         else: 
             
             #Match to LB
@@ -167,22 +171,22 @@ def get_complementary_gap(circuit, detection_events, obs_flips, basis):
                 Comp_matching.add_boundary_edge(node=node1,
                                                 fault_ids = edge[2]['fault_ids'],
                                                 weight=edge[2]['weight'],
-                                                error_probability=edge[2]['error_probability'])
+                                                error_probability=edge[2]['error_probability'],
+                                                merge_strategy='replace')
 
             else:
 
                 Comp_matching.add_edge(node1=node1,node2=node2,
                                 fault_ids = edge[2]['fault_ids'],
                                 weight=edge[2]['weight'],
-                                error_probability=edge[2]['error_probability'])            
+                                error_probability=edge[2]['error_probability'],
+                                merge_strategy='replace')            
             
     
     Comp_matching.set_boundary_nodes({b2})      
             
     
     pred_reg, W_reg = matching.decode_batch(detection_events,return_weights=True) #This is the regular matching
-    print(matching.num_detectors)
-    print(Comp_matching.num_detectors)
     new_array = np.zeros((num_shots,1),dtype=int)
     det0      = np.hstack((detection_events,new_array)) #set boundary to 0 (will not match)
     

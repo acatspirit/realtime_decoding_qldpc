@@ -64,3 +64,21 @@ def get_log_error_CL_MWPM(p,d,memory_type, shots):
     syndrome, obs_flips = sampler.sample(shots=shots, separate_observables=True)
     predictions = matching.decode_batch(syndrome)
     return np.sum(np.array(obs_flips) != np.array(predictions))/shots
+
+
+
+class BPLSD_Tesseract_Switching():
+    # can try doing sliding window with just one window to get clusters from the package, then use QUITS to get real sliding window info
+    # maybe try later ... do ldpc-post-selection sliding window and take subset of H_DEM to feed into tesseract
+
+    def __init__(self, cutoff):
+        self.cutoff = cutoff # when to switch from weak to strong decoder
+
+    def decode(detection_events):
+        """
+        If the decoder llr is below a certain cutoff, switch to tesseract for that window. Record tesseract correction to pass onto sliding window
+        """
+        correction = np.zeros()
+
+
+        return correction

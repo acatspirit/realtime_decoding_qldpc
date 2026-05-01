@@ -4,6 +4,9 @@ from ldpc import BpOsdDecoder, UnionFindDecoder, BpDecoder
 import numpy as np
 from pymatching import Matching
 from quits.decoder import detector_error_model_to_matrix
+from ldpc_post_selection.decoder import SoftOutputsBpLsdDecoder
+from ldpc_post_selection.stim_tools import remove_detectors_from_circuit
+from ldpc_post_selection.cluster_tools import compute_cluster_norm_fraction
 
 def BP_MWPM(syndrome, H, L, error_priors, max_iter, t, dem = None):
     print(H.shape)
@@ -67,18 +70,19 @@ def get_log_error_CL_MWPM(p,d,memory_type, shots):
 
 
 
-class BPLSD_Tesseract_Switching():
+class BPLSD_Switching():
     # can try doing sliding window with just one window to get clusters from the package, then use QUITS to get real sliding window info
     # maybe try later ... do ldpc-post-selection sliding window and take subset of H_DEM to feed into tesseract
 
-    def __init__(self, cutoff):
+    def __init__(self, cutoff, weak_decoder_dict, strong_decoder_dict):
         self.cutoff = cutoff # when to switch from weak to strong decoder
 
     def decode(detection_events):
         """
         If the decoder llr is below a certain cutoff, switch to tesseract for that window. Record tesseract correction to pass onto sliding window
         """
-        correction = np.zeros()
+        
+        bplsd = SoftOutputsBpLsdDecoder()
 
 
         return correction

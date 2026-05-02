@@ -285,10 +285,12 @@ def run_cluster_task():
     results_dir = "decoder_switching_results"
     os.makedirs(results_dir, exist_ok=True)
 
-    p_list = [0.001, 0.003, 0.005, 0.008, 0.01]
+    # p_list = [0.001, 0.003, 0.005, 0.008, 0.01]
+    p_list = [0.001, 0.003,0.005, 0.008]
     d_list = [6, 10, 12]
     cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
-    code_types = ["RSC", "BB"]
+    # code_types = ["RSC", "BB"]
+    code_types = ["BB"]
     basis = 'x'
     W, F = 5,3
     
@@ -317,12 +319,13 @@ def run_cluster_task():
     #     return
 
     # 3. Execution (Batching shots)
-    total_target_shots = {0.001: 50000, 0.003: 10000, 0.005: 10000, 0.008: 5000, 0.01: 5000}[p]
+    # total_target_shots = {0.001: 50000, 0.003: 10000, 0.005: 10000, 0.008: 5000, 0.01: 5000}[p]
+    total_target_shots = {0.001: 5000, 0.003: 1000, 0.005: 1000, 0.008: 1000}[p]
     shots_per_batch = 1000 # Save every 1000 shots
     num_batches = total_target_shots // shots_per_batch
     
     # Unique filename for this specific array job
-    out_file = f"{results_dir}/res_p{p}_d{d}_c{cutoff}_{code_type}_task{task_id}.csv"
+    out_file = f"{results_dir}/res_2_p{p}_d{d}_c{cutoff}_{code_type}_task{task_id}.csv"
 
     for b in range(num_batches):
         # Generate and Sample

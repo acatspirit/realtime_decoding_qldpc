@@ -280,44 +280,63 @@ def run_single_trial(p, d, cutoff, code_type, num_shots, W, F, basis, csv_filena
     return row
 
 # --- 4. Main Parallel Execution ---
-
 if __name__ == "__main__":
     p_list = [0.001, 0.003, 0.005, 0.008, 0.01]
-    d_list = [6,10,12]
-    W,F = 5,3
+    d_list = [6, 10, 12]
     cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
     code_types = ["RSC", "BB"]
-    num_shots = 10_000
-    alpha = 2
-    basis='x'
+    basis = 'x'
     csv_filename = "bplsd_relaybp.csv"
+    alpha = 2 # hasn't been added yet
+    W, F = 5,3
 
-    # Create all combinations of tasks
-    # Heuristic mapping: higher p needs fewer shots
-    # Adjust these based on how much time you have!
+    # 1. Shot mapping (Variable shots based on p)
     p_to_shots = {
-        0.001: 100_000,
-        0.003: 20_000,
+        0.001: 50_000,
+        0.003: 10_000,
         0.005: 10_000,
         0.008: 5_000,
         0.01:  1_000
     }
 
+    # 2. Load existing results to skip completed trials
+    completed_keys = set()
+    if os.path.exists(csv_filename) and os.path.getsize(csv_filename) > 0:
+        existing_df = pd.read_csv(csv_filename)
+        # We define a "trial" by its core physical parameters
+        for _, row in existing_df.iterrows():
+            key = (row['p'], row['d'], row['cutoff'], row['code_type'])
+            completed_keys.add(key)
+        print(f"Detected {len(completed_keys)} trials already finished. Skipping these...")
+
+    # 3. Build the filtered task list
     tasks = []
     for p in p_list:
-        n_shots = p_to_shots.get(p, num_shots) # Default if p not in dict
+        n_shots = p_to_shots.get(p, 10_000)
         for d in d_list:
             for c in cutoff_list:
                 for ct in code_types:
-                    # Add n_shots to the tuple
+                    
+                    # --- FILTER: Omit long-running BB codes ---
+                    # BB codes at d=10, 12 take significantly longer than RSC
+                    if ct == "BB" and d > 6:
+                        continue
+                    
+                    # --- RESUME: Skip if key exists in completed_keys ---
+                    if (p, d, c, ct) in completed_keys:
+                        continue
+
                     tasks.append((p, d, c, ct, n_shots))
 
-    print(f"Starting parallel simulation for {len(tasks)} combinations...")
-    
-    results = Parallel(n_jobs=-1, verbose=0)(
+    if not tasks:
+        print("All trials already completed or filtered out!")
+    else:
+        print(f"Starting simulation for {len(tasks)} remaining trials...")
+        results = Parallel(n_jobs=-1, verbose=0)(
         delayed(run_single_trial)(
             p=p, d=d, cutoff=cutoff, code_type=code_type, 
             num_shots=n_shots, # Passed from the task tuple
             W=W, F=F, basis=basis, csv_filename=csv_filename
-        ) for p, d, cutoff, code_type, n_shots in tqdm(tasks)
-    )
+            ) for p, d, cutoff, code_type, n_shots in tqdm(tasks)
+        )
+

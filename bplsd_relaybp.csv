@@ -14,3 +14,5 @@ LER,cutoff,p,d,basis,cluster_metric,num_shots,code_type,num_switches,bplsd_bp_me
 0.00096,0.01,0.001,6,x,cluster_llrs,50000,RSC,163,minimum_sum,LSD_0,0,10,0.01,20,0.3,0.4,30
 0.00154,0.007,0.001,6,x,cluster_llrs,50000,RSC,330,minimum_sum,LSD_0,0,10,0.007,20,0.3,0.4,30
 0.00236,0.005,0.001,6,x,cluster_llrs,50000,RSC,647,minimum_sum,LSD_0,0,10,0.005,20,0.3,0.4,30
+0.03506,0.1,0.001,10,x,cluster_llrs,50000,RSC,574,minimum_sum,LSD_0,0,10,0.1,20,0.3,0.4,30
+0.03038,0.05,0.001,10,x,cluster_llrs,50000,RSC,1171,minimum_sum,LSD_0,0,10,0.05,20,0.3,0.4,30

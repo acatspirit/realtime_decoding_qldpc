@@ -7,5 +7,5 @@
 #SBATCH --output=logs/%a.out
 
 # Activate your environment
-conda activate realtime_decoding
+# conda activate realtime_decoding
 python decoder_switching.py

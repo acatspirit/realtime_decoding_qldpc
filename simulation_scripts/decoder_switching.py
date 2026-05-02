@@ -279,64 +279,90 @@ def run_single_trial(p, d, cutoff, code_type, num_shots, W, F, basis, csv_filena
     
     return row
 
-# --- 4. Main Parallel Execution ---
-if __name__ == "__main__":
+def run_cluster_task():
+    # 1. Configuration
+    master_csv = "bplsd_relaybp.csv"
+    results_dir = "decoder_switching_results"
+    os.makedirs(results_dir, exist_ok=True)
+
     p_list = [0.001, 0.003, 0.005, 0.008, 0.01]
     d_list = [6, 10, 12]
     cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
     code_types = ["RSC", "BB"]
     basis = 'x'
-    csv_filename = "bplsd_relaybp.csv"
-    alpha = 2 # hasn't been added yet
     W, F = 5,3
+    
+    # 2. Map Slurm Array ID to Parameters
+    # Total combinations = 5 * 3 * 5 * 2 = 150
+    tasks = [(p, d, c, ct) for p in p_list for d in d_list for c in cutoff_list for ct in code_types]
+    
+    # Get ID from environment (0 to 149)
+    task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
+    if task_id >= len(tasks): return
+    p, d, cutoff, code_type = tasks[task_id]
 
-    # 1. Shot mapping (Variable shots based on p)
-    p_to_shots = {
-        0.001: 50_000,
-        0.003: 10_000,
-        0.005: 10_000,
-        0.008: 5_000,
-        0.01:  1_000
-    }
+    # --- SKIP LOGIC: Don't take data you already have locally ---
+    if os.path.exists(master_csv):
+        existing = pd.read_csv(master_csv)
+        # Check if this specific point is already in your local master file
+        match = existing[(existing['p']==p) & (existing['d']==d) & 
+                         (existing['cutoff']==cutoff) & (existing['code_type']==code_type)]
+        if not match.empty:
+            print(f"Skipping {code_type} d={d} p={p} - already in master CSV.")
+            return
 
-    # 2. Load existing results to skip completed trials
-    completed_keys = set()
-    if os.path.exists(csv_filename) and os.path.getsize(csv_filename) > 0:
-        existing_df = pd.read_csv(csv_filename)
-        # We define a "trial" by its core physical parameters
-        for _, row in existing_df.iterrows():
-            key = (row['p'], row['d'], row['cutoff'], row['code_type'])
-            completed_keys.add(key)
-        print(f"Detected {len(completed_keys)} trials already finished. Skipping these...")
+    # --- FILTER: Skip heavy BB codes ---
+    # if code_type == "BB" and d > 6:
+    #     print(f"Skipping heavy BB code d={d}")
+    #     return
 
-    # 3. Build the filtered task list
-    tasks = []
-    for p in p_list:
-        n_shots = p_to_shots.get(p, 10_000)
-        for d in d_list:
-            for c in cutoff_list:
-                for ct in code_types:
-                    
-                    # --- FILTER: Omit long-running BB codes ---
-                    # BB codes at d=10, 12 take significantly longer than RSC
-                    if ct == "BB" and d > 6:
-                        continue
-                    
-                    # --- RESUME: Skip if key exists in completed_keys ---
-                    if (p, d, c, ct) in completed_keys:
-                        continue
+    # 3. Execution (Batching shots)
+    total_target_shots = {0.001: 50000, 0.003: 10000, 0.005: 10000, 0.008: 5000, 0.01: 5000}[p]
+    shots_per_batch = 1000 # Save every 1000 shots
+    num_batches = total_target_shots // shots_per_batch
+    
+    # Unique filename for this specific array job
+    out_file = f"{results_dir}/res_p{p}_d{d}_c{cutoff}_{code_type}_task{task_id}.csv"
 
-                    tasks.append((p, d, c, ct, n_shots))
+    for b in range(num_batches):
+        # Generate and Sample
+        if code_type == "RSC":
+            rsc_circuits, rsc_codes = get_rsc_circuits(p, [d], basis)
+            circuit, code_params = rsc_circuits[0], rsc_codes[0]
+            det_time_index = 2
+        else:
+            circuit, bb_code = get_BB_circuit(d, basis, p)
+            code_params = (bb_code.hx, bb_code.lx) if basis == 'x' else (bb_code.hz, bb_code.lz)
+            det_time_index = 0
 
-    if not tasks:
-        print("All trials already completed or filtered out!")
-    else:
-        print(f"Starting simulation for {len(tasks)} remaining trials...")
-        results = Parallel(n_jobs=-1, verbose=0)(
-        delayed(run_single_trial)(
-            p=p, d=d, cutoff=cutoff, code_type=code_type, 
-            num_shots=n_shots, # Passed from the task tuple
-            W=W, F=F, basis=basis, csv_filename=csv_filename
-            ) for p, d, cutoff, code_type, n_shots in tqdm(tasks)
+        sampler = circuit.compile_detector_sampler()
+        det_events, obs_flips = sampler.sample(shots=shots_per_batch, separate_observables=True)
+
+        trial_switches = [0]
+        dict_SWITCH = {
+            'lsd_order': 0, 'max_iter': 10, 'detector_time_coords': det_time_index,
+            'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
+            'strong_decoder_class': RelayBpWrapper,
+            'strong_decoder_params': {'num_sets': 20, 'relay_max_iter': 30}
+        }
+
+        # Decode
+        logical_pred = sliding_window_circuit_mem(
+            det_events, circuit, code_params[0], code_params[1], W, F, 
+            DecoderSwitchingWrapper, DecoderSwitchingWrapper,
+            dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
         )
+
+        pL = np.mean((obs_flips - logical_pred).any(axis=1))
+        
+        # 4. Save batch line
+        row = {
+            'LER': float(pL), 'cutoff': cutoff, 'p': p, 'd': d, 'code_type': code_type,
+            'num_shots': shots_per_batch, 'num_switches': trial_switches[0], 'basis': basis
+        }
+        pd.DataFrame([row]).to_csv(out_file, mode='a', index=False, header=not os.path.exists(out_file))
+        print(f"Batch {b+1}/{num_batches} complete for {out_file}")
+
+if __name__ == "__main__":
+    run_cluster_task()
 

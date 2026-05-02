@@ -1,0 +1,5 @@
+LER,cutoff,p,d,basis,cluster_metric,num_shots,code_type,num_switches,bplsd_bp_method,bplsd_lsd_method,bplsd_lsd_order,bplsd_max_iter,bplsd_switching_cutoff,strong_num_sets,strong_gamma0,strong_gamma_dist_interval,strong_relay_max_iter
+0.0037,0.1,0.001,6,z,cluster_llrs,100000,RSC,48,minimum_sum,LSD_0,0,10,0.1,20,0.3,0.4,30
+0.00393,0.05,0.001,6,z,cluster_llrs,100000,RSC,87,minimum_sum,LSD_0,0,10,0.05,20,0.3,0.4,30
+0.00031,0.05,0.001,6,x,cluster_llrs,100000,RSC,0,minimum_sum,LSD_0,0,10,0.05,20,0.3,0.4,30
+0.00028,0.1,0.001,6,x,cluster_llrs,100000,RSC,0,minimum_sum,LSD_0,0,10,0.1,20,0.3,0.4,30

@@ -8,6 +8,7 @@ from ldpc_post_selection.decoder import SoftOutputsBpLsdDecoder
 from ldpc_post_selection.stim_tools import remove_detectors_from_circuit
 from ldpc_post_selection.cluster_tools import compute_cluster_norm_fraction
 
+
 def BP_MWPM(syndrome, H, L, error_priors, max_iter, t, dem = None):
     print(H.shape)
     bp = BpDecoder(
@@ -69,20 +70,62 @@ def get_log_error_CL_MWPM(p,d,memory_type, shots):
     return np.sum(np.array(obs_flips) != np.array(predictions))/shots
 
 
-
-class BPLSD_Switching():
-    # can try doing sliding window with just one window to get clusters from the package, then use QUITS to get real sliding window info
-    # maybe try later ... do ldpc-post-selection sliding window and take subset of H_DEM to feed into tesseract
-
-    def __init__(self, cutoff, weak_decoder_dict, strong_decoder_dict):
-        self.cutoff = cutoff # when to switch from weak to strong decoder
-
-    def decode(detection_events):
+class DecoderSwitchingWrapper:
+    def __init__(self, check_matrix, **params):
         """
-        If the decoder llr is below a certain cutoff, switch to tesseract for that window. Record tesseract correction to pass onto sliding window
+        A generic wrapper that attempts BPLSD first and switches to 
+        'strong_decoder_class' if cluster_gap is above the cutoff that is input in the dictionary.
         """
+        # 1. Capture the spacetime priors provided by QUITS
+        priors = params.get('priors')
+
+        # 2. Initialize the Primary Decoder (BPLSD)
+        bplsd_keys = ['max_iter', 'bp_method', 'lsd_method', 'lsd_order', 
+                      'ms_scaling_factor', 'detector_time_coords']
+        bplsd_params = {k: params[k] for k in bplsd_keys if k in params}
+        # Explicitly map priors to the 'p' argument for BPLSD
+        self.primary_decoder = SoftOutputsBpLsdDecoder(H=check_matrix, p=priors, **bplsd_params)
         
-        bplsd = SoftOutputsBpLsdDecoder()
+        # 3. Setup the strong_decoder 
+        # We look for the class object in the params dict
+        self.strong_decoder_class = params.get('strong_decoder_class')
+        
+        if self.strong_decoder_class:
+            # Extract strong_decoder-specific arguments
+            s_params = params.get('strong_decoder_params', {}).copy()
+            
+            # Most strong_decoder decoders (like MWPM or Relay-BP) need the priors
+            # We inject them into the strong_decoder's parameters
+            if 'priors' not in s_params:
+                s_params['priors'] = priors
+                
+            # Initialize the strong_decoder decoder instance
+            self.strong_decoder = self.strong_decoder_class(check_matrix, **s_params)
 
+        # 4. Switching Logic Parameters
+        self.cutoff = params.get('switching_cutoff', 0.001)
+        self.metric_key = params.get('metric_key', 'cluster_llrs')
+        self.verbose = params.get('verbose_switch', False)
+        self.count_container = params.get('switch_count_container')
+        self.norm_order = params.get('norm_order', 2)
 
-        return correction
+    def decode(self, syndrome):
+        """
+        Attempt BPLSD; fall back to the secondary decoder if certainty is low.
+        """
+        # BPLSD returns: (correction, bp_correction, converged, soft_info)
+        corr_bplsd, _, _, soft_info = self.primary_decoder.decode(syndrome)
+        cluster_gap = compute_cluster_norm_fraction(soft_info[self.metric_key], self.norm_order)
+        
+        if self.strong_decoder is not None and cluster_gap > self.cutoff:
+            # Increment the shared counter
+            if self.count_container is not None:
+                self.count_container[0] += 1
+                
+            if self.verbose:
+                print(f"[Switch] cluster_gap {cluster_gap:.2f} > {self.cutoff}. Using strong_decoder.")
+            
+            # Call the strong_decoder's decode method
+            return self.strong_decoder.decode(syndrome)
+            
+        return corr_bplsd

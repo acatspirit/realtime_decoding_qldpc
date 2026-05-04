@@ -72,4 +72,4 @@ def merge_results(results_folder, master_file):
     print(f"Total rows in master: {len(updated_master)}")
 
 if __name__ == "__main__":
-    merge_results("decoder_switching_results", "bplsd_relaybp.csv")
+    merge_results("/Users/ariannameinking/Documents/Brown_Research/realtime_decoding_qldpc/simulation_scripts/decoder_switching_results", "bplsd_relaybp.csv")

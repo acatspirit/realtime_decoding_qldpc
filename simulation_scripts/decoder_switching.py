@@ -252,7 +252,6 @@ def run_single_trial(p, d, cutoff, code_type, num_shots, W, F, basis, csv_filena
         W, F, DecoderSwitchingWrapper, DecoderSwitchingWrapper,
         dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
     )    
-
     pL = np.mean((obs_flips - logical_pred).any(axis=1))
 
     # 3. Log Preparation

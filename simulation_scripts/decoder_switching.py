@@ -83,12 +83,16 @@ class RelayBpWrapper:
         if not isinstance(check_matrix, csr_matrix):
             check_matrix = csr_matrix(check_matrix)
         priors = params.get('priors')
-        self.decoder = relay_bp.RelayDecoderF32(
+
+        self.decoder = relay_bp.RelayDecoderF32( # filter by detectors if you don't wanna do full XYZ decoding. defaults are for the gross code
             check_matrix, priors, 
-            params.get('gamma0', 0.3), 
-            params.get('gamma_dist_interval', 0.4), 
-            params.get('num_sets', 10), 
-            params.get('relay_max_iter', 10)
+            params.get('gamma0', 0.125), # initial memory strength vector for relay legs, 0.35 RSC, 0.125 Gross code [[144,12,12]]
+            params.get('gamma_dist_interval', (-0.175, 0.575)), # random dist to draw gamma from [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
+            params.get('num_sets', 600), # number of relay ensemble elements to tweak, R= 601 in paper :0
+            params.get('set_max_iter', 30), # max number of iterations of each relay leg, init 80, otherwise 60, 30 could be fine
+            params.get('pre_iter', 80), # number max bp iter for first ensemble, init 80
+            params.get('stop_nconv', 1) # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
+
         )
     def decode(self, syndrome):
         binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
@@ -238,10 +242,13 @@ def run_single_trial(p, d, cutoff, code_type, num_shots, W, F, basis, csv_filena
         # --- Relay-BP Fallback Config ---
         'strong_decoder_class': RelayBpWrapper,
         'strong_decoder_params': {
-            'num_sets': 20,           # Use more sets for the fallback
-            'gamma0': 0.3,
-            'gamma_dist_interval': 0.4,
-            'relay_max_iter': 30      # More iterations for the harder syndromes
+            'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
+            'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
+            'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
+            'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60
+            'pre_iter': 80, # number max bp iter for first ensemble, init 80
+            'stop_nconv': 1 # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
+
         }
     }
 
@@ -285,46 +292,49 @@ def run_cluster_task():
     os.makedirs(results_dir, exist_ok=True)
 
     # p_list = [0.001, 0.003, 0.005, 0.008, 0.01]
-    p_list = [0.001, 0.003,0.005, 0.008]
+    p_list = np.logspace(-3.5, -2,4)
     d_list = [6, 10, 12]
     cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
     # code_types = ["RSC", "BB"]
     code_types = ["BB"]
     basis = 'x'
     W, F = 5,3
+
+    # 3. Execution (Batching shots)
+    # total_target_shots = {0.001: 50000, 0.003: 10000, 0.005: 10000, 0.008: 5000, 0.01: 5000}[p]
+    total_target_shots = [10**6, 10**5, 10**5, 10**4]
+    p_to_total_shots = dict(zip(p_list, total_target_shots))
+    shots_per_job = 10000 # Save every 1000 shots
+    num_batches = total_target_shots // shots_per_job
+    
     
     # 2. Map Slurm Array ID to Parameters
-    # Total combinations = 5 * 3 * 5 * 2 = 150
-    tasks = [(p, d, c, ct) for p in p_list for d in d_list for c in cutoff_list for ct in code_types]
+    # Total combinations = 
+    tasks = []
+    for p in p_list:
+        num_jobs_for_this_p = int(p_to_total_shots[p] // shots_per_job)
+        if num_jobs_for_this_p == 0: num_jobs_for_this_p = 1
+        
+        for d in d_list:
+            for cutoff in cutoff_list:
+                for ct in code_types:
+                    # Create a unique entry for every batch
+                    for batch_idx in range(num_jobs_for_this_p):
+                        tasks.append({
+                            'p': p, 'd': d, 'cutoff': cutoff, 
+                            'code_type': ct, 'batch_idx': batch_idx
+                        })
     
     # Get ID from environment (0 to 149)
     task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
     if task_id >= len(tasks): return
-    p, d, cutoff, code_type = tasks[task_id]
+    task = tasks[task_id]
+    p, d, cutoff, code_type = task['p'], task['d'], task['cutoff'], task['code_type']
 
-    # --- SKIP LOGIC: Don't take data you already have locally ---
-    if os.path.exists(master_csv):
-        existing = pd.read_csv(master_csv)
-        # Check if this specific point is already in your local master file
-        match = existing[(existing['p']==p) & (existing['d']==d) & 
-                         (existing['cutoff']==cutoff) & (existing['code_type']==code_type)]
-        if not match.empty:
-            print(f"Skipping {code_type} d={d} p={p} - already in master CSV.")
-            return
+    # --- Unique Output Filename (No locking needed) ---
+    out_file = f"{results_dir}/res_p{p:.5f}_d{d}_c{cutoff}_batch{task['batch_idx']}_id{task_id}.csv"
+    if os.path.exists(out_file): return # Skip if this specific batch file already exists
 
-    # --- FILTER: Skip heavy BB codes ---
-    # if code_type == "BB" and d > 6:
-    #     print(f"Skipping heavy BB code d={d}")
-    #     return
-
-    # 3. Execution (Batching shots)
-    # total_target_shots = {0.001: 50000, 0.003: 10000, 0.005: 10000, 0.008: 5000, 0.01: 5000}[p]
-    total_target_shots = {0.001: 5000, 0.003: 1000, 0.005: 1000, 0.008: 1000}[p]
-    shots_per_batch = 1000 # Save every 1000 shots
-    num_batches = total_target_shots // shots_per_batch
-    
-    # Unique filename for this specific array job
-    out_file = f"{results_dir}/res_2_p{p}_d{d}_c{cutoff}_{code_type}_task{task_id}.csv"
 
     for b in range(num_batches):
         # Generate and Sample
@@ -338,14 +348,21 @@ def run_cluster_task():
             det_time_index = 0
 
         sampler = circuit.compile_detector_sampler()
-        det_events, obs_flips = sampler.sample(shots=shots_per_batch, separate_observables=True)
+        det_events, obs_flips = sampler.sample(shots=shots_per_job, separate_observables=True)
 
         trial_switches = [0]
         dict_SWITCH = {
-            'lsd_order': 0, 'max_iter': 10, 'detector_time_coords': det_time_index,
-            'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
-            'strong_decoder_class': RelayBpWrapper,
-            'strong_decoder_params': {'num_sets': 20, 'relay_max_iter': 30}
+        'max_iter': 10, 'detector_time_coords': det_time_index,
+        'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
+        'strong_decoder_class': RelayBpWrapper,
+        'strong_decoder_params': {
+            'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
+            'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
+            'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
+            'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60
+            'pre_iter': 80, # number max bp iter for first ensemble, init 80
+            'stop_nconv': 1 # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
+            }
         }
 
         # Decode
@@ -357,13 +374,33 @@ def run_cluster_task():
 
         pL = np.mean((obs_flips - logical_pred).any(axis=1))
         
-        # 4. Save batch line
+        # Save Single Batch Result
         row = {
-            'LER': float(pL), 'cutoff': cutoff, 'p': p, 'd': d, 'code_type': code_type,
-            'num_shots': shots_per_batch, 'num_switches': trial_switches[0], 'basis': basis
-        }
-        pd.DataFrame([row]).to_csv(out_file, mode='a', index=False, header=not os.path.exists(out_file))
-        print(f"Batch {b+1}/{num_batches} complete for {out_file}")
+        # Keys & Value columns (Required for weighted average)
+        'LER': float(pL), 
+        'cutoff': cutoff, 
+        'p': p, 
+        'd': d, 
+        'code_type': code_type,
+        'num_shots': shots_per_job, 
+        'num_switches': trial_switches[0], 
+        'basis': basis,
+        
+        # Metadata (to preserve decoder settings in the master file)
+        'cluster_metric': 'llr',
+        'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
+        'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
+        'bplsd_lsd_order': dict_SWITCH['lsd_order'],
+        'bplsd_max_iter': dict_SWITCH['max_iter'],
+        'bplsd_switching_cutoff': cutoff,
+        
+        'strong_num_sets': dict_SWITCH['strong_decoder_params']['num_sets'],
+        'strong_gamma0': dict_SWITCH['strong_decoder_params']['gamma0'],
+        'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params']['gamma_dist_interval'],
+        'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
+    }
+
+        pd.DataFrame([row]).to_csv(out_file, index=False)
 
 if __name__ == "__main__":
     run_cluster_task()

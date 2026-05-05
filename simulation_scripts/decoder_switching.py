@@ -422,10 +422,10 @@ def run_cluster_task():
         # 'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params'].get('gamma_dist_interval'),
         # 'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
 
-        'strong_num_sets': dict_RELAY['strong_decoder_params'].get('num_sets'),
-        'strong_gamma0': dict_RELAY['strong_decoder_params'].get('gamma0'),
-        'strong_gamma_dist_interval': dict_RELAY['strong_decoder_params'].get('gamma_dist_interval'),
-        'strong_relay_max_iter': dict_RELAY['strong_decoder_params'].get('relay_max_iter', 30)
+        'strong_num_sets': dict_RELAY.get('num_sets'),
+        'strong_gamma0': dict_RELAY.get('gamma0'),
+        'strong_gamma_dist_interval': dict_RELAY.get('gamma_dist_interval'),
+        'strong_relay_max_iter': dict_RELAY.get('relay_max_iter', 30)
     }
 
     pd.DataFrame([row]).to_csv(out_file, index=False)

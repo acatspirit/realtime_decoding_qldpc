@@ -86,12 +86,12 @@ class RelayBpWrapper:
 
         self.decoder = relay_bp.RelayDecoderF32( # filter by detectors if you don't wanna do full XYZ decoding. defaults are for the gross code
             check_matrix, priors, 
-            params.get('gamma0', 0.125), # initial memory strength vector for relay legs, 0.35 RSC, 0.125 Gross code [[144,12,12]]
-            params.get('gamma_dist_interval', (-0.175, 0.575)), # random dist to draw gamma from [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
-            params.get('num_sets', 600), # number of relay ensemble elements to tweak, R= 601 in paper :0
-            params.get('set_max_iter', 30), # max number of iterations of each relay leg, init 80, otherwise 60, 30 could be fine
-            params.get('pre_iter', 80), # number max bp iter for first ensemble, init 80
-            params.get('stop_nconv', 1) # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
+            gamma0=params.get('gamma0', 0.125), # initial memory strength vector for relay legs, 0.35 RSC, 0.125 Gross code [[144,12,12]]
+            gamma_dist_interval=params.get('gamma_dist_interval', (-0.175, 0.575)), # random dist to draw gamma from [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
+            num_sets=params.get('num_sets', 600), # number of relay ensemble elements to tweak, R= 601 in paper :0
+            set_max_iter=params.get('set_max_iter', 30), # max number of iterations of each relay leg, init 80, otherwise 60, 30 could be fine
+            pre_iter=params.get('pre_iter', 80), # number max bp iter for first ensemble, init 80
+            stop_nconv=params.get('stop_nconv', 1) # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
 
         )
     def decode(self, syndrome):

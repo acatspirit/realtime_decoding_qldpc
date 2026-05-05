@@ -71,8 +71,8 @@ def merge_results(results_folder, master_file):
     # Instead of moving to an archive, we delete the files. 
     # This ensures that the next time you run this script, you don't 
     # add these same shots to the master file again.
-    # for f in cluster_files:
-    #     os.remove(f)
+    for f in cluster_files:
+        os.remove(f)
     
     print(f"Merge Complete!")
     print(f"Processed and deleted {len(cluster_files)} new batch files.")
@@ -80,5 +80,7 @@ def merge_results(results_folder, master_file):
 
 if __name__ == "__main__":
     # Update the path to your results directory
-    results_path = "/Users/ariannameinking/Documents/Brown_Research/realtime_decoding_qldpc/simulation_scripts/decoder_switching_results"
-    merge_results(results_path, "bplsd_relaybp.csv")
+    outputs_path = "simulation_scripts/decoder_switching_results."
+    combined_results = "data/raw/bplsd_relaybp.csv"
+
+    merge_results(outputs_path, combined_results)

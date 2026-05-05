@@ -353,6 +353,9 @@ def run_cluster_task():
     dict_SWITCH = {
     'max_iter': 10, 'detector_time_coords': det_time_index,
     'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
+    'bp_method': 'minimum_sum',
+    'lsd_method': 'LSD_0',
+    'lsd_order': 0,
     'strong_decoder_class': RelayBpWrapper,
     'strong_decoder_params': {
         'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
@@ -375,28 +378,27 @@ def run_cluster_task():
     
     # Save Single Batch Result
     row = {
-    # Keys & Value columns (Required for weighted average)
-    'LER': float(pL), 
-    'cutoff': cutoff, 
-    'p': p, 
-    'd': d, 
-    'code_type': code_type,
-    'num_shots': shots_per_job, 
-    'num_switches': trial_switches[0], 
-    'basis': basis,
-    
-    # Metadata (to preserve decoder settings in the master file)
-    'cluster_metric': 'llr',
-    'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
-    'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
-    'bplsd_lsd_order': dict_SWITCH['lsd_order'],
-    'bplsd_max_iter': dict_SWITCH['max_iter'],
-    'bplsd_switching_cutoff': cutoff,
-    
-    'strong_num_sets': dict_SWITCH['strong_decoder_params']['num_sets'],
-    'strong_gamma0': dict_SWITCH['strong_decoder_params']['gamma0'],
-    'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params']['gamma_dist_interval'],
-    'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
+        'LER': float(pL), 
+        'cutoff': cutoff, 
+        'p': p, 
+        'd': d, 
+        'code_type': code_type,
+        'num_shots': shots_per_job, 
+        'num_switches': trial_switches[0], 
+        'basis': basis,
+        
+        # Metadata: Use .get() for everything to avoid KeyErrors
+        'cluster_metric': 'llr',
+        'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
+        'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
+        'bplsd_lsd_order': dict_SWITCH.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
+        'bplsd_max_iter': dict_SWITCH.get('max_iter', 10),
+        'bplsd_switching_cutoff': cutoff,
+        
+        'strong_num_sets': dict_SWITCH['strong_decoder_params'].get('num_sets'),
+        'strong_gamma0': dict_SWITCH['strong_decoder_params'].get('gamma0'),
+        'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params'].get('gamma_dist_interval'),
+        'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
     }
 
     pd.DataFrame([row]).to_csv(out_file, index=False)

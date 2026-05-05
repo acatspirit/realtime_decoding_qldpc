@@ -305,7 +305,7 @@ def run_cluster_task():
     total_target_shots = [10**6, 10**5, 10**5, 10**4]
     p_to_total_shots = dict(zip(p_list, total_target_shots))
     shots_per_job = 10000 # Save every 1000 shots
-    num_batches = total_target_shots // shots_per_job
+    num_batches = sum([(target_shots//shots_per_job)*len(d_list)*len(cutoff_list)*len(code_types) for target_shots in total_target_shots]) # len of the array to request
     
     
     # 2. Map Slurm Array ID to Parameters
@@ -336,71 +336,70 @@ def run_cluster_task():
     if os.path.exists(out_file): return # Skip if this specific batch file already exists
 
 
-    for b in range(num_batches):
-        # Generate and Sample
-        if code_type == "RSC":
-            rsc_circuits, rsc_codes = get_rsc_circuits(p, [d], basis)
-            circuit, code_params = rsc_circuits[0], rsc_codes[0]
-            det_time_index = 2
-        else:
-            circuit, bb_code = get_BB_circuit(d, basis, p)
-            code_params = (bb_code.hx, bb_code.lx) if basis == 'x' else (bb_code.hz, bb_code.lz)
-            det_time_index = 0
+    # Generate and Sample
+    if code_type == "RSC":
+        rsc_circuits, rsc_codes = get_rsc_circuits(p, [d], basis)
+        circuit, code_params = rsc_circuits[0], rsc_codes[0]
+        det_time_index = 2
+    else:
+        circuit, bb_code = get_BB_circuit(d, basis, p)
+        code_params = (bb_code.hx, bb_code.lx) if basis == 'x' else (bb_code.hz, bb_code.lz)
+        det_time_index = 0
 
-        sampler = circuit.compile_detector_sampler()
-        det_events, obs_flips = sampler.sample(shots=shots_per_job, separate_observables=True)
+    sampler = circuit.compile_detector_sampler()
+    det_events, obs_flips = sampler.sample(shots=shots_per_job, separate_observables=True)
 
-        trial_switches = [0]
-        dict_SWITCH = {
-        'max_iter': 10, 'detector_time_coords': det_time_index,
-        'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
-        'strong_decoder_class': RelayBpWrapper,
-        'strong_decoder_params': {
-            'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
-            'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
-            'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
-            'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60
-            'pre_iter': 80, # number max bp iter for first ensemble, init 80
-            'stop_nconv': 1 # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
-            }
+    trial_switches = [0]
+    dict_SWITCH = {
+    'max_iter': 10, 'detector_time_coords': det_time_index,
+    'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
+    'strong_decoder_class': RelayBpWrapper,
+    'strong_decoder_params': {
+        'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
+        'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
+        'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
+        'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60
+        'pre_iter': 80, # number max bp iter for first ensemble, init 80
+        'stop_nconv': 1 # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
         }
-
-        # Decode
-        logical_pred = sliding_window_circuit_mem(
-            det_events, circuit, code_params[0], code_params[1], W, F, 
-            DecoderSwitchingWrapper, DecoderSwitchingWrapper,
-            dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
-        )
-
-        pL = np.mean((obs_flips - logical_pred).any(axis=1))
-        
-        # Save Single Batch Result
-        row = {
-        # Keys & Value columns (Required for weighted average)
-        'LER': float(pL), 
-        'cutoff': cutoff, 
-        'p': p, 
-        'd': d, 
-        'code_type': code_type,
-        'num_shots': shots_per_job, 
-        'num_switches': trial_switches[0], 
-        'basis': basis,
-        
-        # Metadata (to preserve decoder settings in the master file)
-        'cluster_metric': 'llr',
-        'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
-        'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
-        'bplsd_lsd_order': dict_SWITCH['lsd_order'],
-        'bplsd_max_iter': dict_SWITCH['max_iter'],
-        'bplsd_switching_cutoff': cutoff,
-        
-        'strong_num_sets': dict_SWITCH['strong_decoder_params']['num_sets'],
-        'strong_gamma0': dict_SWITCH['strong_decoder_params']['gamma0'],
-        'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params']['gamma_dist_interval'],
-        'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
     }
 
-        pd.DataFrame([row]).to_csv(out_file, index=False)
+    # Decode
+    logical_pred = sliding_window_circuit_mem(
+        det_events, circuit, code_params[0], code_params[1], W, F, 
+        DecoderSwitchingWrapper, DecoderSwitchingWrapper,
+        dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
+    )
+
+    pL = np.mean((obs_flips - logical_pred).any(axis=1))
+    
+    # Save Single Batch Result
+    row = {
+    # Keys & Value columns (Required for weighted average)
+    'LER': float(pL), 
+    'cutoff': cutoff, 
+    'p': p, 
+    'd': d, 
+    'code_type': code_type,
+    'num_shots': shots_per_job, 
+    'num_switches': trial_switches[0], 
+    'basis': basis,
+    
+    # Metadata (to preserve decoder settings in the master file)
+    'cluster_metric': 'llr',
+    'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
+    'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
+    'bplsd_lsd_order': dict_SWITCH['lsd_order'],
+    'bplsd_max_iter': dict_SWITCH['max_iter'],
+    'bplsd_switching_cutoff': cutoff,
+    
+    'strong_num_sets': dict_SWITCH['strong_decoder_params']['num_sets'],
+    'strong_gamma0': dict_SWITCH['strong_decoder_params']['gamma0'],
+    'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params']['gamma_dist_interval'],
+    'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
+    }
+
+    pd.DataFrame([row]).to_csv(out_file, index=False)
 
 if __name__ == "__main__":
     run_cluster_task()

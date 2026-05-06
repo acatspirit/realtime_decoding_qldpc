@@ -49,6 +49,8 @@ class DecoderSwitchingWrapper:
                 
             # Initialize the strong_decoder decoder instance
             self.strong_decoder = self.strong_decoder_class(check_matrix, **s_params)
+        else:
+            self.strong_decoder = None
 
         # 4. Switching Logic Parameters
         self.cutoff = params.get('switching_cutoff', 0.001)
@@ -291,7 +293,7 @@ def run_cluster_task():
     os.makedirs(results_dir, exist_ok=True)
 
     # Updated p_list (5 values)
-    p_list = np.logspace(-4, -2, 5) 
+    p_list = np.logspace(-3.5, -1.9, 5) 
     d_list = [6, 10, 12]
     W,F = 5,3
     # cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
@@ -300,7 +302,7 @@ def run_cluster_task():
     basis = 'x'
     
     # Updated to match length of p_list (5 values)
-    total_target_shots = [10**6, 10**6, 10**5, 10**5, 10**4]
+    total_target_shots = [10**7, 10**7, 10**6, 10**5, 10**4]
     p_to_total_shots = dict(zip(p_list, total_target_shots))
     shots_per_job = 10000 
 
@@ -373,6 +375,16 @@ def run_cluster_task():
     #     }
     # }
 
+    dict_BPLSD = {
+    'max_iter': 30, 'detector_time_coords': det_time_index,
+    'alpha':0.625,
+    'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
+    'bp_method': 'minimum_sum',
+    'lsd_method': 'LSD_0',
+    'lsd_order': 0,
+    'strong_decoder_class': None
+    }
+
     dict_RELAY = {
         'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
         'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
@@ -391,8 +403,8 @@ def run_cluster_task():
 
     logical_pred = sliding_window_circuit_mem(
         det_events, circuit, code_params[0], code_params[1], W, F, 
-        RelayBpWrapper, RelayBpWrapper,
-        dict_RELAY, dict_RELAY, 'priors', 'priors', 'decode', 'decode'
+        DecoderSwitchingWrapper, DecoderSwitchingWrapper,
+        dict_BPLSD, dict_BPLSD, 'priors', 'priors', 'decode', 'decode'
     )
 
 
@@ -416,16 +428,21 @@ def run_cluster_task():
         # 'bplsd_lsd_order': dict_SWITCH.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
         # 'bplsd_max_iter': dict_SWITCH.get('max_iter', 10),
         # 'bplsd_switching_cutoff': cutoff,
+        'bplsd_bp_method': dict_BPLSD.get('bp_method', 'minimum_sum'),
+        'bplsd_lsd_method': dict_BPLSD.get('lsd_method', 'LSD_0'),
+        'bplsd_lsd_order': dict_BPLSD.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
+        'bplsd_max_iter': dict_BPLSD.get('max_iter', 30),
+        'bplsd_switching_cutoff': cutoff,
         
         # 'strong_num_sets': dict_SWITCH['strong_decoder_params'].get('num_sets'),
         # 'strong_gamma0': dict_SWITCH['strong_decoder_params'].get('gamma0'),
         # 'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params'].get('gamma_dist_interval'),
         # 'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
 
-        'strong_num_sets': dict_RELAY.get('num_sets'),
-        'strong_gamma0': dict_RELAY.get('gamma0'),
-        'strong_gamma_dist_interval': dict_RELAY.get('gamma_dist_interval'),
-        'strong_relay_max_iter': dict_RELAY.get('relay_max_iter', 30)
+        # 'strong_num_sets': dict_RELAY.get('num_sets'),
+        # 'strong_gamma0': dict_RELAY.get('gamma0'),
+        # 'strong_gamma_dist_interval': dict_RELAY.get('gamma_dist_interval'),
+        # 'strong_relay_max_iter': dict_RELAY.get('relay_max_iter', 30)
     }
 
     pd.DataFrame([row]).to_csv(out_file, index=False)

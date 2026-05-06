@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=qec_sim
-#SBATCH --array=0-5000 # total 6332
+#SBATCH --array=0-1000 # total 6332
 #SBATCH --mem=15G
 #SBATCH --time=8:00:00
 #SBATCH --output=logs/%a.out

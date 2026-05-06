@@ -2,7 +2,7 @@
 #SBATCH --job-name=qec_sim
 #SBATCH --array=0-6332
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=20G
+#SBATCH --mem=15G
 #SBATCH --time=24:00:00
 #SBATCH --output=logs/%a.out
 

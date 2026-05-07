@@ -139,6 +139,6 @@ def merge_results(results_folder, master_file):
 if __name__ == "__main__":
     # Update the path to your results directory
     outputs_path = "simulation_scripts/decoder_switching_results"
-    combined_results = "data/raw/relaybp.csv"
+    combined_results = "data/raw/bplsd.csv"
 
     merge_results(outputs_path, combined_results)

@@ -293,7 +293,7 @@ def run_cluster_task():
     os.makedirs(results_dir, exist_ok=True)
 
     # Updated p_list (5 values)
-    p_list = np.logspace(-3.5, -1.9, 5) 
+    p_list = np.logspace(-2.7, -1.9, 5) 
     d_list = [6, 10, 12]
     W,F = 5,3
     # cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
@@ -358,22 +358,22 @@ def run_cluster_task():
     det_events, obs_flips = sampler.sample(shots=shots_per_job, separate_observables=True)
 
     trial_switches = [0]
-    # dict_SWITCH = {
-    # 'max_iter': 10, 'detector_time_coords': det_time_index,
-    # 'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
-    # 'bp_method': 'minimum_sum',
-    # 'lsd_method': 'LSD_0',
-    # 'lsd_order': 0,
-    # 'strong_decoder_class': RelayBpWrapper,
-    # 'strong_decoder_params': {
-    #     'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
-    #     'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
-    #     'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
-    #     'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60
-    #     'pre_iter': 80, # number max bp iter for first ensemble, init 80
-    #     'stop_nconv': 1 # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
-    #     }
-    # }
+    dict_SWITCH = {
+    'max_iter': 30, 'detector_time_coords': det_time_index,
+    'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
+    'bp_method': 'minimum_sum',
+    'lsd_method': 'LSD_0',
+    'lsd_order': 0,
+    'strong_decoder_class': RelayBpWrapper,
+    'strong_decoder_params': {
+        'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
+        'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
+        'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
+        'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60
+        'pre_iter': 80, # number max bp iter for first ensemble, init 80
+        'stop_nconv': 1 # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
+        }
+    }
 
     dict_BPLSD = {
     'max_iter': 30, 'detector_time_coords': det_time_index,
@@ -395,17 +395,17 @@ def run_cluster_task():
         }
 
     # Decode
-    # logical_pred = sliding_window_circuit_mem(
-    #     det_events, circuit, code_params[0], code_params[1], W, F, 
-    #     DecoderSwitchingWrapper, DecoderSwitchingWrapper,
-    #     dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
-    # )
-
     logical_pred = sliding_window_circuit_mem(
         det_events, circuit, code_params[0], code_params[1], W, F, 
         DecoderSwitchingWrapper, DecoderSwitchingWrapper,
-        dict_BPLSD, dict_BPLSD, 'priors', 'priors', 'decode', 'decode'
+        dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
     )
+
+    # logical_pred = sliding_window_circuit_mem(
+    #     det_events, circuit, code_params[0], code_params[1], W, F, 
+    #     DecoderSwitchingWrapper, DecoderSwitchingWrapper,
+    #     dict_BPLSD, dict_BPLSD, 'priors', 'priors', 'decode', 'decode'
+    # )
 
 
     pL = np.mean((obs_flips - logical_pred).any(axis=1))
@@ -423,21 +423,20 @@ def run_cluster_task():
         
         # Metadata: Use .get() for everything to avoid KeyErrors
         'cluster_metric': 'llr',
-        # 'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
-        # 'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
-        # 'bplsd_lsd_order': dict_SWITCH.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
-        # 'bplsd_max_iter': dict_SWITCH.get('max_iter', 10),
-        # 'bplsd_switching_cutoff': cutoff,
-        'bplsd_bp_method': dict_BPLSD.get('bp_method', 'minimum_sum'),
-        'bplsd_lsd_method': dict_BPLSD.get('lsd_method', 'LSD_0'),
-        'bplsd_lsd_order': dict_BPLSD.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
-        'bplsd_max_iter': dict_BPLSD.get('max_iter', 30),
-        'bplsd_switching_cutoff': cutoff,
+        'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
+        'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
+        'bplsd_lsd_order': dict_SWITCH.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
+        'bplsd_max_iter': dict_SWITCH.get('max_iter', 10),
+
+        # 'bplsd_bp_method': dict_BPLSD.get('bp_method', 'minimum_sum'),
+        # 'bplsd_lsd_method': dict_BPLSD.get('lsd_method', 'LSD_0'),
+        # 'bplsd_lsd_order': dict_BPLSD.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
+        # 'bplsd_max_iter': dict_BPLSD.get('max_iter', 30),
         
-        # 'strong_num_sets': dict_SWITCH['strong_decoder_params'].get('num_sets'),
-        # 'strong_gamma0': dict_SWITCH['strong_decoder_params'].get('gamma0'),
-        # 'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params'].get('gamma_dist_interval'),
-        # 'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
+        'strong_num_sets': dict_SWITCH['strong_decoder_params'].get('num_sets'),
+        'strong_gamma0': dict_SWITCH['strong_decoder_params'].get('gamma0'),
+        'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params'].get('gamma_dist_interval'),
+        'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
 
         # 'strong_num_sets': dict_RELAY.get('num_sets'),
         # 'strong_gamma0': dict_RELAY.get('gamma0'),

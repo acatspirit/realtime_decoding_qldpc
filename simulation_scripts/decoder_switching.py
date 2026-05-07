@@ -296,8 +296,8 @@ def run_cluster_task():
     p_list = np.logspace(-2.7, -1.9, 5) 
     d_list = [6, 10, 12]
     W,F = 5,3
-    # cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
-    cutoff_list = [0] # for when just running relay or bplsd
+    cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
+    # cutoff_list = [0] # for when just running relay or bplsd
     code_types = ["BB"]
     basis = 'x'
     

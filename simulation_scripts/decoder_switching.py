@@ -296,10 +296,10 @@ def run_cluster_task():
     p_list = np.logspace(-2.7, -1.8, 5) 
     d_list = [6, 10, 12]
     W,F = 5,3
-    # cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
-    cutoff_list = [0] # for when just running relay or bplsd
+    cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
+    # cutoff_list = [0] # for when just running relay or bplsd
     code_types = ["BB"]
-    switching_on = False
+    switching_on = True
     basis = 'x'
     
     # Updated to match length of p_list (5 values)
@@ -400,17 +400,17 @@ def run_cluster_task():
         }
 
     # Decode
-    # logical_pred = sliding_window_circuit_mem(
-    #     det_events, circuit, code_params[0], code_params[1], W, F, 
-    #     DecoderSwitchingWrapper, DecoderSwitchingWrapper,
-    #     dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
-    # )
-
     logical_pred = sliding_window_circuit_mem(
         det_events, circuit, code_params[0], code_params[1], W, F, 
-        RelayBpWrapper, RelayBpWrapper,
-        dict_RELAY, dict_RELAY, 'priors', 'priors', 'decode', 'decode'
+        DecoderSwitchingWrapper, DecoderSwitchingWrapper,
+        dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
     )
+
+    # logical_pred = sliding_window_circuit_mem(
+    #     det_events, circuit, code_params[0], code_params[1], W, F, 
+    #     RelayBpWrapper, RelayBpWrapper,
+    #     dict_RELAY, dict_RELAY, 'priors', 'priors', 'decode', 'decode'
+    # )
 
 
     pL = np.mean((obs_flips - logical_pred).any(axis=1))
@@ -428,25 +428,25 @@ def run_cluster_task():
         
         # Metadata: Use .get() for everything to avoid KeyErrors
         'cluster_metric': 'llr',
-        # 'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
-        # 'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
-        # 'bplsd_lsd_order': dict_SWITCH.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
-        # 'bplsd_max_iter': dict_SWITCH.get('max_iter', 10),
+        'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
+        'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
+        'bplsd_lsd_order': dict_SWITCH.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
+        'bplsd_max_iter': dict_SWITCH.get('max_iter', 10),
 
         # 'bplsd_bp_method': dict_BPLSD.get('bp_method', 'minimum_sum'),
         # 'bplsd_lsd_method': dict_BPLSD.get('lsd_method', 'LSD_0'),
         # 'bplsd_lsd_order': dict_BPLSD.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
         # 'bplsd_max_iter': dict_BPLSD.get('max_iter', 30),
         
-        # 'strong_num_sets': dict_SWITCH['strong_decoder_params'].get('num_sets'),
-        # 'strong_gamma0': dict_SWITCH['strong_decoder_params'].get('gamma0'),
-        # 'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params'].get('gamma_dist_interval'),
-        # 'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
+        'strong_num_sets': dict_SWITCH['strong_decoder_params'].get('num_sets'),
+        'strong_gamma0': dict_SWITCH['strong_decoder_params'].get('gamma0'),
+        'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params'].get('gamma_dist_interval'),
+        'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
 
-        'strong_num_sets': dict_RELAY.get('num_sets'),
-        'strong_gamma0': dict_RELAY.get('gamma0'),
-        'strong_gamma_dist_interval': dict_RELAY.get('gamma_dist_interval'),
-        'strong_relay_max_iter': dict_RELAY.get('relay_max_iter', 30)
+        # 'strong_num_sets': dict_RELAY.get('num_sets'),
+        # 'strong_gamma0': dict_RELAY.get('gamma0'),
+        # 'strong_gamma_dist_interval': dict_RELAY.get('gamma_dist_interval'),
+        # 'strong_relay_max_iter': dict_RELAY.get('relay_max_iter', 30)
     }
 
     pd.DataFrame([row]).to_csv(out_file, index=False)

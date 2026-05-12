@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=bb_bplsd
-#SBATCH --array=0-31664 # total 6332
-#SBATCH --mem=4G
+#SBATCH --job-name=bb_switching
+#SBATCH --array=0-1000 
+#SBATCH --mem=50G
 #SBATCH --time=24:00:00
 #SBATCH --output=logs/%a.out
 

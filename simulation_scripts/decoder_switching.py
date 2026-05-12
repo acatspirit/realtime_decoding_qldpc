@@ -15,6 +15,7 @@ from quits.simulation import get_stim_mem_result
 from quits import ErrorModel
 import numpy as np
 from tqdm import tqdm
+import gc
 
 
 
@@ -287,6 +288,127 @@ def run_single_trial(p, d, cutoff, code_type, num_shots, W, F, basis, csv_filena
     
     return row
 
+
+
+def run_cluster_task_modular():
+    # 1. Configuration
+    results_dir = "decoder_switching_results"
+    os.makedirs(results_dir, exist_ok=True)
+
+    p_list = np.logspace(-2.7, -1.8, 5) 
+    d_list = [6, 10, 12]
+    cutoff_list = [0.005, 0.007, 0.01, 0.05, 0.1]
+    total_target_shots = [10**7, 10**7, 10**6, 10**5, 10**4]
+    p_to_total_shots = dict(zip(p_list, total_target_shots))
+    
+    shots_per_increment = 10000 
+    W, F = 5, 3
+    code_types = ["BB"]
+    basis = 'x'
+
+    # 2. Generate UNIQUE Parameter Combinations (75 total)
+    param_sets = []
+    for p in p_list:
+        for d in d_list:
+            for cutoff in cutoff_list:
+                for ct in code_types:
+                    param_sets.append({
+                        'p': p, 'd': d, 'cutoff': cutoff, 
+                        'code_type': ct, 'target': p_to_total_shots[p]
+                    })
+
+   
+    # 3. Map 1000 Slurm IDs to 75 Parameter Sets using Modulo
+    # This allows ~13 jobs to work on each parameter set simultaneously
+    task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
+    t = param_sets[task_id % len(param_sets)] 
+    
+    p, d, cutoff, code_type = t['p'], t['d'], t['cutoff'], t['code_type']
+    # manually change file name if not switching
+    out_file = f"{results_dir}/switching_p{p:.5f}_d{d}_c{cutoff}_{code_type}.csv"
+    lock_file = out_file + ".lock"
+
+    # 4. Incremental Loop with File Locking
+    while True:
+        # Check progress inside the loop to see if other jobs finished the target
+        completed_shots = 0
+        if os.path.exists(out_file):
+            try:
+                # Use a quick read to check progress
+                existing_df = pd.read_csv(out_file, usecols=['num_shots'])
+                completed_shots = existing_df['num_shots'].sum()
+            except:
+                completed_shots = 0
+
+        if completed_shots >= t['target']:
+            print(f"Job {task_id}: Target reached for {out_file}. Exiting.")
+            break
+
+        # --- Perform Simulation Increment ---
+        # (Circuit generation and sampling logic remains identical to your previous code)
+        if code_type == "BB":
+            circuit, bb_code = get_BB_circuit(d, basis, p)
+            code_params = (bb_code.hx, bb_code.lx) if basis == 'x' else (bb_code.hz, bb_code.lz)
+            det_time_index = 0
+        else:
+            rsc_circuits, rsc_codes = get_rsc_circuits(p, [d], basis)
+            circuit, code_params = rsc_circuits[0], rsc_codes[0]
+            det_time_index = 2
+
+        sampler = circuit.compile_detector_sampler()
+        det_events, obs_flips = sampler.sample(shots=shots_per_increment, separate_observables=True)
+        trial_switches = [0]
+        
+        trial_switches = [0]
+        dict_SWITCH = {
+        'max_iter': 30, 'detector_time_coords': det_time_index,
+        'switching_cutoff': cutoff, 'switch_count_container': trial_switches,
+        'bp_method': 'minimum_sum',
+        'lsd_method': 'LSD_0',
+        'lsd_order': 0,
+        'strong_decoder_class': RelayBpWrapper,
+        'strong_decoder_params': {
+            'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
+            'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
+            'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
+            'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60
+            'pre_iter': 80, # number max bp iter for first ensemble, init 80
+            'stop_nconv': 1 # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
+            }
+        }
+
+        logical_pred = sliding_window_circuit_mem(
+            det_events, circuit, code_params[0], code_params[1], W, F, 
+            DecoderSwitchingWrapper, DecoderSwitchingWrapper,
+            dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
+        )
+        pL = np.mean((obs_flips - logical_pred).any(axis=1))
+        
+        row = {
+            'LER': float(pL), 'cutoff': cutoff, 'p': p, 'd': d, 'code_type': code_type,
+            'num_shots': shots_per_increment, 'num_switches': trial_switches[0], 
+            'basis': basis,
+             'cluster_metric': 'llr',
+            'bplsd_bp_method': dict_SWITCH.get('bp_method', 'minimum_sum'),
+            'bplsd_lsd_method': dict_SWITCH.get('lsd_method', 'LSD_0'),
+            'bplsd_lsd_order': dict_SWITCH.get('lsd_order', 0), # Changed from dict_SWITCH['lsd_order']
+            'bplsd_max_iter': dict_SWITCH.get('max_iter', 10),
+            'strong_num_sets': dict_SWITCH['strong_decoder_params'].get('num_sets'),
+            'strong_gamma0': dict_SWITCH['strong_decoder_params'].get('gamma0'),
+            'strong_gamma_dist_interval': dict_SWITCH['strong_decoder_params'].get('gamma_dist_interval'),
+            'strong_relay_max_iter': dict_SWITCH['strong_decoder_params'].get('relay_max_iter', 30)
+        }
+
+        # 5. Locked Write: Append the batch result safely
+        with FileLock(lock_file):
+            pd.DataFrame([row]).to_csv(out_file, mode='a', index=False, header=not os.path.exists(out_file))
+
+        # Explicitly clear large objects
+        del det_events
+        del obs_flips
+        del logical_pred
+        gc.collect() # Force Python to free up memory immediately
+
 def run_cluster_task():
     # 1. Configuration
     results_dir = "decoder_switching_results"
@@ -305,7 +427,7 @@ def run_cluster_task():
     # Updated to match length of p_list (5 values)
     total_target_shots = [10**7, 10**7, 10**6, 10**5, 10**4]
     p_to_total_shots = dict(zip(p_list, total_target_shots))
-    shots_per_job = 10000 
+    shots_per_job = 10000
 
     # 2. Map Slurm Array ID to Parameters (Breadth-First)
     tasks = []
@@ -343,7 +465,7 @@ def run_cluster_task():
     # --- Unique Output Filename (No locking needed) ---
     
     if switching_on:
-        out_file = f"{results_dir}/res_p{p:.5f}_d{d}_c{cutoff}_batch{task['batch_idx']}_id{task_id}.csv"
+        out_file = f"{results_dir}/switching_p{p:.5f}_d{d}_c{cutoff}_batch{task['batch_idx']}_id{task_id}.csv"
     else:
         out_file = f"{results_dir}/relay_p{p:.5f}_d{d}_c{cutoff}_batch{task['batch_idx']}_id{task_id}.csv"
     if os.path.exists(out_file): return # Skip if this specific batch file already exists
@@ -452,5 +574,5 @@ def run_cluster_task():
     pd.DataFrame([row]).to_csv(out_file, index=False)
 
 if __name__ == "__main__":
-    run_cluster_task()
+    run_cluster_task_modular()
 

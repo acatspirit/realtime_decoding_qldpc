@@ -301,7 +301,7 @@ def run_cluster_task_modular():
     total_target_shots = [10**7, 10**7, 10**6, 10**5, 10**4]
     p_to_total_shots = dict(zip(p_list, total_target_shots))
     
-    shots_per_increment = 10000 
+    shots_per_increment = 5000 
     W, F = 5, 3
     code_types = ["BB"]
     basis = 'x'
@@ -318,46 +318,44 @@ def run_cluster_task_modular():
                     })
 
    
-    # 3. Map 1000 Slurm IDs to 75 Parameter Sets using Modulo
-    # This allows ~13 jobs to work on each parameter set simultaneously
+    # 3. Parameter Mapping
     task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
     t = param_sets[task_id % len(param_sets)] 
-    
     p, d, cutoff, code_type = t['p'], t['d'], t['cutoff'], t['code_type']
-    # manually change file name if not switching
+    
     out_file = f"{results_dir}/switching_p{p:.5f}_d{d}_c{cutoff}_{code_type}.csv"
     lock_file = out_file + ".lock"
 
-    # 4. Incremental Loop with File Locking
-    while True:
-        # Check progress inside the loop to see if other jobs finished the target
-        completed_shots = 0
-        if os.path.exists(out_file):
-            try:
-                # Use a quick read to check progress
-                existing_df = pd.read_csv(out_file, usecols=['num_shots'])
-                completed_shots = existing_df['num_shots'].sum()
-            except:
-                completed_shots = 0
+    # --- MEMORY OPTIMIZATION: MOVE OUT OF LOOP --- [cite: 6, 8]
+    if code_type == "BB":
+        circuit, bb_code = get_BB_circuit(d, basis, p)
+        code_params = (bb_code.hx, bb_code.lx) if basis == 'x' else (bb_code.hz, bb_code.lz)
+        det_time_index = 0
+    else:
+        rsc_circuits, rsc_codes = get_rsc_circuits(p, [d], basis)
+        circuit, code_params = rsc_circuits[0], rsc_codes[0]
+        det_time_index = 2
 
-        if completed_shots >= t['target']:
-            print(f"Job {task_id}: Target reached for {out_file}. Exiting.")
-            break
+    # Compile the sampler ONCE per job
+    sampler = circuit.compile_detector_sampler()
 
-        # --- Perform Simulation Increment ---
-        # (Circuit generation and sampling logic remains identical to your previous code)
-        if code_type == "BB":
-            circuit, bb_code = get_BB_circuit(d, basis, p)
-            code_params = (bb_code.hx, bb_code.lx) if basis == 'x' else (bb_code.hz, bb_code.lz)
-            det_time_index = 0
-        else:
-            rsc_circuits, rsc_codes = get_rsc_circuits(p, [d], basis)
-            circuit, code_params = rsc_circuits[0], rsc_codes[0]
-            det_time_index = 2
+    # 4. Determine Workload Once
+    completed_shots = 0
+    if os.path.exists(out_file):
+        try:
+            # Only read the specific column to keep memory low
+            existing_df = pd.read_csv(out_file, usecols=['num_shots'])
+            completed_shots = existing_df['num_shots'].sum()
+        except:
+            completed_shots = 0
 
-        sampler = circuit.compile_detector_sampler()
+    remaining_shots = t['target'] - completed_shots
+    num_increments = int(np.ceil(remaining_shots / shots_per_increment))
+
+    # --- Execution Loop ---
+    for _ in range(num_increments):
+        # Sample
         det_events, obs_flips = sampler.sample(shots=shots_per_increment, separate_observables=True)
-        trial_switches = [0]
         
         trial_switches = [0]
         dict_SWITCH = {
@@ -368,7 +366,7 @@ def run_cluster_task_modular():
         'lsd_order': 0,
         'strong_decoder_class': RelayBpWrapper,
         'strong_decoder_params': {
-            'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
+            'num_sets': 150, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
             'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
             'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
             'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60
@@ -427,7 +425,7 @@ def run_cluster_task():
     # Updated to match length of p_list (5 values)
     total_target_shots = [10**7, 10**7, 10**6, 10**5, 10**4]
     p_to_total_shots = dict(zip(p_list, total_target_shots))
-    shots_per_job = 10000
+    shots_per_job = 5000
 
     # 2. Map Slurm Array ID to Parameters (Breadth-First)
     tasks = []
@@ -493,7 +491,7 @@ def run_cluster_task():
     'lsd_order': 0,
     'strong_decoder_class': RelayBpWrapper,
     'strong_decoder_params': {
-        'num_sets': 300, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
+        'num_sets': 150, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
         'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
         'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
         'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60

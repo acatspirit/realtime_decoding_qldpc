@@ -323,8 +323,12 @@ def run_cluster_task_modular():
     t = param_sets[task_id % len(param_sets)] 
     p, d, cutoff, code_type = t['p'], t['d'], t['cutoff'], t['code_type']
     
-    out_file = f"{results_dir}/switching_p{p:.5f}_d{d}_c{cutoff}_{code_type}.csv"
-    lock_file = out_file + ".lock"
+    out_file = f"{results_dir}/switching_p{p:.5f}_d{d}_c{cutoff}_{code_type}_task{task_id}.csv"
+    # lock_file = out_file + ".lock"
+    total_slurm_tasks = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", 1))
+    jobs_per_param = total_slurm_tasks // len(param_sets)
+    shots_this_job = t['target'] // jobs_per_param
+    num_increments = int(np.ceil(shots_this_job / shots_per_increment))
 
     # --- MEMORY OPTIMIZATION: MOVE OUT OF LOOP --- [cite: 6, 8]
     if code_type == "BB":
@@ -338,20 +342,6 @@ def run_cluster_task_modular():
 
     # Compile the sampler ONCE per job
     sampler = circuit.compile_detector_sampler()
-
-    # 4. Determine Workload Once
-    completed_shots = 0
-    if os.path.exists(out_file):
-        try:
-            # Only read the specific column to keep memory low
-            existing_df = pd.read_csv(out_file, usecols=['num_shots'])
-            completed_shots = existing_df['num_shots'].sum()
-        except:
-            completed_shots = 0
-
-    remaining_shots = t['target'] - completed_shots
-    num_increments = int(np.ceil(remaining_shots / shots_per_increment))
-
     # --- Execution Loop ---
     for _ in range(num_increments):
         # Sample
@@ -398,8 +388,7 @@ def run_cluster_task_modular():
         }
 
         # 5. Locked Write: Append the batch result safely
-        with FileLock(lock_file):
-            pd.DataFrame([row]).to_csv(out_file, mode='a', index=False, header=not os.path.exists(out_file))
+        pd.DataFrame([row]).to_csv(out_file, mode='a', index=False, header=not os.path.exists(out_file))
 
         # Explicitly clear large objects
         del det_events

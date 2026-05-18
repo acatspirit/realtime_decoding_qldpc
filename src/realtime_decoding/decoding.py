@@ -4,10 +4,21 @@ from ldpc import BpOsdDecoder, UnionFindDecoder, BpDecoder
 import numpy as np
 from pymatching import Matching
 from quits.decoder import detector_error_model_to_matrix
+import relay_bp
+from tesseract_decoder import tesseract
+from scipy.sparse import csr_matrix
 from ldpc_post_selection.decoder import SoftOutputsBpLsdDecoder
 from ldpc_post_selection.stim_tools import remove_detectors_from_circuit
 from ldpc_post_selection.cluster_tools import compute_cluster_norm_fraction
+from realtime_decoding.tesseract_w_sliding_window import chk_obs_priors_to_dem, get_dems_per_window
 
+#################################################################################
+#
+#
+# Decoding LER extraction functions
+#
+#
+#################################################################################
 
 def BP_MWPM(syndrome, H, L, error_priors, max_iter, t, dem = None):
     print(H.shape)
@@ -70,7 +81,81 @@ def get_log_error_CL_MWPM(p,d,memory_type, shots):
     return np.sum(np.array(obs_flips) != np.array(predictions))/shots
 
 
-class DecoderSwitchingWrapper:
+#################################################################################
+#
+#
+# Decoder construction and switching wrapper classes
+#
+#
+#################################################################################
+
+class RelayBpWrapper:
+    def __init__(self, check_matrix, **params):
+        if not isinstance(check_matrix, csr_matrix):
+            check_matrix = csr_matrix(check_matrix)
+        priors = params.get('priors')
+
+        self.decoder = relay_bp.RelayDecoderF32( # filter by detectors if you don't wanna do full XYZ decoding. defaults are for the gross code
+            check_matrix, priors, 
+            gamma0=params.get('gamma0', 0.125), # initial memory strength vector for relay legs, 0.35 RSC, 0.125 Gross code [[144,12,12]]
+            gamma_dist_interval=params.get('gamma_dist_interval', (-0.175, 0.575)), # random dist to draw gamma from [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
+            num_sets=params.get('num_sets', 600), # number of relay ensemble elements to tweak, R= 601 in paper :0
+            set_max_iter=params.get('set_max_iter', 30), # max number of iterations of each relay leg, init 80, otherwise 60, 30 could be fine
+            pre_iter=params.get('pre_iter', 80), # number max bp iter for first ensemble, init 80
+            stop_nconv=params.get('stop_nconv', 1) # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
+
+        )
+    def decode(self, syndrome):
+        binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
+        return self.decoder.decode(binary_syndrome)
+
+class TesseractWrapper:
+    def __init__(self, check_matrix, **kwargs):
+        """
+        Standardized wrapper for Google's Tesseract decoder to make it 
+        compatible with the QUITS sliding window interface.
+        """
+        self.check_matrix = check_matrix
+        
+        # 1. Extract priors (injected dynamically by the sliding window loop)
+        priors_key = kwargs.get('priors_key', 'priors')
+        self.priors = kwargs.get(priors_key)
+        
+        # 2. Extract the correct window observable matrix using the tracker
+        window_observables = kwargs.get('window_observables')
+        if window_observables is not None:
+            if 'window_index' in kwargs:
+                idx = kwargs['window_index']
+            elif 'window_index_tracker' in kwargs:
+                tracker = kwargs['window_index_tracker']
+                idx = tracker[0]
+                tracker[0] += 1  # Move tracker to the next window position
+            else:
+                raise ValueError("TesseractWrapper requires 'window_index' or 'window_index_tracker'.")
+            
+            self.obs = window_observables[idx]
+        else:
+            raise ValueError("TesseractWrapper requires 'window_observables' to build the DEM.")
+            
+        self.det_beam = kwargs.get('det_beam', 10)
+        
+        # 3. Assemble the DEM using your colleague's function
+        self.dem = chk_obs_priors_to_dem(self.check_matrix, self.obs, self.priors)
+        
+        # 4. Compile the Tesseract instance
+        config = tesseract.TesseractConfig(dem=self.dem, det_beam=self.det_beam)
+        self.decoder = config.compile_decoder()
+
+
+    def decode(self, syndrome):
+        """Alias to guarantee interoperability inside standard switching wrappers."""
+        decoded_error_inds = self.decoder.decode_to_errors(syndrome)
+        num_events = self.dem.num_errors
+        decoded_errors = np.zeros(num_events, dtype=bool)
+        decoded_errors[decoded_error_inds] = True
+        return decoded_errors
+
+class DecoderSwitchingBPLSD:
     def __init__(self, check_matrix, **params):
         """
         A generic wrapper that attempts BPLSD first and switches to 
@@ -129,3 +214,24 @@ class DecoderSwitchingWrapper:
             return self.strong_decoder.decode(syndrome)
             
         return corr_bplsd
+    
+class DecoderSwitchingWrapper:
+    def __init__(self, primary_decoder_class, secondary_decoder_class, primary_params, secondary_params, cluster_metric, cutoff, count_container=None, norm_order=2):
+        self.primary_decoder = primary_decoder_class(**primary_params)
+        self.secondary_decoder = secondary_decoder_class(**secondary_params)
+        self.metric_key = cluster_metric
+        self.cutoff = cutoff
+        self.norm_order = norm_order
+        self.count_container = count_container # should just pass in a list with [0]
+
+    def decode(self, syndrome):
+        # TODO : write our own cluster norm fraction function independent of primary decoder class and add it here
+        corr_primary, _, _, soft_info = self.primary_decoder.decode(syndrome)
+        cluster_gap = compute_cluster_norm_fraction(soft_info[self.metric_key], self.norm_order)
+
+        if cluster_gap > self.cutoff:
+            if self.count_container is not None:
+                self.count_container[0] += 1
+
+            return self.secondary_decoder.decode(syndrome)
+        return corr_primary

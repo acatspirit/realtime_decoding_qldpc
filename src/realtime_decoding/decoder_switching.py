@@ -356,7 +356,7 @@ def run_cluster_task_modular():
         'lsd_order': 0,
         'strong_decoder_class': RelayBpWrapper,
         'strong_decoder_params': {
-            'num_sets': 150, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 300
+            'num_sets': 150, # the number of relay ensemble elements R= 601 in paper :0... may be really big ... start with 150
             'gamma0': 0.125, # the initial memory strength , 0.35 RSC, 0.125 Gross code [[144,12,12]]
             'gamma_dist_interval': (-0.175, 0.575), # uniform distribution for range of memory weight selection, [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
             'set_max_iter': 30, # max BP iterations per relay ensable, tested with 60
@@ -370,7 +370,7 @@ def run_cluster_task_modular():
             DecoderSwitchingWrapper, DecoderSwitchingWrapper,
             dict_SWITCH, dict_SWITCH, 'priors', 'priors', 'decode', 'decode'
         )
-        pL = np.mean((obs_flips - logical_pred).any(axis=1))
+        pL = np.mean((obs_flips != logical_pred).any(axis=1)) # is this the same as sum / shots?
         
         row = {
             'LER': float(pL), 'cutoff': cutoff, 'p': p, 'd': d, 'code_type': code_type,

@@ -4,8 +4,11 @@ import numpy as np
 import ldpc.codes
 from ldpc import BpOsdDecoder, UnionFindDecoder
 
+# try UF from the other repo now too 
+import py_wrapper.py_decoder as uf
 H = ldpc.codes.hamming_code(5)
 
+decoder = uf.UFDecoder()
 ## The
 # bp_osd = BpOsdDecoder(
 #     H,

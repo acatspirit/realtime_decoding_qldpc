@@ -28,6 +28,12 @@ pip install -e .
 # Optional: install codes used for the numerical analyses in our paper.
 pip install -e ./simulations
 ```
+
+To run the Union-Find decoding scripts, clone and install the decoder dependency outside this repository:
+```bash
+git clone [https://github.com/nbi-hyq/uf_decoder.git](https://github.com/nbi-hyq/uf_decoder.git)
+cd uf_decoder
+pip install -e .
 ### On the HPC only...
 ```bash
 pip install cudaq

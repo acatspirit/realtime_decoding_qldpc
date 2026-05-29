@@ -98,3 +98,20 @@ print(f"Tracked Cluster Sizes: {sizes}")
 print("Cluster Membership Maps:")
 for cluster_idx, qubit_ids in cluster_membership.items():
     print(f"  -> Cluster {cluster_idx} (Size {len(qubit_ids)}) contains Qubit IDs: {qubit_ids}")
+
+print("\n--------------------\n")
+# Setup your batch inputs (e.g. 5 repetitions)
+nrep = 5
+batch_syndromes = np.zeros(nrep * decoder.n_syndr, dtype=np.uint8)
+batch_erasures = np.zeros(nrep * decoder.n_qbt, dtype=np.uint8)
+
+# Populate individual shots with simulated data ...
+
+# Run the updated batch pipeline
+batch_data = decoder.ldpc_decode_batch(batch_syndromes, batch_erasures, nrep)
+
+# Unpack and verify results loop
+for shot_id, (sizes, membership) in enumerate(batch_data):
+    print(f"Shot {shot_id} -> Cluster Sizes found: {sizes}")
+    for c_idx, qubits in membership.items():
+        print(f"    Cluster {c_idx} contains Qubits: {qubits}")

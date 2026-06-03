@@ -6,6 +6,7 @@ from pymatching import Matching
 from quits.decoder import detector_error_model_to_matrix
 import relay_bp
 from tesseract_decoder import tesseract
+import py_wrapper.py_decoder as uf
 from scipy.sparse import csr_matrix
 from ldpc_post_selection.decoder import SoftOutputsBpLsdDecoder
 from ldpc_post_selection.stim_tools import remove_detectors_from_circuit
@@ -65,7 +66,6 @@ def get_log_error_CL_BP_MWPM(p,d,t,max_iter, memory_type, shots):
         predicted_flip = observables_matrix@total_correction % 2
         num_errors += not np.array_equal(predicted_flip, obs_flips[k,:]) # shot 0
     return num_errors / shots
-
 
 def get_log_error_CL_MWPM(p,d,memory_type, shots):
     circuit = stim.Circuit.generated(f"surface_code:rotated_memory_{memory_type}",rounds=d, distance=d,
@@ -155,6 +155,59 @@ class TesseractWrapper:
         decoded_errors[decoded_error_inds] = True
         return decoded_errors
 
+class UnionFindWrapper:
+    def __init__(self, check_matrix, **params):
+        """
+        A sliding-window compatible wrapper for the custom nbi-hyq Union Find decoder.
+        
+        Parameters
+        ----------
+        check_matrix : array_like or csr_matrix
+            The parity-check matrix (H) associated with the current decoding window.
+        """
+        if not isinstance(check_matrix, csr_matrix):
+            check_matrix = csr_matrix(check_matrix)
+            
+        self.check_matrix = check_matrix
+        
+        # Initialize the underlying C-wrapped Union Find decoder instance
+        self.decoder = uf.UFDecoder(self.check_matrix)
+        
+        # Public instance attribute for DecoderSwitchingWrapper to read
+        self.last_cluster_sizes = None
+        
+    def decode(self, syndrome):
+        """
+        Decodes a window syndrome vector and returns a correction vector.
+        
+        Parameters
+        ----------
+        syndrome : np.ndarray
+            The syndrome vector generated inside the current sliding window.
+            
+        Returns
+        -------
+        correction : np.ndarray
+            The predicted correction vector extracted from the decoder instance.
+        """
+        # 1. Enforce strict contiguous data alignment types for the underlying C structures
+        binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
+        
+        # 2. Build a matching blank erasure vector corresponding to the window size's qubits
+        erasures = np.zeros(shape=self.check_matrix.shape[1], dtype=np.uint8)
+        erasures = np.ascontiguousarray(erasures, dtype=np.uint8)
+        
+        # 3. Process data via the method to populate internal attributes
+        found_cluster_sizes = self.decoder.ldpc_decode(binary_syndrome, erasures)
+        
+        # 4. Cache cluster stats metadata for the DecoderSwitchingWrapper pass
+        self.last_cluster_sizes = found_cluster_sizes
+        
+        # 5. Extract the actual correction pattern produced by the decode logic
+        correction = self.decoder.correction
+        
+        return correction
+
 class DecoderSwitchingBPLSD:
     def __init__(self, check_matrix, **params):
         """
@@ -234,4 +287,67 @@ class DecoderSwitchingWrapper:
                 self.count_container[0] += 1
 
             return self.secondary_decoder.decode(syndrome)
+        return corr_primary
+
+
+# the wrapper that I am writing to take in general decoder1
+class DecoderSwitchingWrapperDraftGeneral:
+    def __init__(self, primary_decoder_class, secondary_decoder_class, primary_params, secondary_params, cluster_metric, cutoff, count_container=None, norm_order=2):
+        self.primary_decoder = primary_decoder_class(**primary_params)
+        self.secondary_decoder = secondary_decoder_class(**secondary_params)
+        self.metric_key = cluster_metric
+        self.cutoff = cutoff
+        self.norm_order = norm_order
+        self.count_container = count_container # expected to be a mutable list like [0]
+
+    def decode(self, syndrome):
+        # 1. Execute the primary decoder pass
+        primary_output = self.primary_decoder.decode(syndrome)
+        
+        # 2. Extract correction and soft info dynamically depending on the primary decoder class
+        if isinstance(primary_output, tuple):
+            # Handles BP-LSD style outputs: (correction, soft_outputs_dict, ...)
+            corr_primary = primary_output[0]
+            
+            # Find the soft outputs dictionary (usually the second or last element)
+            soft_info = None
+            for item in primary_output[1:]:
+                if isinstance(item, dict):
+                    soft_info = item
+                    break
+            
+            # Extract the user-defined metric key from the dictionary
+            if soft_info is not None and self.metric_key in soft_info:
+                cluster_data = soft_info[self.metric_key]
+            else:
+                # Fallback if dictionary or specific key is missing
+                cluster_data = primary_output
+        else:
+            # Handles Custom Union-Find wrapper style outputs where the direct 
+            # return value might be the raw array of cluster sizes or direct correction
+            corr_primary = primary_output
+            cluster_data = primary_output
+
+        # 3. Compute cluster norm fraction with your universal metric module
+        # Pass cluster_data, the raw syndrome, and order settings to maximize flexibility
+        cluster_gap = universal_cluster_norm_fraction(
+            cluster_data=cluster_data, 
+            syndrome=syndrome, 
+            metric_key=self.metric_key, 
+            norm_order=self.norm_order
+        )
+
+        # 4. Evaluate switching condition
+        if cluster_gap > self.cutoff:
+            if self.count_container is not None:
+                self.count_container[0] += 1
+                
+            # Switch to strong fallback decoder (e.g., RelayBpWrapper)
+            secondary_output = self.secondary_decoder.decode(syndrome)
+            
+            # If secondary decoder returns a tuple, isolate the correction slice
+            if isinstance(secondary_output, tuple):
+                return secondary_output[0]
+            return secondary_output
+            
         return corr_primary

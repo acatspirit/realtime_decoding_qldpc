@@ -64,54 +64,60 @@ decoder = uf.UFDecoder(H)
 #       Default is False.
 # """
 
-# syndrome = np.random.randint(size=H.shape[0], low=0, high=2).astype(np.uint8)
-# erasures = np.zeros(shape=H.shape[1], dtype=np.uint8)
-# print(f"Syndrome: {syndrome}")
+syndrome = np.random.randint(size=H.shape[0], low=0, high=2).astype(np.uint8)
+syndrome_copy = syndrome.copy()
+erasures = np.zeros(shape=H.shape[1], dtype=np.uint8)
+print(f"Syndrome: {syndrome}")
 # decoding = union_find.decode(syndrome)
 # print(f"Decoding: {decoding}")
 # decoding_syndrome = H @ decoding % 2
 # print(f"Decoding syndrome: {decoding_syndrome}")
 
 
-# # test cluster sizes
-# found_cluster_sizes = decoder.ldpc_decode(syndrome, erasures)
-# print(f"Found cluster sizes: {found_cluster_sizes}")
-
-
-# 2. Simulate an actual physical error pattern (e.g., flip 3 random qubits)
-num_qubits = H.shape[1]
-true_error = np.zeros(num_qubits, dtype=np.uint8)
-# Pick 3 random data qubits to suffer phase/bit flips
-# error_indices = np.random.choice(num_qubits, size=3, replace=False)
-error_indices = np.array([18, 23, 64]) # for testing purposes, do some clusters
-# error_indices = np.array([10,11,12]) # for testing purposes, do some clusters
-true_error[error_indices] = 1
-
-# Calculate valid syndrome from physical error indices [18, 23, 64]
-syndrome = (H @ true_error % 2).astype(np.uint8)
-erasures = np.zeros(num_qubits, dtype=np.uint8)
-
-# Run the updated decoder 
-sizes, cluster_membership = decoder.ldpc_decode(syndrome, erasures)
-
-print(f"Tracked Cluster Sizes: {sizes}")
-print("Cluster Membership Maps:")
-for cluster_idx, qubit_ids in cluster_membership.items():
-    print(f"  -> Cluster {cluster_idx} (Size {len(qubit_ids)}) contains Qubit IDs: {qubit_ids}")
-
+# test cluster sizes
+found_cluster_sizes = decoder.ldpc_decode(syndrome, erasures)
+correction = decoder.correction
+print(f"Found cluster sizes: {found_cluster_sizes}")
 print("\n--------------------\n")
-# Setup your batch inputs (e.g. 5 repetitions)
-nrep = 5
-batch_syndromes = np.zeros(nrep * decoder.n_syndr, dtype=np.uint8)
-batch_erasures = np.zeros(nrep * decoder.n_qbt, dtype=np.uint8)
+print(f"Did syndrome disagree? {not np.array_equal(syndrome, syndrome_copy)}")
+print(f"New syndrome: {syndrome}")
+print(f"Correction: {correction}")
 
-# Populate individual shots with simulated data ...
 
-# Run the updated batch pipeline
-batch_data = decoder.ldpc_decode_batch(batch_syndromes, batch_erasures, nrep)
+# # 2. Simulate an actual physical error pattern (e.g., flip 3 random qubits)
+# num_qubits = H.shape[1]
+# true_error = np.zeros(num_qubits, dtype=np.uint8)
+# # Pick 3 random data qubits to suffer phase/bit flips
+# # error_indices = np.random.choice(num_qubits, size=3, replace=False)
+# error_indices = np.array([18, 23, 64]) # for testing purposes, do some clusters
+# # error_indices = np.array([10,11,12]) # for testing purposes, do some clusters
+# true_error[error_indices] = 1
 
-# Unpack and verify results loop
-for shot_id, (sizes, membership) in enumerate(batch_data):
-    print(f"Shot {shot_id} -> Cluster Sizes found: {sizes}")
-    for c_idx, qubits in membership.items():
-        print(f"    Cluster {c_idx} contains Qubits: {qubits}")
+# # Calculate valid syndrome from physical error indices [18, 23, 64]
+# syndrome = (H @ true_error % 2).astype(np.uint8)
+# erasures = np.zeros(num_qubits, dtype=np.uint8)
+
+# # Run the updated decoder 
+# sizes, cluster_membership = decoder.ldpc_decode(syndrome, erasures)
+
+# print(f"Tracked Cluster Sizes: {sizes}")
+# print("Cluster Membership Maps:")
+# for cluster_idx, qubit_ids in cluster_membership.items():
+#     print(f"  -> Cluster {cluster_idx} (Size {len(qubit_ids)}) contains Qubit IDs: {qubit_ids}")
+
+# print("\n--------------------\n")
+# # Setup your batch inputs (e.g. 5 repetitions)
+# nrep = 5
+# batch_syndromes = np.zeros(nrep * decoder.n_syndr, dtype=np.uint8)
+# batch_erasures = np.zeros(nrep * decoder.n_qbt, dtype=np.uint8)
+
+# # Populate individual shots with simulated data ...
+
+# # Run the updated batch pipeline
+# batch_data = decoder.ldpc_decode_batch(batch_syndromes, batch_erasures, nrep)
+
+# # Unpack and verify results loop
+# for shot_id, (sizes, membership) in enumerate(batch_data):
+#     print(f"Shot {shot_id} -> Cluster Sizes found: {sizes}")
+#     for c_idx, qubits in membership.items():
+#         print(f"    Cluster {c_idx} contains Qubits: {qubits}")

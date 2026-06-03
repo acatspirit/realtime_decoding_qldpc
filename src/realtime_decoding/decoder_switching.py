@@ -16,90 +16,91 @@ from quits import ErrorModel
 import numpy as np
 from tqdm import tqdm
 import gc
+from .decoding import DecoderSwitchingWrapper, RelayBpWrapper, UnionFindWrapper
 
 
 
-class DecoderSwitchingWrapper:
-    def __init__(self, check_matrix, **params):
-        """
-        A generic wrapper that attempts BPLSD first and switches to 
-        'strong_decoder_class' if cluster_gap is above the cutoff that is input in the dictionary.
-        """
-        # 1. Capture the spacetime priors provided by QUITS
-        priors = params.get('priors')
+# class DecoderSwitchingWrapper:
+#     def __init__(self, check_matrix, **params):
+#         """
+#         A generic wrapper that attempts BPLSD first and switches to 
+#         'strong_decoder_class' if cluster_gap is above the cutoff that is input in the dictionary.
+#         """
+#         # 1. Capture the spacetime priors provided by QUITS
+#         priors = params.get('priors')
 
-        # 2. Initialize the Primary Decoder (BPLSD)
-        bplsd_keys = ['max_iter', 'bp_method', 'lsd_method', 'lsd_order', 
-                      'ms_scaling_factor', 'detector_time_coords']
-        bplsd_params = {k: params[k] for k in bplsd_keys if k in params}
-        # Explicitly map priors to the 'p' argument for BPLSD
-        self.primary_decoder = SoftOutputsBpLsdDecoder(H=check_matrix, p=priors, **bplsd_params)
+#         # 2. Initialize the Primary Decoder (BPLSD)
+#         bplsd_keys = ['max_iter', 'bp_method', 'lsd_method', 'lsd_order', 
+#                       'ms_scaling_factor', 'detector_time_coords']
+#         bplsd_params = {k: params[k] for k in bplsd_keys if k in params}
+#         # Explicitly map priors to the 'p' argument for BPLSD
+#         self.primary_decoder = SoftOutputsBpLsdDecoder(H=check_matrix, p=priors, **bplsd_params)
         
-        # 3. Setup the strong_decoder 
-        # We look for the class object in the params dict
-        self.strong_decoder_class = params.get('strong_decoder_class')
+#         # 3. Setup the strong_decoder 
+#         # We look for the class object in the params dict
+#         self.strong_decoder_class = params.get('strong_decoder_class')
         
-        if self.strong_decoder_class:
-            # Extract strong_decoder-specific arguments
-            s_params = params.get('strong_decoder_params', {}).copy()
+#         if self.strong_decoder_class:
+#             # Extract strong_decoder-specific arguments
+#             s_params = params.get('strong_decoder_params', {}).copy()
             
-            # Most strong_decoder decoders (like MWPM or Relay-BP) need the priors
-            # We inject them into the strong_decoder's parameters
-            if 'priors' not in s_params:
-                s_params['priors'] = priors
+#             # Most strong_decoder decoders (like MWPM or Relay-BP) need the priors
+#             # We inject them into the strong_decoder's parameters
+#             if 'priors' not in s_params:
+#                 s_params['priors'] = priors
                 
-            # Initialize the strong_decoder decoder instance
-            self.strong_decoder = self.strong_decoder_class(check_matrix, **s_params)
-        else:
-            self.strong_decoder = None
+#             # Initialize the strong_decoder decoder instance
+#             self.strong_decoder = self.strong_decoder_class(check_matrix, **s_params)
+#         else:
+#             self.strong_decoder = None
 
-        # 4. Switching Logic Parameters
-        self.cutoff = params.get('switching_cutoff', 0.001)
-        self.metric_key = params.get('metric_key', 'cluster_llrs')
-        self.verbose = params.get('verbose_switch', False)
-        self.count_container = params.get('switch_count_container')
-        self.norm_order = params.get('norm_order', 2)
+#         # 4. Switching Logic Parameters
+#         self.cutoff = params.get('switching_cutoff', 0.001)
+#         self.metric_key = params.get('metric_key', 'cluster_llrs')
+#         self.verbose = params.get('verbose_switch', False)
+#         self.count_container = params.get('switch_count_container')
+#         self.norm_order = params.get('norm_order', 2)
 
-    def decode(self, syndrome):
-        """
-        Attempt BPLSD; fall back to the secondary decoder if certainty is low.
-        """
-        # BPLSD returns: (correction, bp_correction, converged, soft_info)
-        corr_bplsd, _, _, soft_info = self.primary_decoder.decode(syndrome)
-        cluster_gap = compute_cluster_norm_fraction(soft_info[self.metric_key], self.norm_order)
+#     def decode(self, syndrome):
+#         """
+#         Attempt BPLSD; fall back to the secondary decoder if certainty is low.
+#         """
+#         # BPLSD returns: (correction, bp_correction, converged, soft_info)
+#         corr_bplsd, _, _, soft_info = self.primary_decoder.decode(syndrome)
+#         cluster_gap = compute_cluster_norm_fraction(soft_info[self.metric_key], self.norm_order)
         
-        if self.strong_decoder is not None and cluster_gap > self.cutoff:
-            # Increment the shared counter
-            if self.count_container is not None:
-                self.count_container[0] += 1
+#         if self.strong_decoder is not None and cluster_gap > self.cutoff:
+#             # Increment the shared counter
+#             if self.count_container is not None:
+#                 self.count_container[0] += 1
                 
-            if self.verbose:
-                print(f"[Switch] cluster_gap {cluster_gap:.2f} > {self.cutoff}. Using strong_decoder.")
+#             if self.verbose:
+#                 print(f"[Switch] cluster_gap {cluster_gap:.2f} > {self.cutoff}. Using strong_decoder.")
             
-            # Call the strong_decoder's decode method
-            return self.strong_decoder.decode(syndrome)
+#             # Call the strong_decoder's decode method
+#             return self.strong_decoder.decode(syndrome)
             
-        return corr_bplsd
+#         return corr_bplsd
 
-class RelayBpWrapper:
-    def __init__(self, check_matrix, **params):
-        if not isinstance(check_matrix, csr_matrix):
-            check_matrix = csr_matrix(check_matrix)
-        priors = params.get('priors')
+# class RelayBpWrapper:
+#     def __init__(self, check_matrix, **params):
+#         if not isinstance(check_matrix, csr_matrix):
+#             check_matrix = csr_matrix(check_matrix)
+#         priors = params.get('priors')
 
-        self.decoder = relay_bp.RelayDecoderF32( # filter by detectors if you don't wanna do full XYZ decoding. defaults are for the gross code
-            check_matrix, priors, 
-            gamma0=params.get('gamma0', 0.125), # initial memory strength vector for relay legs, 0.35 RSC, 0.125 Gross code [[144,12,12]]
-            gamma_dist_interval=params.get('gamma_dist_interval', (-0.175, 0.575)), # random dist to draw gamma from [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
-            num_sets=params.get('num_sets', 600), # number of relay ensemble elements to tweak, R= 601 in paper :0
-            set_max_iter=params.get('set_max_iter', 30), # max number of iterations of each relay leg, init 80, otherwise 60, 30 could be fine
-            pre_iter=params.get('pre_iter', 80), # number max bp iter for first ensemble, init 80
-            stop_nconv=params.get('stop_nconv', 1) # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
+#         self.decoder = relay_bp.RelayDecoderF32( # filter by detectors if you don't wanna do full XYZ decoding. defaults are for the gross code
+#             check_matrix, priors, 
+#             gamma0=params.get('gamma0', 0.125), # initial memory strength vector for relay legs, 0.35 RSC, 0.125 Gross code [[144,12,12]]
+#             gamma_dist_interval=params.get('gamma_dist_interval', (-0.175, 0.575)), # random dist to draw gamma from [center - w/2, center + w/2], gross w = 0.75, c = 0.2, RSC w=0.8, c=0.3
+#             num_sets=params.get('num_sets', 600), # number of relay ensemble elements to tweak, R= 601 in paper :0
+#             set_max_iter=params.get('set_max_iter', 30), # max number of iterations of each relay leg, init 80, otherwise 60, 30 could be fine
+#             pre_iter=params.get('pre_iter', 80), # number max bp iter for first ensemble, init 80
+#             stop_nconv=params.get('stop_nconv', 1) # number of relay solutions to find before stopping (choose best, run up to num_sets when picking parameters)
 
-        )
-    def decode(self, syndrome):
-        binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
-        return self.decoder.decode(binary_syndrome)
+#         )
+#     def decode(self, syndrome):
+#         binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
+#         return self.decoder.decode(binary_syndrome)
 
 
 ###########

@@ -7,4 +7,5 @@
 
 # Activate your environment
 # conda activate realtime_decoding
-python decoder_switching.py
+python src/realtime_decoding/decoder_switching.py
+# python decoder_switching.py

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=bb_switching
-#SBATCH --array=0-1000 
-#SBATCH --mem=300G
+#SBATCH --job-name=bb_uf
+#SBATCH --array=0-9999 
+#SBATCH --mem=2G
 #SBATCH --time=24:00:00
 #SBATCH --output=logs/%a.out
 

@@ -101,6 +101,9 @@ from .decoding import DecoderSwitchingWrapper, RelayBpWrapper, UnionFindWrapper
 #     def decode(self, syndrome):
 #         binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
 #         return self.decoder.decode(binary_syndrome)
+###########
+# Cluster norm calculation 
+###########
 
 
 ###########

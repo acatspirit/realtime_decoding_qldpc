@@ -8,5 +8,6 @@
 # Activate your environment
 # conda activate realtime_decoding
 cd ..
+# Add this to your bash script/shell session
 python -m realtime_decoding.decoder_switching
 # python decoder_switching.py

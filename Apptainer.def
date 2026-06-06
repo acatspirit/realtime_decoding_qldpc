@@ -1,0 +1,42 @@
+BootStrap: docker
+From: condaforge/mambaforge:latest
+
+%post
+  # Install build tools
+  apt-get update && apt-get install -y git g++ make cmake ninja-build python3-pip
+
+  # Install Bazel (for Tesseract)
+  apt-get install -y curl gnupg
+  curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
+  mv bazel.gpg /etc/apt/trusted.gpg.d/
+  echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
+  apt-get update && apt-get install -y bazel
+
+  # Clone and Build Repositories
+  mkdir -p /opt/src
+  cd /opt/src
+  
+  # Clone your repositories
+  git clone https://github.com/quantumlib/tesseract-decoder.git
+  git clone https://github.com/YOUR_GITHUB_USER/uf_decoder.git
+  git clone https://github.com/seokhyung-lee/ldpc-post-selection.git
+
+  # Build Tesseract
+  cd tesseract-decoder
+  bazel build //...
+
+  # Build UF-Decoder
+  cd /opt/src/uf_decoder
+  pip install meson ninja
+  meson setup build --buildtype=release
+  cd build
+  ninja
+
+  # Install Python packages
+  cd /opt/src/ldpc-post-selection
+  pip install -e .
+  cd /opt/src/uf_decoder
+  pip install -e .
+
+%environment
+  export PATH=/opt/conda/bin:$PATH

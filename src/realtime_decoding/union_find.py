@@ -14,39 +14,26 @@ from quits.qldpc_code import HgpCode
 import ldpc.codes as codes 
 np.set_printoptions(threshold=sys.maxsize)
 
+def get_cluster_norm(cluster_sizes, order=2, type="LSD"):
+    if type == "LSD": # using LSD decoder
+        return compute_cluster_norm_fraction(cluster_sizes, order=order) # this should include the largest cluster - i.e. whichever one doesn't have errors
+    else: # using UF decoder
+        num_clusters = len(cluster_sizes)
+        cluster_powers = np.power(cluster_sizes, order)
+        cluster_norm = np.sum(cluster_powers)**(1/order) / num_clusters
+        return cluster_norm
+
 H, L = surface_code_non_periodic(7)
 # print(f"H:\n{[(H.nonzero()[0][i],H.nonzero()[1][i]) for i in range(len(H.nonzero()[0]))]}")
 # print(f"L:\n{L.nonzero()}")
 # H = ldpc.codes.hamming_code(5)
+p = 0.1
 
 decoder_uf = uf.UFDecoder(H)
-decoder_lsd = SoftOutputsBpLsdDecoder(H, error_rate=0.1, bp_method="minimum_sum", max_iter=20, schedule="serial", osd_method="osd_cs", osd_order=0)
+decoder_lsd = SoftOutputsBpLsdDecoder(H, p=p*np.ones(H.shape[1]), bp_method="minimum_sum", max_iter=20, schedule="serial", osd_method="osd_cs", osd_order=0)
 
-## The
-# bp_osd = BpOsdDecoder(
-#     H,
-#     error_rate=0.1,
-#     bp_method="product_sum",
-#     max_iter=7,
-#     schedule="serial",
-#     osd_method="osd_cs",  #set to OSD_0 for fast solve
-#     osd_order=2,
-# )
-#help(UnionFindDecoder)
-# union_find = UnionFindDecoder(pcm=H, uf_method='True')
-
-# #according to their docstring this is what I get for the two parameters we can pass in:
-# """
-# pcm : Union[np.ndarray, spmatrix]
-#       The parity-check matrix (PCM) of the code. This should be either a dense matrix (numpy ndarray)
-#       or a sparse matrix (scipy sparse matrix).
-# uf_method : bool, optional
-#       If True, the decoder operates in matrix solve mode. If False, it operates in peeling mode.
-#       Default is False.
-# """
-
-syndrome = np.random.randint(size=H.shape[0], low=0, high=2).astype(np.uint8)
-syndrome_copy = syndrome.copy()
+# syndrome = np.random.randint(size=H.shape[0], low=0, high=2).astype(np.uint8)
+syndrome = np.random.binomial(n=1, p=p, size=H.shape[0]).astype(np.uint8)
 erasures = np.zeros(shape=H.shape[1], dtype=np.uint8)
 print(f"Syndrome: {syndrome}")
 # decoding = union_find.decode(syndrome)
@@ -56,13 +43,19 @@ print(f"Syndrome: {syndrome}")
 
 
 # test cluster sizes
-found_cluster_sizes = decoder.ldpc_decode(syndrome, erasures)
-correction = decoder.correction
-print(f"Found cluster sizes: {found_cluster_sizes}")
+found_cluster_sizes_uf = decoder_uf.ldpc_decode(syndrome, erasures)
+correction_uf = decoder_uf.correction
+cluster_norm_uf = get_cluster_norm(found_cluster_sizes_uf[0], order=2, type="UF")
+print(f"Found cluster sizes: {found_cluster_sizes_uf}")
+print(f"Cluster norm for uf: {cluster_norm_uf}")
 print("\n--------------------\n")
-print(f"Did syndrome disagree? {not np.array_equal(syndrome, syndrome_copy)}")
-print(f"New syndrome: {syndrome}")
-print(f"Correction: {correction}")
+correction_lsd, correction_bp, converge, soft_outputs_lsd = decoder_lsd.decode(syndrome)
+# print(f"Correction for lsd: {correction_lsd}")
+cluster_sizes = np.delete(soft_outputs_lsd['cluster_sizes'], np.argmax(soft_outputs_lsd['cluster_sizes']))
+cluster_norm_lsd = get_cluster_norm(soft_outputs_lsd['cluster_sizes'], order=2, type="LSD")
+ # remove the 0 cluster size (for unclustered qubits)
+print(f"cluster sizes(qubits) for lsd: {soft_outputs_lsd['cluster_sizes']}")
+print(f"Cluster norm for lsd: {cluster_norm_lsd}")
 
 
 # # 2. Simulate an actual physical error pattern (e.g., flip 3 random qubits)

@@ -18,9 +18,10 @@ def get_cluster_norm(cluster_sizes, order=2, type="LSD"):
     if type == "LSD": # using LSD decoder
         return compute_cluster_norm_fraction(cluster_sizes, order=order) # this should include the largest cluster - i.e. whichever one doesn't have errors
     else: # using UF decoder
-        num_clusters = len(cluster_sizes)
-        cluster_powers = np.power(cluster_sizes, order)
-        cluster_norm = np.sum(cluster_powers)**(1/order) / num_clusters
+        total_clusters = sum(cluster_sizes)
+        cluster_sizes_internal = cluster_sizes[:-1] # remove the outside cluster size, which is the largest one
+        cluster_powers = np.power(cluster_sizes_internal, order)
+        cluster_norm = np.sum(cluster_powers)**(1/order) / total_clusters
         return cluster_norm
 
 H, L = surface_code_non_periodic(7)
@@ -44,9 +45,11 @@ print(f"Syndrome: {syndrome}")
 
 # test cluster sizes
 found_cluster_sizes_uf = decoder_uf.ldpc_decode(syndrome, erasures)
+num_qubits = H.shape[1]
+clusters_including_outside_uf = np.append(found_cluster_sizes_uf[0], num_qubits - np.sum(found_cluster_sizes_uf[0])) # this includes the outside cluster, which is the largest one
 correction_uf = decoder_uf.correction
-cluster_norm_uf = get_cluster_norm(found_cluster_sizes_uf[0], order=2, type="UF")
-print(f"Found cluster sizes: {found_cluster_sizes_uf}")
+cluster_norm_uf = get_cluster_norm(clusters_including_outside_uf, order=2, type="UF")
+print(f"Found cluster sizes: {clusters_including_outside_uf}")
 print(f"Cluster norm for uf: {cluster_norm_uf}")
 print("\n--------------------\n")
 correction_lsd, correction_bp, converge, soft_outputs_lsd = decoder_lsd.decode(syndrome)

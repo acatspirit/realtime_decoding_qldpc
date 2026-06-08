@@ -5,6 +5,8 @@ import sys
 import numpy as np
 import ldpc.codes
 from ldpc import BpOsdDecoder, UnionFindDecoder
+from ldpc_post_selection.decoder import SoftOutputsBpLsdDecoder
+from ldpc_post_selection.cluster_tools import compute_cluster_norm_fraction
 # try UF from the other repo now too 
 import py_wrapper.py_decoder as uf
 from py_wrapper.some_codes import surface_code_non_periodic
@@ -12,34 +14,13 @@ from quits.qldpc_code import HgpCode
 import ldpc.codes as codes 
 np.set_printoptions(threshold=sys.maxsize)
 
-# I realized that their package has a toric code built in that I can compare to directly so I just used that instead
-
-# def get_parity_toric(d):
-#     H_rep = codes.rep_code(d).toarray().astype(int)
-
-#     # build cyclic row
-#     cyclic_row = np.zeros((1, d), dtype=int)
-#     cyclic_row[0, 0] = 1
-#     cyclic_row[0, -1] = 1
-
-#     # append it
-#     H_rep_cyclic = np.vstack([H_rep, cyclic_row])
-
-#     code = HgpCode(H_rep_cyclic, H_rep_cyclic) # generate a toric code from the repetition code
-
-#     return code.hx, code.hz, code.lx, code.lz
-
-# d = 7
-# Hx,Hz,Lx,Lz = get_parity_toric(d)
-# H = Hx
-# L = Lx
-
 H, L = surface_code_non_periodic(7)
 # print(f"H:\n{[(H.nonzero()[0][i],H.nonzero()[1][i]) for i in range(len(H.nonzero()[0]))]}")
 # print(f"L:\n{L.nonzero()}")
 # H = ldpc.codes.hamming_code(5)
 
-decoder = uf.UFDecoder(H)
+decoder_uf = uf.UFDecoder(H)
+decoder_lsd = SoftOutputsBpLsdDecoder(H, error_rate=0.1, bp_method="minimum_sum", max_iter=20, schedule="serial", osd_method="osd_cs", osd_order=0)
 
 ## The
 # bp_osd = BpOsdDecoder(

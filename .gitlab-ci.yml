@@ -1,6 +1,9 @@
 image:
   name: gitlab-registry.oit.duke.edu/oit-dcc/apptainer-ci/apptainer-ci:latest
   entrypoint: ["/bin/sh", "-c"]
+default:
+  tags:
+    - oit-research-apptainer
 
 stages:
   - build
@@ -9,16 +12,16 @@ stages:
 build:
   stage: build
   script:
-    # Build the image using the definition file
     - apptainer build --disable-cache ${CI_PROJECT_NAME}.sif Apptainer.def
   artifacts:
     paths:
       - ${CI_PROJECT_NAME}.sif
+    untracked: false
     expire_in: 48 hours
 
 deploy:
   stage: deploy
   script:
     - apk add curl
-    # Upload to the OIT FTP server for storage
     - curl -T ${CI_PROJECT_NAME}.sif --user "anonymous:csi-linux-admins@duke.edu" "ftp://research-containers-01.oit.duke.edu/incoming/${CI_PROJECT_ROOT_NAMESPACE}:${CI_PROJECT_NAME}.sif"
+

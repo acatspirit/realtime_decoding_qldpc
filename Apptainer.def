@@ -2,6 +2,9 @@ BootStrap: docker
 From: condaforge/mambaforge:latest
 
 %post
+  # stuff gemini told me to put so that the code runs
+  export DEBIAN_FRONTEND=noninteractive
+  export TZ=Etc/UTC
   # Install build tools
   apt-get update && apt-get install -y git g++ make cmake ninja-build python3-pip
 
@@ -18,7 +21,7 @@ From: condaforge/mambaforge:latest
   
   # Clone your repositories
   git clone https://github.com/quantumlib/tesseract-decoder.git
-  git clone https://github.com/YOUR_GITHUB_USER/uf_decoder.git
+  git clone https://github.com/acatspirit/uf_decoder.git
   git clone https://github.com/seokhyung-lee/ldpc-post-selection.git
 
   # Build Tesseract

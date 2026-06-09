@@ -9,6 +9,9 @@ stages:
   - build
   - deploy
 
+variables:
+  GIT_SUBMODULE_STRATEGY: recursive
+
 build:
   stage: build
   script:
@@ -24,4 +27,3 @@ deploy:
   script:
     - apk add curl
     - curl -T ${CI_PROJECT_NAME}.sif --user "anonymous:csi-linux-admins@duke.edu" "ftp://research-containers-01.oit.duke.edu/incoming/${CI_PROJECT_ROOT_NAMESPACE}:${CI_PROJECT_NAME}.sif"
-

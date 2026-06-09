@@ -12,6 +12,25 @@ import py_wrapper.py_decoder as uf
 from py_wrapper.some_codes import surface_code_non_periodic
 from quits.qldpc_code import HgpCode
 import ldpc.codes as codes 
+from realtime_decoding.decoder_switching import get_BB_circuit
+from quits.qldpc_code import BbCode
+from quits import ErrorModel
+
+def get_bb_code_parity_and_logs(d):
+
+    d_dict = {6:{'l':6, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},
+                10: {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]},
+                12:{'l':12, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},}
+    code_params = d_dict[d]
+    bb = BbCode(
+        l=code_params['l'],
+        m=code_params['m'],
+        A_x_pows=code_params['A_x_pows'],
+        A_y_pows=code_params['A_y_pows'],
+        B_x_pows=code_params['B_x_pows'],
+        B_y_pows=code_params['B_y_pows'],
+    )
+    return bb.hx, bb.lx
 np.set_printoptions(threshold=sys.maxsize)
 
 def get_cluster_norm(cluster_sizes, order=2, type="LSD"):
@@ -23,8 +42,10 @@ def get_cluster_norm(cluster_sizes, order=2, type="LSD"):
         cluster_powers = np.power(cluster_sizes_internal, order)
         cluster_norm = np.sum(cluster_powers)**(1/order) / total_clusters
         return cluster_norm
+d = 6
 
-H, L = surface_code_non_periodic(7)
+# H, L = surface_code_non_periodic(7)
+H,L = get_bb_code_parity_and_logs(d=d)
 # print(f"H:\n{[(H.nonzero()[0][i],H.nonzero()[1][i]) for i in range(len(H.nonzero()[0]))]}")
 # print(f"L:\n{L.nonzero()}")
 # H = ldpc.codes.hamming_code(5)

@@ -167,9 +167,9 @@ def get_BB_circuit(d, basis, p):
     code_params = d_dict[d]
 
     error_model = ErrorModel(
-        idle_error=p,
-        sqgate_error=p,
-        tqgate_error=p,
+        # idle_error=p,
+        # sqgate_error=p,
+        # tqgate_error=p,
         spam_error=p,
         )
 

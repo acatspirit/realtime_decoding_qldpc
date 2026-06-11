@@ -8,12 +8,11 @@ From: condaforge/mambaforge:latest
   # Install build tools
   apt-get update && apt-get install -y git g++ make cmake ninja-build python3-pip
 
-  # Install Bazel (for Tesseract)
-  apt-get install -y curl gnupg
-  curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
-  mv bazel.gpg /etc/apt/trusted.gpg.d/
-  echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
-  apt-get update && apt-get install -y bazel
+  # Install Bazelisk (instead of raw bazel)
+  # This automatically manages versions via the .bazelversion file
+  apt-get install -y wget
+  wget https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64 -O /usr/local/bin/bazel
+  chmod +x /usr/local/bin/bazel
 
   # Clone and Build Repositories
   mkdir -p /opt/src

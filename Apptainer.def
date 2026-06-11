@@ -5,8 +5,16 @@ From: condaforge/mambaforge:latest
   # stuff gemini told me to put so that the code runs
   export DEBIAN_FRONTEND=noninteractive
   export TZ=Etc/UTC
-  # Install build tools
-  apt-get update && apt-get install -y git g++ make cmake ninja-build python3-pip
+  # 1. Update apt and install software-properties-common to get newer gcc
+  apt-get update && apt-get install -y git make cmake ninja-build python3-pip wget software-properties-common
+
+  # 2. Add the toolchain repository for modern GCC
+  add-apt-repository -y ppa:ubuntu-toolchain-r/test
+  apt-get update && apt-get install -y gcc-12 g++-12
+
+  # 3. Symlink the new compilers to the system defaults
+  update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
+  update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
 
   # Install Bazelisk (instead of raw bazel)
   # This automatically manages versions via the .bazelversion file

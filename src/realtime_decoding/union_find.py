@@ -59,19 +59,22 @@ H,L = get_bb_code_parity_and_logs(d=d)
 # print(f"H:\n{[(H.nonzero()[0][i],H.nonzero()[1][i]) for i in range(len(H.nonzero()[0]))]}")
 # print(f"L:\n{L.nonzero()}")
 # H = ldpc.codes.hamming_code(5)
-p = 0.1
+p = 0.05 # I think 6 is the smallest cluster size here
 
 decoder_uf = uf.UFDecoder(H.astype(np.uint8))
 decoder_lsd = SoftOutputsBpLsdDecoder(H, p=p*np.ones(H.shape[1]), bp_method="minimum_sum", max_iter=20, schedule="serial", osd_method="osd_cs", osd_order=0)
 
 # syndrome = np.random.randint(size=H.shape[0], low=0, high=2).astype(np.uint8)
 error = np.random.binomial(n=1, p=p, size=H.shape[1]).astype(np.uint8)
+
 syndrome = (H @ error % 2).astype(np.uint8)
 erasures = np.zeros(shape=H.shape[1], dtype=np.uint8)
-print(f"Syndrome: {syndrome}")
-# print(f"H:\n{H}")
-decoder_uf.ldpc_decode(syndrome, erasures)
+print(f"Error: {np.where(error == 1)[0]}")
+print(f"Syndrome: {np.where(syndrome == 1)[0]}")
+# print(f"H:\n{H}")``
+clusters = decoder_uf.ldpc_decode(syndrome, erasures)
 print(f"Decoding: {decoder_uf.correction}")
+print(f"List of clusters: {clusters} with length {len(clusters)}")
 # decoding_syndrome = H @ decoding % 2
 # print(f"Decoding syndrome: {decoding_syndrome}")
 
@@ -131,3 +134,13 @@ print(f"Decoding: {decoder_uf.correction}")
 #     print(f"Shot {shot_id} -> Cluster Sizes found: {sizes}")
 #     for c_idx, qubits in membership.items():
 #         print(f"    Cluster {c_idx} contains Qubits: {qubits}")
+
+
+"""
+example output:
+(base) ariannameinking@Ariannas-Fancy-MacBook-Pro-9 realtime_decoding_qldpc % /Users/ariannameinking/miniforge3/envs/realtime_decoding/bin/python /Users/ariannameinking/Documents/Brown_Research/realtime_decoding_qldpc/src/realtime_decoding/union_find.py
+Syndrome: [0 0 0 0 1 0 1 0 0 1 1 1 0 0 0 1 1 1 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 1 0]
+Decoding: [0 0 0 0 0 0 1 1 0 0 0 1 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+ 1 0 0 0 0 0 1 0 0 1 0 0 1 0 0 0 0 0 0 0 0 0 1 0 0 0 1 0 0 0 0 0 0 0 0]
+Number of clusters: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 34]
+"""

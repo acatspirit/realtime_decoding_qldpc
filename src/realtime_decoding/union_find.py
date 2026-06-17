@@ -51,7 +51,7 @@ def get_cluster_norm(cluster_sizes, order=2, type="LSD"):
         cluster_powers = np.power(cluster_sizes_internal, order)
         cluster_norm = np.sum(cluster_powers)**(1/order) / total_clusters
         return cluster_norm
-d = 6
+d = 10
 
 # H, L = surface_code_non_periodic(7)
 H,L = get_bb_code_parity_and_logs(d=d)
@@ -59,10 +59,10 @@ H,L = get_bb_code_parity_and_logs(d=d)
 # print(f"H:\n{[(H.nonzero()[0][i],H.nonzero()[1][i]) for i in range(len(H.nonzero()[0]))]}")
 # print(f"L:\n{L.nonzero()}")
 # H = ldpc.codes.hamming_code(5)
-p = 0.05 # I think 6 is the smallest cluster size here
+p = 0.0158 # I think 6 is the smallest cluster size here
 
 decoder_uf = uf.UFDecoder(H.astype(np.uint8))
-decoder_lsd = SoftOutputsBpLsdDecoder(H, p=p*np.ones(H.shape[1]), bp_method="minimum_sum", max_iter=20, schedule="serial", osd_method="osd_cs", osd_order=0)
+# decoder_lsd = SoftOutputsBpLsdDecoder(H, p=p*np.ones(H.shape[1]), bp_method="minimum_sum", max_iter=20, schedule="serial", osd_method="osd_cs", osd_order=0)
 
 # syndrome = np.random.randint(size=H.shape[0], low=0, high=2).astype(np.uint8)
 error = np.random.binomial(n=1, p=p, size=H.shape[1]).astype(np.uint8)

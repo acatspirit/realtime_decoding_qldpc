@@ -20,7 +20,7 @@ from .decoding import DecoderSwitchingWrapper, RelayBpWrapper, UnionFindWrapper
 
 
 ###########
-# Cluster norm calculation (add once you fix the segfault)
+# Cluster norm calculation 
 ###########
 
 
@@ -85,9 +85,9 @@ def get_BB_circuit(d, basis, p):
     code_params = d_dict[d]
 
     error_model = ErrorModel(
-        # idle_error=p,
-        # sqgate_error=p,
-        # tqgate_error=p,
+        idle_error=p,
+        sqgate_error=p,
+        tqgate_error=p,
         spam_error=p,
         )
 

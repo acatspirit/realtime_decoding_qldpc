@@ -22,7 +22,25 @@ from .decoding import DecoderSwitchingWrapper, RelayBpWrapper, UnionFindWrapper
 ###########
 # Cluster norm calculation 
 ###########
+def get_cluster_norm(cluster_sizes, num_qubits,order=2, type="LSD"):
+    """
+    Calculate the cluster norm for a given set of cluster sizes.
 
+    :param cluster_sizes: array of cluster sizes. If the type if "LSD", the cluster sizes should include inside / outside the inverted cluster. UF should
+    include only clusters that are visited.
+    :param num_qubits: the total number of qubits in the code
+    :param order: the order of the norm to be computed. Inifinity norm is used when only the largest cluster is considered. 2 is standard.
+    :param type: the type of decoder being used ("LSD" or "UF")
+    """
+
+    if type == "LSD": # using LSD decoder
+        return compute_cluster_norm_fraction(cluster_sizes, order=order) # this should include the largest cluster - i.e. whichever one doesn't have errors
+    else: # using UF decoder
+        clusters_including_outside_uf = np.append(cluster_sizes, num_qubits - np.sum(cluster_sizes))
+        total_clusters = sum(clusters_including_outside_uf) # sum of all the cluster sizes, including the outside cluster
+        cluster_powers = np.power(cluster_sizes, order)
+        cluster_norm = np.sum(cluster_powers)**(1/order) / total_clusters
+        return cluster_norm
 
 ###########
 # code construction helpers

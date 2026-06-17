@@ -155,6 +155,33 @@ class TesseractWrapper:
         decoded_errors[decoded_error_inds] = True
         return decoded_errors
 
+class BPLSDWrapper:
+    def __init__(self, check_matrix, **params):
+        """
+        A generic wrapper that attempts BPLSD first and switches to 
+        'strong_decoder_class' if cluster_gap is above the cutoff that is input in the dictionary.
+        """
+        # 1. Capture the spacetime priors provided by QUITS
+        priors = params.get('priors')
+
+        # 2. Initialize the Primary Decoder (BPLSD)
+        bplsd_keys = ['max_iter', 'bp_method', 'lsd_method', 'lsd_order', 
+                      'ms_scaling_factor', 'detector_time_coords']
+        bplsd_params = {k: params[k] for k in bplsd_keys if k in params}
+        self.cluster_sizes = None
+        self.cluster_gap = None
+        # Explicitly map priors to the 'p' argument for BPLSD
+        self.decoder = SoftOutputsBpLsdDecoder(H=check_matrix, p=priors, **bplsd_params)
+
+    def decode(self, syndrome):
+        # BPLSD returns: (correction, bp_correction, converged, soft_info)
+        corr_bplsd, _, _, soft_info = self.decoder.decode(syndrome)
+        cluster_gap = compute_cluster_norm_fraction(soft_info[self.metric_key], self.norm_order)
+        self.cluster_sizes = soft_info.get('cluster_sizes')
+        self.cluster_gap = cluster_gap
+            
+        return corr_bplsd
+
 class UnionFindWrapper:
     def __init__(self, check_matrix, **params):
         """

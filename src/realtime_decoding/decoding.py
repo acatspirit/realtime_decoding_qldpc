@@ -170,6 +170,7 @@ class BPLSDWrapper:
         bplsd_params = {k: params[k] for k in bplsd_keys if k in params}
         self.cluster_sizes = None
         self.cluster_gap = None
+        self.cluster_map = None
         # Explicitly map priors to the 'p' argument for BPLSD
         self.decoder = SoftOutputsBpLsdDecoder(H=check_matrix, p=priors, **bplsd_params)
 
@@ -178,6 +179,7 @@ class BPLSDWrapper:
         corr_bplsd, _, _, soft_info = self.decoder.decode(syndrome)
         cluster_gap = compute_cluster_norm_fraction(soft_info[self.metric_key], self.norm_order)
         self.cluster_sizes = soft_info.get('cluster_sizes')
+        self.cluster_map = soft_info.get('clusters')
         self.cluster_gap = cluster_gap
             
         return corr_bplsd
@@ -201,7 +203,8 @@ class UnionFindWrapper:
         self.decoder = uf.UFDecoder(self.check_matrix)
         
         # Public instance attribute for DecoderSwitchingWrapper to read
-        self.last_cluster_sizes = None
+        self.cluster_sizes = None
+        self.cluster_dict = None
         
     def decode(self, syndrome):
         """
@@ -225,10 +228,11 @@ class UnionFindWrapper:
         erasures = np.ascontiguousarray(erasures, dtype=np.uint8)
         
         # 3. Process data via the method to populate internal attributes
-        found_cluster_sizes = self.decoder.ldpc_decode(binary_syndrome, erasures)
+        found_cluster_sizes, cluster_map = self.decoder.ldpc_decode(binary_syndrome, erasures)
         
-        # 4. Cache cluster stats metadata for the DecoderSwitchingWrapper pass
-        self.last_cluster_sizes = found_cluster_sizes
+        # 4. Cache cluster stats metadata 
+        self.cluster_sizes = found_cluster_sizes
+        self.cluster_map = cluster_map
         
         # 5. Extract the actual correction pattern produced by the decode logic
         correction = self.decoder.correction

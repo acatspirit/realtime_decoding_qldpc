@@ -11,6 +11,7 @@ from scipy.sparse import csr_matrix
 from ldpc_post_selection.decoder import SoftOutputsBpLsdDecoder
 from ldpc_post_selection.stim_tools import remove_detectors_from_circuit
 from ldpc_post_selection.cluster_tools import compute_cluster_norm_fraction
+from realtime_decoding.decoder_switching import get_cluster_norm
 from realtime_decoding.tesseract_w_sliding_window import chk_obs_priors_to_dem, get_dems_per_window
 
 #################################################################################
@@ -169,18 +170,24 @@ class BPLSDWrapper:
                       'ms_scaling_factor', 'detector_time_coords']
         bplsd_params = {k: params[k] for k in bplsd_keys if k in params}
         self.cluster_sizes = None
-        self.cluster_gap = None
         self.cluster_map = None
+        self.commit_region = None
+        self.committed_clusters = None
         # Explicitly map priors to the 'p' argument for BPLSD
         self.decoder = SoftOutputsBpLsdDecoder(H=check_matrix, p=priors, **bplsd_params)
-
+    
+    def set_commit_region(self, commit_region):
+        self.commit_region = commit_region
     def decode(self, syndrome):
         # BPLSD returns: (correction, bp_correction, converged, soft_info)
         corr_bplsd, _, _, soft_info = self.decoder.decode(syndrome)
-        cluster_gap = compute_cluster_norm_fraction(soft_info[self.metric_key], self.norm_order)
+        # cluster_gap = compute_cluster_norm_fraction(soft_info[self.metric_key], self.norm_order)
         self.cluster_sizes = soft_info.get('cluster_sizes')
         self.cluster_map = soft_info.get('clusters')
-        self.cluster_gap = cluster_gap
+        self.committed_clusters = np.where(self.commit_region, self.cluster_map, 0)
+        
+        if np.all(self.committed_clusters != self.cluster_map):
+            cluster_ids, self.cluster_sizes = np.unique(self.committed_clusters, return_counts=True)
             
         return corr_bplsd
 
@@ -205,6 +212,11 @@ class UnionFindWrapper:
         # Public instance attribute for DecoderSwitchingWrapper to read
         self.cluster_sizes = None
         self.cluster_dict = None
+        self.commit_region = None
+        self.committed_clusters = None
+    
+    def set_commit_region(self, commit_region):
+        self.commit_region = commit_region
         
     def decode(self, syndrome):
         """
@@ -233,7 +245,11 @@ class UnionFindWrapper:
         # 4. Cache cluster stats metadata 
         self.cluster_sizes = found_cluster_sizes
         self.cluster_map = cluster_map
+        self.committed_clusters = np.where(self.commit_region, self.cluster_map, 0)
         
+        if np.all(self.committed_clusters != self.cluster_map):
+            cluster_ids, sizes = np.unique(self.committed_clusters, return_counts=True)
+            self.cluster_sizes = sizes
         # 5. Extract the actual correction pattern produced by the decode logic
         correction = self.decoder.correction
         
@@ -300,25 +316,28 @@ class DecoderSwitchingBPLSD:
         return corr_bplsd
     
 class DecoderSwitchingWrapper:
-    def __init__(self, primary_decoder_class, secondary_decoder_class, primary_params, secondary_params, cluster_metric, cutoff, count_container=None, norm_order=2):
+    def __init__(self, primary_decoder_class, secondary_decoder_class, primary_params, secondary_params, cluster_metric, cutoff, count_container=None, norm_order=2, weak_decoding_type="LSD"):
         self.primary_decoder = primary_decoder_class(**primary_params)
         self.secondary_decoder = secondary_decoder_class(**secondary_params)
-        self.metric_key = cluster_metric
+        self.metric_key = cluster_metric # either size or LLR, right now only size is supported
         self.cutoff = cutoff
         self.norm_order = norm_order
         self.count_container = count_container # should just pass in a list with [0]
+        self.weak_decoding_type = weak_decoding_type
 
     def decode(self, syndrome):
         # TODO : write our own cluster norm fraction function independent of primary decoder class and add it here
-        corr_primary, _, _, soft_info = self.primary_decoder.decode(syndrome)
-        cluster_gap = compute_cluster_norm_fraction(soft_info[self.metric_key], self.norm_order)
+        correction_primary = self.primary_decoder.decode(syndrome) # uses the wrapper, so 
+        cluster_sizes = self.primary_decoder.cluster_sizes
+        num_qubits = len(self.primary_decoder.cluster_map)
+        cluster_gap = get_cluster_norm(cluster_sizes, num_qubits, self.norm_order, type=self.weak_decoding_type)
 
         if cluster_gap > self.cutoff:
             if self.count_container is not None:
                 self.count_container[0] += 1
 
             return self.secondary_decoder.decode(syndrome)
-        return corr_primary
+        return correction_primary
 
 
 # the wrapper that I am writing to take in general decoder1

@@ -16,7 +16,7 @@ from quits import ErrorModel
 import numpy as np
 from tqdm import tqdm
 import gc
-from .decoding import DecoderSwitchingWrapper, RelayBpWrapper, UnionFindWrapper
+# from realtime_decoding.decoding import DecoderSwitchingWrapper, RelayBpWrapper, UnionFindWrapper
 
 
 ###########
@@ -100,7 +100,7 @@ def get_parity_and_logs_rsc(d, basis):
     l = bplsd.obs_matrix   # This is your logical operator matrix
     return h, l
 
-def get_BB_circuit(d, basis, p):
+def get_BB_circuit(d, basis, p, rounds):
     d_dict = {6:{'l':6, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},
               10: {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]},
               12:{'l':12, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},}
@@ -122,8 +122,8 @@ def get_BB_circuit(d, basis, p):
         B_y_pows=code_params['B_y_pows'],
     )
 
-    custom_circuit = bb.build_circuit(strategy="custom", num_rounds=d, basis=basis, error_model=error_model) # num_rounds fixed to d for us
-    labeled_circuit = fix_bb_circuit_for_sliding_window(custom_circuit, d)
+    custom_circuit = bb.build_circuit(strategy="custom", num_rounds=rounds, basis=basis, error_model=error_model) # num_rounds fixed to d for us
+    labeled_circuit = fix_bb_circuit_for_sliding_window(custom_circuit, rounds)
     return labeled_circuit, bb
 
 def fix_bb_circuit_for_sliding_window(original_circuit, num_rounds):

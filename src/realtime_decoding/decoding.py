@@ -245,6 +245,8 @@ class UnionFindWrapper:
         # 4. Cache cluster stats metadata 
         self.cluster_sizes = found_cluster_sizes
         self.cluster_map = cluster_map
+        print(self.commit_region.shape)
+        print(len(self.cluster_map))
         self.committed_clusters = np.where(self.commit_region, self.cluster_map, 0)
         
         if np.all(self.committed_clusters != self.cluster_map):

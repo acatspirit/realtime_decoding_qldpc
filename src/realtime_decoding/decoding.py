@@ -23,7 +23,7 @@ from realtime_decoding.tesseract_w_sliding_window import chk_obs_priors_to_dem, 
 #################################################################################
 
 def BP_MWPM(syndrome, H, L, error_priors, max_iter, t, dem = None):
-    print(H.shape)
+    # print(H.shape)
     bp = BpDecoder(
                 H,
                 error_channel= error_priors,
@@ -245,8 +245,6 @@ class UnionFindWrapper:
         # 4. Cache cluster stats metadata 
         self.cluster_sizes = found_cluster_sizes
         self.cluster_map = cluster_map
-        print(self.commit_region.shape)
-        print(len(self.cluster_map))
         self.committed_clusters = np.where(self.commit_region, self.cluster_map, 0)
         
         if np.all(self.committed_clusters != self.cluster_map):

@@ -37,10 +37,10 @@ def get_cluster_norm(cluster_sizes, num_qubits,order=2, type="LSD"):
         return compute_cluster_norm_fraction(cluster_sizes, order=order) # this should include the largest cluster - i.e. whichever one doesn't have errors
     else: # using UF decoder
         if sum(cluster_sizes) == num_qubits:
-            clusters_including_outside_uf = cluster_sizes
+            # clusters_including_outside_uf = cluster_sizes
             cluster_sizes_inside = cluster_sizes[cluster_sizes != np.argmax(cluster_sizes)]
         else:
-            clusters_including_outside_uf = np.append(cluster_sizes, num_qubits - np.sum(cluster_sizes))
+            # clusters_including_outside_uf = np.append(cluster_sizes, num_qubits - np.sum(cluster_sizes))
             cluster_sizes_inside = cluster_sizes
         cluster_powers = np.power(cluster_sizes_inside, order)
         cluster_norm = np.sum(cluster_powers)**(1/order) / num_qubits

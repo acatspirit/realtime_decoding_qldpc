@@ -10,15 +10,10 @@ import warnings
 
 from quits.decoder import spacetime
 import numpy as np
-from ldpc_post_selection.src.ldpc_post_selection.cluster_tools import compute_lp_norm
 from helper_cluster_tools import *
-from matplotlib import pyplot as plt
-import matplotlib
-matplotlib.rcParams.update({'font.size': 17})
-plt.rcParams["font.family"] = "Microsoft Sans Serif"
+
 
 from src.circuits import create_bb_codes_circuit
-from joblib import Parallel, delayed
 from src.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, collect_default_decoder_params
 from typing import Optional
 import relay_bp
@@ -152,7 +147,7 @@ class decoder_switching_class:
 
 
         else:
-            raise NotImplementedError("No other strong decoder besides tesseract is implemented for now")
+            raise NotImplementedError("No other strong decoder besides tesseract is implemented for now. Choose from tesseract or relay_bp.")
         
 
         if weak_decoder_option=='bplsd':
@@ -162,7 +157,7 @@ class decoder_switching_class:
                                          for decoder in self.weak_decoder] 
 
         else:
-            raise NotImplementedError("No other weak decoder besides bplsd is implemented for now")
+            raise NotImplementedError("No other weak decoder besides bplsd is implemented for now.")
         
 
         
@@ -187,6 +182,19 @@ class decoder_switching_class:
     def decode_last_window_w_weak_decoder(self, F: int, num_checks: int, shot_index: int, syn_update, accumulated_correction, num_cor_rounds: int, norm_order=2):
         '''
         Decode the last window w/ the weak decoder.
+
+        Inputs:
+            F: commit region
+            num_checks: # of checks (row size of parity check matrix)
+            shot_index: index of i-th shot we decode
+            syn_update: the syndrome update from previous window decoding
+            accumulated_correction: the inferred logical flip so far
+            num_cor_rounds: num of windows before last window (see __init__)
+            norm_order: the order to evaluate cluster norm
+
+        Outputs:
+            accumulated_correction: updated predicted logical flip (length of # of logical qubits)
+            cluster_norm: the calculated cluster norm for this window, calculated and normalized only over faults in commit region F
         '''
         k          = -1
 
@@ -195,7 +203,6 @@ class decoder_switching_class:
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  
 
         diff_syndrome              = self.detection_events[shot_index, (F * num_cor_rounds) * num_checks:].copy()
-        # diff_syndrome[:num_checks] = (diff_syndrome[:num_checks] + syn_update) % 2
         diff_syndrome[:num_checks] ^= syn_update
         
         decoded_errors = self.weak_decode_function[k](diff_syndrome)
@@ -205,14 +212,30 @@ class decoder_switching_class:
         stats           = decoder.statistics
         cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order)      
 
-        # accumulated_correction = (accumulated_correction + correction) % 2
         accumulated_correction ^= (correction) 
 
         return accumulated_correction,cluster_norm
 
     def decode_main_window_w_weak_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2):
         '''
-        Decode any window besides last w/ a weak cluster based decoder and keep truck of the cluster norm information.
+        Decode any window besides last window w/ the weak decoder.
+
+        Inputs:
+            W: total size of window
+            F: commit region
+            num_checks: # of checks (row size of parity check matrix)
+            current_window_index: integer k>=0 which tracks the current window that we will process
+            shot_index: index of i-th shot we decode
+            syn_update: the syndrome update from previous window decoding
+            accumulated_correction: the inferred logical flip so far
+            norm_order: the order to evaluate cluster norm
+
+
+        Outputs:
+            syn_update: the syndrome update to apply to syndromes in next window
+            accumulated_correction: updated predicted logical flip so far (length of # of logical qubits)
+            cluster_norm: the calculated cluster norm for this window, calculated and normalized only over faults in commit region F
+            
         '''
 
         k          = current_window_index
@@ -222,7 +245,6 @@ class decoder_switching_class:
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  #number of faults in the entire window W
 
         diff_syndrome              = self.detection_events[shot_index, F * k * num_checks:(F * k + W) * num_checks].copy()
-        # diff_syndrome[:num_checks] = (diff_syndrome[:num_checks] + syn_update) % 2  #update syndrome based on previous window decoding
         diff_syndrome[:num_checks] ^= syn_update   #update syndrome based on previous window decoding
 
         
@@ -236,31 +258,42 @@ class decoder_switching_class:
         stats           = decoder.statistics
         cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order)      
 
-        # accumulated_correction = (accumulated_correction + correction) % 2
         accumulated_correction ^= (correction) 
-
 
         return syn_update,accumulated_correction,cluster_norm
     
     def decode_main_window_w_strong_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction):
         '''
-        Decode any window besides last w/ a strong decoder
+        Decode any window besides last window w/ the strong decoder.
+
+        Inputs:
+            W: total size of window
+            F: commit region
+            num_checks: # of checks (row size of parity check matrix)
+            current_window_index: integer k>=0 which tracks the current window that we will process
+            shot_index: index of i-th shot we decode
+            syn_update: the syndrome update from previous window decoding
+            accumulated_correction: the inferred logical flip so far
+
+
+        Outputs:
+            syn_update: the syndrome update to apply to syndromes in next window
+            accumulated_correction: updated predicted logical flip so far (length of # of logical qubits)
+            
         '''
 
         k          = current_window_index
 
         diff_syndrome              = self.detection_events[shot_index, F * k * num_checks:(F * k + W) * num_checks].copy()
-        # diff_syndrome[:num_checks] = (diff_syndrome[:num_checks] + syn_update) % 2  #update syndrome based on previous window decoding
         diff_syndrome[:num_checks] ^= syn_update
         
-        decoded_errors = self.strong_decode_function[k](diff_syndrome) #Correction in entire window W, (only part F is committed)
+        decoded_errors      = self.strong_decode_function[k](diff_syndrome) #Correction in entire window W, (only part F is committed)
         decoded_errors_in_F = decoded_errors[:self.window_observable_set[k].shape[1]]
         
         correction = self.window_observable_set[k] @ decoded_errors_in_F % 2  #the window_observable_set is set of observables only in region F. # of observables x # of faults in region F
 
         syn_update = self.window_update[k] @ decoded_errors_in_F % 2
 
-        # accumulated_correction = (accumulated_correction + correction) % 2
         accumulated_correction ^= (correction) 
 
         return syn_update,accumulated_correction
@@ -268,22 +301,47 @@ class decoder_switching_class:
     def decode_last_window_w_strong_decoder(self, F: int, num_checks: int, shot_index: int, syn_update, num_cor_rounds: int, accumulated_correction):
         '''
         Decode the last window w/ the strong decoder.
+
+        Inputs:
+            F: commit region
+            num_checks: # of checks (row size of parity check matrix)
+            shot_index: index of i-th shot we decode
+            syn_update: the syndrome update from previous window decoding
+            accumulated_correction: the inferred logical flip so far
+
+
+        Outputs:
+            accumulated_correction: updated predicted logical flip so far (length of # of logical qubits)
+            
         '''
         k          = -1
 
         diff_syndrome              = self.detection_events[shot_index, (F * num_cor_rounds) * num_checks:].copy()
-        # diff_syndrome[:num_checks] = (diff_syndrome[:num_checks] + syn_update) % 2
         diff_syndrome[:num_checks] ^= syn_update
         
         decoded_errors = self.strong_decode_function[k](diff_syndrome)
         correction     = self.window_observable_set[num_cor_rounds] @ decoded_errors % 2
 
-        # accumulated_correction = (accumulated_correction + correction) % 2
         accumulated_correction ^= (correction) 
 
         return accumulated_correction
 
-    def decode_with_sliding_window_and_decoder_switching(self, cluster_norm_cutoff: float, norm_order=2):
+    def decode_with_sliding_window_and_decoder_switching(self, cluster_norm_cutoff: float, norm_order=2, rel_error_tol = 0.2):
+        '''
+        Decode w/ sliding window and decoder switching from weak to strong decoder, if we exceed the specified cluster_norm_cutoff for any window, for a given shot.
+
+        Input:
+            cluster_norm_cuoff: max cluster size accepted to accept weak decoder's correction
+            norm_order: integer defining the cluster norm order for the weak decoder
+            reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = \sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
+
+        Outputs:
+            N: new number of shots which can be different than self.num_shots, if we reached the rel_error accuracy faster than the total number of shots specified.
+               N<=self.num_shots. If relative accuracy was not reached, output self.num_shots.
+            cluster_norms_per_shot: a list of cluster norms lists per shot (inner list is cluster norms per window)
+            switch_times_per_shot: a list of how many times in total we switched to the strong decoder per shot
+            logical_errors_per_shot: returned both for weak/strong decoder and gives a 0/1 array of whether or not we made a logical error per shot
+        '''
 
         num_checks       = self.h.shape[0]
         logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
@@ -294,6 +352,11 @@ class decoder_switching_class:
         W = self.W 
         F = self.F
         num_cor_rounds = self.num_cor_rounds
+
+        failures_cnt   = 0               #count decoded logical failures
+        epsilon        = rel_error_tol   #default is 20% relative error -- should be chosen based on how we simulate this externally (e.g., if we break into tasks of shots via multiprocessing we don't need a very small epsilon)
+        shots_to_check = 20              #how often to check the precision in LER
+
 
         for shot_index in range(self.num_shots):
 
@@ -331,21 +394,36 @@ class decoder_switching_class:
             cluster_norms_per_shot.append(cluster_norm_per_window)
             switch_times_per_shot.append(switch_times)
 
+            failures_cnt += np.any(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
+
+            if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
+                N = shot_index + 1
+                p = failures_cnt / N
+                sigma = np.sqrt(p * (1 - p) / N)
+                rel_err = sigma / p
+
+                if rel_err<epsilon:
+
+                    print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
+
+                    return N, cluster_norms_per_shot, switch_times_per_shot, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)             
+
         
-        logical_errors_per_shot = {"switching": np.any(self.obs_flips ^ logical_pred,axis=1)}
+        return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.any(self.obs_flips ^ logical_pred,axis=1)
 
-        return cluster_norms_per_shot,switch_times_per_shot,logical_errors_per_shot
-
-    def decode_with_sliding_window(self,decoder_option: str, norm_order: int):
+    def decode_with_sliding_window(self, decoder_option: str, norm_order: int, rel_error_tol = 0.2):
         '''
         Decode w/ sliding window and no decoder switching. Choose weak or strong decoder option.
 
         Input:
-            decoder_option: 'weak' or 'strong' and uses the weak or strong set by the class upon initialization
+            decoder_option: 'weak' or 'strong' and uses the weak or strong set upon initialization
             norm_order: integer defining the cluster norm order, in case we use the weak decoder
+            reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = \sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
 
         Outputs:
-            cluster_norms_per_shot: if weak decoder was chosen output a list of cluster norms lists per shot
+            N: new number of shots which can be different than self.num_shots, if we reached the rel_error accuracy faster than the total number of shots specified.
+               N<=self.num_shots. If relative accuracy was not reached, output self.num_shots.
+            cluster_norms_per_shot: if weak decoder was chosen, output a list of cluster norms lists per shot (inner list is cluster norms per window)
             logical_errors_per_shot: returned both for weak/strong decoder and gives a 0/1 array of whether or not we made a logical error per shot
         '''
 
@@ -356,6 +434,10 @@ class decoder_switching_class:
         W = self.W 
         F = self.F
         num_cor_rounds = self.num_cor_rounds
+        
+        failures_cnt   = 0               #count decoded logical failures
+        epsilon        = rel_error_tol   #default is 20% relative error -- should be chosen based on how we simulate this externally (e.g., if we break into tasks of shots via multiprocessing we don't need a very small epsilon)
+        shots_to_check = 20              #how often to check the precision in LER
         
         if decoder_option=='weak':
 
@@ -380,11 +462,26 @@ class decoder_switching_class:
                 logical_pred[shot_index, :] = accumulated_correction
                 cluster_norms_per_shot.append(cluster_norm_per_window)
 
+                failures_cnt += np.any(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
+
+                if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
+                    N = shot_index + 1
+                    p = failures_cnt / N
+                    sigma = np.sqrt(p * (1 - p) / N)
+                    rel_err = sigma / p
+
+                    if rel_err<epsilon:
+
+                        print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
+
+                        return N, cluster_norms_per_shot, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1) 
+
             
             return cluster_norms_per_shot, np.any(self.obs_flips ^ logical_pred,axis=1)
 
         elif decoder_option=='strong':
 
+            
             for shot_index in range(self.num_shots):
 
                 accumulated_correction = np.zeros(num_logicals, dtype=np.uint8)
@@ -399,47 +496,70 @@ class decoder_switching_class:
                 
                 logical_pred[shot_index, :] = accumulated_correction
 
-            return np.any(self.obs_flips ^ logical_pred,axis=1)
+                failures_cnt += np.any(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
+
+                
+                if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
+
+                    N = shot_index + 1
+                    p = failures_cnt / N
+                    sigma = np.sqrt(p * (1 - p) / N)
+                    rel_err = sigma / p
+
+                    if rel_err<epsilon:
+
+                        print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
+
+                        return N, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1) #output updated shots
+
+
+            return self.num_shots,np.any(self.obs_flips ^ logical_pred,axis=1)
 
         return 
 
-    #TODO: Need wrapper for uf
     def decode_full_syndrome_history(self,decoder: str):
         '''
-        Do regular decoding of the entire syndrome history w/o sliding window. Note this uses 'decode' function of all decoders (not decoding batch).
+        Do regular decoding of the entire syndrome history w/o sliding window. 
         
         Input:
-            decoder: 'tesseract', 'bplsd', 'relay_bp'
+            decoder: option for decoder which can be 'tesseract', 'bplsd', or 'relay_bp'
         Output:
             logical_errors_per_shot: 0/1 array whether or not we made a logical error for each shot
         '''
 
-        defaults       = collect_default_decoder_params(decoder)
+        defaults       = collect_default_decoder_params(decoder)  #import default parameters from decoders_utils.py
         dem            = self.circuit.detector_error_model()
-        chk,obs,priors = detector_error_model_to_matrix(dem)
+        chk,obs,priors = detector_error_model_to_matrix(dem) 
         det_events     = self.detection_events
 
         logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
 
         if decoder=='tesseract':
-            config  = tesseract.TesseractConfig(dem=dem, det_beam=defaults['det_beam'])
+              
+            config  = tesseract.TesseractConfig(dem=dem, 
+                                                det_beam=defaults['det_beam'],
+                                                pqlimit=defaults['pqlimit'],
+                                                beam_climbing=defaults['beam_climbing'],
+                                                no_revisit_dets=defaults['no_revisit_dets'])
+            
             tesseract_decoder = config.compile_decoder()
 
-            for i in range(self.num_shots):
-            
-                decoded_errors    = tesseract_wrapper(tesseract_decoder,dem.num_errors)(det_events[i,:])
-                logical_pred[i,:] = obs @ decoded_errors % 2 
+            pred_flips   = tesseract_decoder.decode_batch(det_events) #decode_batch outputs directly the logical predictions
+            logical_pred = np.any(self.obs_flips ^ pred_flips, axis=1)
+
+            return logical_pred
+
             
         elif decoder=='relay_bp':
             
             relay_decoder = relay_bp.RelayDecoderF32(chk.tocsr(),                                   
-                                    error_priors=np.array(priors,dtype=np.float64),
-                                    gamma0=defaults['gamma0'],
-                                    pre_iter=defaults['pre_iter'],
-                                    num_sets=defaults['num_sets'],
-                                    set_max_iter=defaults['set_max_iter'],
-                                    gamma_dist_interval=defaults['gamma_dist_interval'],
-                                    stop_nconv=defaults['stop_nconv'])
+                                                     error_priors=np.array(priors,dtype=np.float64),
+                                                     gamma0=defaults['gamma0'],
+                                                     pre_iter=defaults['pre_iter'],
+                                                     num_sets=defaults['num_sets'],
+                                                     set_max_iter=defaults['set_max_iter'],
+                                                     gamma_dist_interval=defaults['gamma_dist_interval'],
+                                                     stop_nconv=defaults['stop_nconv'])
 
             for i in range(self.num_shots):
             
@@ -448,34 +568,24 @@ class decoder_switching_class:
 
         elif decoder=='bplsd':
 
-            bplsd_decoder = BpLsdDecoder(chk,
-                                error_channel=priors,
-                                bp_method=defaults['bp_method'],
-                                max_iter=defaults['max_bp_iters'],
-                                schedule=defaults['schedule'],
-                                lsd_method=defaults['lsd_method'],
-                                lsd_order=defaults['lsd_order'])
+            bplsd_decoder = BpLsdDecoder(chk, 
+                                        error_channel=priors,
+                                        bp_method=defaults['bp_method'],
+                                        max_iter=defaults['max_bp_iters'],
+                                        schedule=defaults['schedule'],
+                                        lsd_method=defaults['lsd_method'],
+                                        lsd_order=defaults['lsd_order'])
             
             for i in range(self.num_shots):
             
                 decoded_errors    = bplsd_decoder.decode(det_events[i,:])
                 logical_pred[i,:] = obs @ decoded_errors % 2 
-
             
 
         else:
-            raise NotImplemented("No other decoder choice besides tesseract, relay_bp and bplsd are available.")
-        
-
-
+            raise NotImplemented("No other decoder choice besides tesseract, relay_bp and bplsd are available for now.")
 
         return np.any(self.obs_flips ^ logical_pred,axis=1)
-
-
-    def calculate_ler(self,logical_errors_per_shot):
-
-        return np.sum(logical_errors_per_shot["switching"])/self.num_shots
-
 
 
 

@@ -477,7 +477,7 @@ class decoder_switching_class:
                         return N, cluster_norms_per_shot, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1) 
 
             
-            return cluster_norms_per_shot, np.any(self.obs_flips ^ logical_pred,axis=1)
+            return self.num_shots,cluster_norms_per_shot, np.any(self.obs_flips ^ logical_pred,axis=1)
 
         elif decoder_option=='strong':
 

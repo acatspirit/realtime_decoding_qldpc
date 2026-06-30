@@ -30,17 +30,58 @@ def fix_bb_circuit_for_sliding_window(original_circuit, num_rounds):
     return new_circuit
 
 
-def create_bb_codes_circuit(d: int, p: float, num_rounds: int, basis: str):
+def create_bb_codes_circuit(code_name: str, p: float, num_rounds: int, basis: str):
     
-    d_dict = {6:{'l':6, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},    #this is [[72,12,6]]
-                10: {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]}, #this is [[90,8,10]]
-                12:{'l':12, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},  #this is [[144,12,12]]
-                18:{'l':12, 'm':12, 'A_x_pows': [3], 'A_y_pows': [2,7], 'B_x_pows': [1,2], 'B_y_pows':[3]},  #this is [[288,12,18]]
-                24:{'l':28, 'm':14, 'A_x_pows': [26], 'A_y_pows': [6,8], 'B_x_pows': [9,20], 'B_y_pows':[7]}} #this is [[784,24,24]]
+    '''Maybe we should compare codes that have the same # of logical qubits??
+    This is because we call logical failure even if one out of k qubits has a logical error.
+    So we should have a fixed k as well.
     
+    So:
+     [[72,12,6]], [[144,12,12]], [[288,12,18]]
+     [[90,8,10]], [[162,8,14]], [[180,8,16]]
+
+    '''
+
+    bb_codes_dict = { "[[98,6,12]]": {'l': 7, 'm': 7, 'A_x_pows': [3], 'A_y_pows': [5,6], 'B_x_pows': [3,5], 'B_y_pows': [2]}, 
+                
+                # https://arxiv.org/pdf/2408.10001 some codes taken from this paper (all CSS).
+                 "[[54,8,6]]":    {'l': 3, 'm': 9, 'A_x_pows': [0], 'A_y_pows': [2,4], 'B_x_pows': [1,2], 'B_y_pows': [3]},      
+                 "[[90,8,10]]]": {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]},      
+                 "[[126,8,10]]":  {'l': 3, 'm': 21, 'A_x_pows': [0], 'A_y_pows': [2,10], 'B_x_pows': [1,2], 'B_y_pows': [3]}, 
+                 "[[162,8,14]]":  {'l': 3, 'm': 27, 'A_x_pows': [0], 'A_y_pows': [10,14], 'B_x_pows': [1,2], 'B_y_pows': [12]}, 
+                 "[[180,8,16]]": {'l': 6, 'm': 15, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [4,5], 'B_y_pows': [6]},    
+                 
+                 "[[150,16,8]]": {'l': 5, 'm': 15, 'A_x_pows': [0], 'A_y_pows': [6,8], 'B_x_pows': [1,4], 'B_y_pows': [5]}, 
+
+                 "[[72,12,6]]":   {'l':6, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},    
+                 "[[144,12,12]]": {'l':12, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},  
+                 "[[288,12,18]]": {'l':12, 'm':12, 'A_x_pows': [3], 'A_y_pows': [2,7], 'B_x_pows': [1,2], 'B_y_pows':[3]},  
+                 "[[360,12,24]]": {'l':30, 'm':6, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [25,26], 'B_y_pows':[3]},  
+
+                 "[[288,24,12]]": {'l':12, 'm':12, 'A_x_pows': [6], 'A_y_pows': [1,2], 'B_x_pows': [2,4], 'B_y_pows':[3]},
+                 "[[784,24,24]]": {'l':28, 'm':14, 'A_x_pows': [26], 'A_y_pows': [6,8], 'B_x_pows': [9,20], 'B_y_pows':[7]} 
+                }
+
+
+    # d_dict = { 6:{'l':6, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},    #this is [[72,12,6]]
+    #             10: {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]}, #this is [[90,8,10]]
+    #              12:{'l':12, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},  #this is [[144,12,12]]
+                
+    #              14:{'l':3, 'm':27, 'A_x_pows': [0], 'A_y_pows': [10,14], 'B_x_pows': [1,2], 'B_y_pows':[12]},  #this is [[162,8,14]]
+    #             16:{'l':6, 'm':15, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [4,5], 'B_y_pows':[6]},  #this is [[180,8,16]]
+                
+    #             18:{'l':12, 'm':12, 'A_x_pows': [3], 'A_y_pows': [2,7], 'B_x_pows': [1,2], 'B_y_pows':[3]},  #this is [[288,12,18]]
+    #             24:{'l':28, 'm':14, 'A_x_pows': [26], 'A_y_pows': [6,8], 'B_x_pows': [9,20], 'B_y_pows':[7]}} #this is [[784,24,24]]
+    
+
+
+    # https://arxiv.org/pdf/2408.10001 some codes taken from this paper (k=8 codes taken from there)
+    # https://github.com/qiskit-community/qcode-discovery (codes taken from here too)
+    # Codes also taken from Bravyi et al. 2024 (arXiv:2308.07915): [[72,12,6]], [[90,8,10]], [[144,12,12]], [[288,12,18]], [[360,12,<=24]]
+
     # The code is defined by a pair of polynomials
     # A and B that depends on two variables x and y such that
-    # x^ell = 1
+    # x^l = 1
     # y^m = 1
     # A = x^{a_1} + y^{a_2} + y^{a_3} 
     # B = y^{b_1} + x^{b_2} + x^{b_3}    
@@ -65,7 +106,8 @@ def create_bb_codes_circuit(d: int, p: float, num_rounds: int, basis: str):
 
     # https://github.com/sbravyi/BivariateBicycleCodes/blob/main/decoder_setup.py    
 
-    code_params = d_dict[d]
+    # code_params = d_dict[d]
+    code_params = bb_codes_dict[code_name]
 
     error_model = ErrorModel(
         idle_error=p,

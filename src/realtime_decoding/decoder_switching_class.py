@@ -73,7 +73,7 @@ class relaybp_wrapper:
 
 class decoder_switching_class:
 
-    def __init__(self, d: int, num_rounds: int, p: float, basis: str, num_shots: int, W: int, F: int, 
+    def __init__(self, code_name: str, num_rounds: int, p: float, basis: str, num_shots: int, W: int, F: int, 
                  strong_decoder_option: str, 
                  weak_decoder_option: str, 
                  strong_decoder_params: Optional[dict] = None,
@@ -95,7 +95,7 @@ class decoder_switching_class:
         '''
 
      
-        circuit,bb = create_bb_codes_circuit(d, p, num_rounds, basis)
+        circuit,bb = create_bb_codes_circuit(code_name, p, num_rounds, basis)
         sampler    = circuit.compile_detector_sampler()
 
         detection_events,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
@@ -537,17 +537,17 @@ class decoder_switching_class:
         if decoder=='tesseract':
               
             config  = tesseract.TesseractConfig(dem=dem, 
-                                                det_beam=defaults['det_beam'],
-                                                pqlimit=defaults['pqlimit'],
+                                                det_beam=5, #defaults['det_beam']
+                                                pqlimit=5_000, #defaults['pqlimit']
                                                 beam_climbing=defaults['beam_climbing'],
-                                                no_revisit_dets=defaults['no_revisit_dets'])
+                                                no_revisit_dets=defaults['no_revisit_dets'])#
             
             tesseract_decoder = config.compile_decoder()
 
             pred_flips   = tesseract_decoder.decode_batch(det_events) #decode_batch outputs directly the logical predictions
             logical_pred = np.any(self.obs_flips ^ pred_flips, axis=1)
 
-            return logical_pred
+            return self.num_shots,logical_pred
 
             
         elif decoder=='relay_bp':
@@ -561,10 +561,27 @@ class decoder_switching_class:
                                                      gamma_dist_interval=defaults['gamma_dist_interval'],
                                                      stop_nconv=defaults['stop_nconv'])
 
+            shots_to_check = 20
+            epsilon        = 0.2
+            failures_cnt   = 0
+
             for i in range(self.num_shots):
             
                 decoded_errors    = relaybp_wrapper(relay_decoder)(det_events[i,:])
                 logical_pred[i,:] = obs @ decoded_errors % 2 
+
+                failures_cnt += np.any(self.obs_flips[i,:] ^ logical_pred[i,:])
+
+                if (i + 1) % shots_to_check == 0 and failures_cnt > 0:
+                    N = i + 1
+                    p = failures_cnt / N
+                    sigma = np.sqrt(p * (1 - p) / N)
+                    rel_err = sigma / p
+
+                    if rel_err<epsilon:
+
+                        print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
+                        return N, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)                
 
         elif decoder=='bplsd':
 
@@ -576,16 +593,32 @@ class decoder_switching_class:
                                         lsd_method=defaults['lsd_method'],
                                         lsd_order=defaults['lsd_order'])
             
+            shots_to_check = 20
+            epsilon        = 0.2
+            failures_cnt   = 0
             for i in range(self.num_shots):
             
                 decoded_errors    = bplsd_decoder.decode(det_events[i,:])
                 logical_pred[i,:] = obs @ decoded_errors % 2 
+
+                failures_cnt += np.any(self.obs_flips[i,:] ^ logical_pred[i,:])
+
+                if (i + 1) % shots_to_check == 0 and failures_cnt > 0:
+                    N = i + 1
+                    p = failures_cnt / N
+                    sigma = np.sqrt(p * (1 - p) / N)
+                    rel_err = sigma / p
+
+                    if rel_err<epsilon:
+
+                        print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
+                        return N, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)
             
 
         else:
             raise NotImplemented("No other decoder choice besides tesseract, relay_bp and bplsd are available for now.")
 
-        return np.any(self.obs_flips ^ logical_pred,axis=1)
+        return self.num_shots,np.any(self.obs_flips ^ logical_pred,axis=1)
 
 
 

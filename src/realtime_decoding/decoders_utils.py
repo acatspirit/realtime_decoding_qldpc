@@ -8,7 +8,11 @@ import numpy as np
 def collect_default_decoder_params(decoder):
 
     if decoder=='tesseract':
-        decoder_params = {'det_beam': 3}
+        #We could change some of these parameters
+        decoder_params = {'det_beam': 10,
+                          'pqlimit': 50_000, 
+                          'beam_climbing': True,
+                          'no_revisit_dets': True}
 
     elif decoder=='relay_bp':
         decoder_params =  {
@@ -60,7 +64,12 @@ def configure_tesseract_per_sliding_window(window_check_set, window_observable_s
 
     compiled_decoders = []
     for k in range(len(window_check_set)):
-        config  = tesseract.TesseractConfig(dem=window_dems[k], det_beam=decoder_params['det_beam'])
+        config  = tesseract.TesseractConfig(dem=window_dems[k], 
+                                            det_beam=decoder_params['det_beam'],
+                                            pqlimit=decoder_params['pqlimit'],
+                                            beam_climbing=decoder_params['beam_climbing'],
+                                            no_revisit_dets=decoder_params['no_revisit_dets'])
+
         decoder = config.compile_decoder()
         compiled_decoders.append(decoder)
 

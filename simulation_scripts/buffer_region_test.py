@@ -25,20 +25,25 @@ def test_buffer_region(p = 1e-3, num_shots = 100_000, basis='Z'):
         basis: 'Z' or 'X'
     '''
     
-    ds                    = [6,10,12]
+    # ds                    = [6,10,12]
+    code_names = ["[[72,12,6]]", "[[90,8,10]]]", "[[144,12,12]]"]
+
     all_num_rounds        = [20, 30, 40, 50]
     strong_decoder        = 'relay_bp' #or tesseract
     weak_decoder          = 'bplsd'
 
-    def process_one_round_value(d,num_rounds,num_shots):
+    def process_one_round_value(code_name,num_rounds,num_shots):
         
-        print("d,rds,shots:",(d,num_rounds,num_shots))
+        print("code_name,rds,shots:",(code_name,num_rounds,num_shots))
+
+        n, k, d = map(int, code_name.strip("[]").split(","))
+
 
         nbuffer = d            #W-F = buffer -> W = buffer +F
         F       = d//2         #just pick this commit region so that there are at least some windows to decode for rds>20 (e.g. for d=12, we have 20 rounds, and W = 12 +6 = 18)
         W       = nbuffer + F  #entire window
 
-        test  = decoder_switching_class(d=d,
+        test  = decoder_switching_class(code_name=code_name,
                                         num_rounds=num_rounds,
                                         p=p,
                                         basis=basis,
@@ -49,7 +54,7 @@ def test_buffer_region(p = 1e-3, num_shots = 100_000, basis='Z'):
                                         weak_decoder_option=weak_decoder,)    
         
 
-        logical_errors_batch                 = test.decode_full_syndrome_history(strong_decoder)#decoding of d-rounds
+        shots_batch,logical_errors_batch                 = test.decode_full_syndrome_history(strong_decoder)#decoding of d-rounds
         shots_sliding,logical_errors_sliding = test.decode_with_sliding_window('strong', norm_order=2)  #sliding window decoding with buffer size=d, commit = d//2
 
         #uncomment for weak decoder
@@ -60,77 +65,77 @@ def test_buffer_region(p = 1e-3, num_shots = 100_000, basis='Z'):
         result = {"err_batch": np.sum(logical_errors_batch),
                   "err_sliding": np.sum(logical_errors_sliding),
                   "shots_sliding": shots_sliding,
-                  "shots_batch": num_shots}
+                  "shots_batch": shots_batch}
 
-        return d,num_rounds,num_shots,result
+        return code_name,num_rounds,result
 
     tasks = []
     import multiprocessing as mp
     n_jobs = mp.cpu_count()    
     chunk_size = max(200, num_shots // (100 * n_jobs)) #200
 
-    for d in ds:
+    for code_name in code_names:
         for rd in all_num_rounds:
 
             tasks.extend(
-                (d,rd, chunk_size)
+                (code_name,rd, chunk_size)
                 for _ in range(num_shots // chunk_size)
             )       
 
-    results = Parallel(n_jobs=-1,verbose=10,)(delayed(process_one_round_value)(d,rd,shots) for d,rd, shots in tasks)      
+    results = Parallel(n_jobs=-1,verbose=10,)(delayed(process_one_round_value)(code_name,rd,shots) for code_name,rd, shots in tasks)      
     print("Done.")
     
     total_errors = {}
     total_shots  = {}
 
-    for d,rd,shot,result in results:
-        total_errors[(d, rd,"batch")]   = 0
-        total_errors[(d, rd,"sliding")] = 0
-        total_shots[(d, rd,"batch")]    = 0    
-        total_shots[(d, rd,"sliding")]  = 0    
+    for code_name,rd,result in results:
+        total_errors[(code_name, rd,"batch")]   = 0
+        total_errors[(code_name, rd,"sliding")] = 0
+        total_shots[(code_name, rd,"batch")]    = 0    
+        total_shots[(code_name, rd,"sliding")]  = 0    
 
-    for d,rd,shot,result in results:
+    for code_name,rd,result in results:
 
-        print("rd,shot:",(rd,shot))
-        total_errors[(d,rd,"batch")]   += result["err_batch"]
-        total_errors[(d,rd,"sliding")] += result["err_sliding"]
         
-        total_shots[(d,rd,"batch")]   += result["shots_batch"]
-        total_shots[(d,rd,"sliding")] += result["shots_sliding"]
+        total_errors[(code_name,rd,"batch")]   += result["err_batch"]
+        total_errors[(code_name,rd,"sliding")] += result["err_sliding"]
+        
+        total_shots[(code_name,rd,"batch")]   += result["shots_batch"]
+        total_shots[(code_name,rd,"sliding")] += result["shots_sliding"]
 
 
-    ler_results_batch = {(d, rd): total_errors[(d, rd,"batch")] / total_shots[(d, rd,"batch")]
-                        for d in ds 
+    ler_results_batch = {(code_name, rd): total_errors[(code_name, rd,"batch")] / total_shots[(code_name, rd,"batch")]
+                        for code_name in code_names
                         for rd in all_num_rounds}
 
-    ler_results_sliding = {(d, rd): total_errors[(d, rd,"sliding")] / total_shots[(d, rd, "sliding")]
-                        for d in ds
+    ler_results_sliding = {(code_name, rd): total_errors[(code_name, rd,"sliding")] / total_shots[(code_name, rd, "sliding")]
+                        for code_name in code_names
                         for rd in all_num_rounds}
     
-    err_batch = { (d, rd): np.sqrt(ler_results_batch[(d,rd,)]*(1-ler_results_batch[(d,rd)])/total_shots[(d, rd,"batch")]) 
-                 for d in ds
+    err_batch = { (code_name, rd): np.sqrt(ler_results_batch[(code_name,rd,)]*(1-ler_results_batch[(code_name,rd)])/total_shots[(code_name, rd,"batch")]) 
+                 for code_name in code_names
                  for rd in all_num_rounds}
     
-    err_sliding = { (d, rd): np.sqrt(ler_results_sliding[(d,rd)]*(1-ler_results_sliding[(d,rd)])/total_shots[(d, rd,"sliding")]) 
-                   for d in ds
+    err_sliding = { (code_name, rd): np.sqrt(ler_results_sliding[(code_name,rd)]*(1-ler_results_sliding[(code_name,rd)])/total_shots[(code_name, rd,"sliding")]) 
+                   for code_name in code_names
                    for rd in all_num_rounds}
 
     
-    for d in ds:
+    for code_name in code_names:
 
-        y_batch = {rd: ler_results_batch[(d,rd)] for rd in all_num_rounds}
-        yerr_batch = {rd: err_batch[(d,rd)] for rd in all_num_rounds}
+        y_batch = {rd: ler_results_batch[(code_name,rd)] for rd in all_num_rounds}
+        yerr_batch = {rd: err_batch[(code_name,rd)] for rd in all_num_rounds}
 
         #plot batch decoding
-        plt.errorbar(all_num_rounds,y_batch.values(),yerr=yerr_batch.values(),label=f'batch, d={d}',marker='o')
+        plt.errorbar(all_num_rounds,y_batch.values(),yerr=yerr_batch.values(),label=f'batch, {code_name}',marker='o')
         #plot sliding decoding
 
-        y_sliding = {rd: ler_results_sliding[(d,rd)] for rd in all_num_rounds}
-        yerr_sliding = {rd: err_sliding[(d,rd)] for rd in all_num_rounds}
+        y_sliding = {rd: ler_results_sliding[(code_name,rd)] for rd in all_num_rounds}
+        yerr_sliding = {rd: err_sliding[(code_name,rd)] for rd in all_num_rounds}
 
-        plt.errorbar(all_num_rounds,y_sliding.values(),yerr=yerr_sliding.values(),label=f'sliding, d={d}',linestyle='--',marker='o')
+        plt.errorbar(all_num_rounds,y_sliding.values(),yerr=yerr_sliding.values(),label=f'sliding, {code_name}',linestyle='--',marker='o')
 
-    plt.title(f"$n_{{buffer}}=d$, shots={num_shots}, p={p}")
+    plt.title(f"$n_{{buffer}}=d$, p={p}")
     plt.yscale('log')
     plt.ylabel('LER')
     plt.xlabel('rounds')

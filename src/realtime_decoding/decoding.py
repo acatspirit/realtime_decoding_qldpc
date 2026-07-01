@@ -246,10 +246,11 @@ class UnionFindWrapper:
         self.cluster_sizes = found_cluster_sizes
         self.cluster_map = cluster_map
         self.committed_clusters = np.where(self.commit_region, self.cluster_map, 0)
+        self.committed_cluster_sizes = found_cluster_sizes
         
         if np.all(self.committed_clusters != self.cluster_map):
             cluster_ids, sizes = np.unique(self.committed_clusters, return_counts=True)
-            self.cluster_sizes = sizes
+            self.committed_cluster_sizes = sizes
         # 5. Extract the actual correction pattern produced by the decode logic
         correction = self.decoder.correction
         

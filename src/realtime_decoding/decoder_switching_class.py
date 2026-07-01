@@ -81,9 +81,9 @@ class decoder_switching_class:
         
         '''
         Inputs:
-        d: distance of bb code
+        code_name: code_name of bb code of the form "[[n,k,d]]" (see circuits.py)
         num_rounds: # of syndrome extraction rounds
-        p: error rate
+        p: physical error rate
         basis: 'Z' or 'X'
         num_shots: number of shots for memory experiment
         W: size of total window
@@ -92,6 +92,8 @@ class decoder_switching_class:
         weak_decoder_option: option to choose weak decoder from 'uf' or 'bplsd'
         strong_decoder_params: dictionary with strong decoder parameters 
         weak_decoder_params: dictionary with weak decoder parameters 
+
+        ---decoder_params are optional. default parameters can be found in decoders_utils.py---
         '''
 
      
@@ -147,7 +149,7 @@ class decoder_switching_class:
 
 
         else:
-            raise NotImplementedError("No other strong decoder besides tesseract is implemented for now. Choose from tesseract or relay_bp.")
+            raise NotImplementedError("No other strong decoder besides tesseract or relay-bp is implemented for now. Choose from tesseract or relay_bp.")
         
 
         if weak_decoder_option=='bplsd':
@@ -438,7 +440,7 @@ class decoder_switching_class:
         failures_cnt   = 0               #count decoded logical failures
         epsilon        = rel_error_tol   #default is 20% relative error -- should be chosen based on how we simulate this externally (e.g., if we break into tasks of shots via multiprocessing we don't need a very small epsilon)
         shots_to_check = 20              #how often to check the precision in LER
-        
+
         if decoder_option=='weak':
 
             cluster_norms_per_shot = []

@@ -294,7 +294,7 @@ class decoder_switching_class:
 
         return accumulated_correction,cluster_norm
 
-    def decode_main_window_w_weak_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2):
+    def decode_main_window_w_weak_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2, decoder_type='bplsd'):
         '''
         Decode any window besides last window w/ the weak decoder.
 
@@ -332,15 +332,23 @@ class decoder_switching_class:
         correction = self.window_observable_set[k] @ decoded_errors_in_F % 2  #the window_observable_set is set of observables only in region F. # of observables x # of faults in region F
 
         syn_update = self.window_update[k] @ decoded_errors_in_F % 2
-    
-        stats           = decoder.statistics
-        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order)      
+
+        if decoder_type == 'bplsd':
+            stats           = decoder.statistics
+        elif decoder_type == 'uf':
+            decoder.set_commit_region(num_faults_in_F)
+            stats           = decoder.cluster_map
+        else:
+            raise ValueError(f"Unsupported decoder type: {decoder_type}")
+        
+        
+        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, decoder_type)      
 
         accumulated_correction ^= (correction) 
 
         return syn_update,accumulated_correction,cluster_norm
     
-    def decode_main_window_w_strong_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction):
+    def decode_main_window_w_strong_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2, decoder_type='bplsd'):
         '''
         Decode any window besides last window w/ the strong decoder.
 

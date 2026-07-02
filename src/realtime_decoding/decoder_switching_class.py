@@ -6,15 +6,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
 from quits import detector_error_model_to_matrix
 from tesseract_decoder import tesseract
 from ldpc.bplsd_decoder import BpLsdDecoder
+import py_wrapper.py_decoder as uf
 import warnings
 
 from quits.decoder import spacetime
 import numpy as np
+from scipy.sparse import csr_matrix
 from realtime_decoding.helper_cluster_tools import * # figure out the improt
 
 # fix the imports
 from src.circuits import create_bb_codes_circuit
-from src.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, collect_default_decoder_params
+from src.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params
 from typing import Optional
 import relay_bp
 
@@ -27,7 +29,71 @@ import relay_bp
 #i)   batch decoding 
 #ii)  sliding window decoding with one decoder
 #iii) sliding window decoding where it switches from weak to strong decoder, based on cluster norm cutoff
+class uf_wrapper:
+    def __init__(self, decoder, **params):
+        """
+        A sliding-window compatible wrapper for the custom nbi-hyq Union Find decoder.
+        
+        Parameters
+        ----------
+        check_matrix : array_like or csr_matrix
+            The parity-check matrix (H) associated with the current decoding window.
+        """
+        if not isinstance(check_matrix, csr_matrix):
+            check_matrix = csr_matrix(check_matrix)
+            
+        self.check_matrix = check_matrix
+        
+        # Initialize the underlying C-wrapped Union Find decoder instance
+        self.decoder = decoder
+        
+        # Public instance attribute for DecoderSwitchingWrapper to read
+        self.cluster_sizes = None
+        self.cluster_dict = None
+        self.commit_region = None
+        self.committed_clusters = None
+    
+    def set_commit_region(self, commit_region):
 
+        self.commit_region = commit_region
+        
+    def decode(self, syndrome):
+        """
+        Decodes a window syndrome vector and returns a correction vector.
+        
+        Parameters
+        ----------
+        syndrome : np.ndarray
+            The syndrome vector generated inside the current sliding window.
+            
+        Returns
+        -------
+        correction : np.ndarray
+            The predicted correction vector extracted from the decoder instance.
+        """
+        # 1. Enforce strict contiguous data alignment types for the underlying C structures
+        binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
+        
+        # 2. Build a matching blank erasure vector corresponding to the window size's qubits
+        erasures = np.zeros(shape=self.check_matrix.shape[1], dtype=np.uint8)
+        erasures = np.ascontiguousarray(erasures, dtype=np.uint8)
+        
+        # 3. Process data via the method to populate internal attributes
+        found_cluster_sizes, cluster_map = self.decoder.ldpc_decode(binary_syndrome, erasures) # sizes of cluster, list with index = fault id and value = cluster id
+        
+        # 4. Cache cluster stats metadata 
+        # clusters in whole window
+        self.cluster_sizes = found_cluster_sizes
+        self.cluster_map = cluster_map
+
+        # clusters in commit region
+        self.committed_clusters = np.append(self.cluster_map[:self.commit_region], np.zeros(self.cluster_map.shape[1] - self.commit_region, dtype=np.uint8))
+        _, self.committed_cluster_sizes = np.unique(self.committed_clusters, return_counts=True)
+
+        # 5. Extract the actual correction pattern produced by the decode logic
+        correction = self.decoder.correction
+        
+        return correction
 
 class tesseract_wrapper:
     '''
@@ -69,7 +135,6 @@ class relaybp_wrapper:
 #      (currently limited in decoder.statistics see weak decoding functions)
 
 #TODO: To make the decoder_switching class more modular we could make it accept the errormodel instead of a value of p 
-#TODO: need uf wrapper because we might also be inputing erasures
 
 class decoder_switching_class:
 
@@ -157,9 +222,12 @@ class decoder_switching_class:
             self.weak_decoder         = configure_bplsd_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,weak_decoder_params)
             self.weak_decode_function = [getattr(decoder,"decode",None)
                                          for decoder in self.weak_decoder] 
-
+        elif weak_decoder_option == 'uf':
+            self.weak_decoder         = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,weak_decoder_params)
+            self.weak_decode_function = [uf_wrapper(decoder)
+                                         for decoder in self.weak_decoder] 
         else:
-            raise NotImplementedError("No other weak decoder besides bplsd is implemented for now.")
+            raise NotImplementedError("No other weak decoder besides bplsd and uf are implemented for now.")
         
 
         
@@ -181,7 +249,7 @@ class decoder_switching_class:
 
         return window_check_set, window_observable_set, window_priors_set, window_update 
 
-    def decode_last_window_w_weak_decoder(self, F: int, num_checks: int, shot_index: int, syn_update, accumulated_correction, num_cor_rounds: int, norm_order=2):
+    def decode_last_window_w_weak_decoder(self, F: int, num_checks: int, shot_index: int, syn_update, accumulated_correction, num_cor_rounds: int, norm_order=2, decoder_type: str = 'bplsd'):
         '''
         Decode the last window w/ the weak decoder.
 
@@ -210,11 +278,17 @@ class decoder_switching_class:
         decoded_errors = self.weak_decode_function[k](diff_syndrome)
         correction     = self.window_observable_set[num_cor_rounds] @ decoded_errors % 2
 
-        # for UF say decoder.set_commit_region(num_faults_in_F)
 
         #TODO: This needs to be handled externally -- need a general wrapper applicable for UF & BPLSD -- ideally configured upon initialization of the object
-        stats           = decoder.statistics
-        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order)      # add option for UF / BPLSD
+        if decoder_type == 'bplsd':
+            stats           = decoder.statistics
+        elif decoder_type == 'uf':
+            # Handle UF decoder specific logic here
+            decoder.set_commit_region(num_faults_in_F)
+            stats = decoder.cluster_map # the map of committed clusters in the region set by F
+        else:
+            raise ValueError(f"Unsupported decoder type: {decoder_type}")
+        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, decoder_type)      # add option for UF / BPLSD
 
         accumulated_correction ^= (correction) 
 

@@ -54,20 +54,26 @@ def compute_cluster_norm_fraction(values: np.ndarray, order: float) -> float:
     return inside_norm / total_sum
 
 
-def collect_cluster_norm(stats, num_faults_in_W, num_faults_in_F, order):
+def collect_cluster_norm(stats, num_faults_in_W, num_faults_in_F, order, decoder_type = 'bplsd'):
     '''
     Inputs:
     stats: the stats from bplsd for the particular committed region
     num_faults_in_W: total # of faults in the entire window 
     num_faults_in_F: total # of faults in the commit region F
     order: order for cluster norm 
+    decoder_type: type of decoder used. Either 'bplsd' or 'uf'
 
     Output:
     clusters: array of size # of faults. each entry has a unique identifier, that tells us in which cluster each fault mechanism belongs to.
     '''
     # modify to work with UF
-    soft_output_stats = stats["individual_cluster_stats"]
-    
+    if decoder_type == 'bplsd':
+        soft_output_stats = stats["individual_cluster_stats"]
+    elif decoder_type == 'uf':
+        soft_output_stats = stats # this is just the map
+    else:
+        raise ValueError(f"Unsupported decoder type: {decoder_type}")
+
     clusters = np.zeros(num_faults_in_W,dtype=np.int_)
     cluster_id = 1
     for data in soft_output_stats.values():

@@ -4,7 +4,7 @@ from typing import Optional
 from tesseract_decoder import tesseract
 import relay_bp
 import numpy as np
-
+import py_wrapper.py_decoder as uf
 """
 Helper functions for configuring decoders. Set parameters in this file for decoders
 """
@@ -35,7 +35,10 @@ def collect_default_decoder_params(decoder):
             'schedule': 'serial',
             'lsd_method': 'lsd_cs',
             'lsd_order': 0,
-        }        
+        }    
+
+    elif decoder == 'uf':
+        decoder_params = {}    # there are no params to pass to UF
 
 
     return decoder_params
@@ -149,3 +152,24 @@ def configure_bplsd_decoder_per_sliding_window(window_check_set,window_priors_se
 
 
     return bplsd_decoders
+
+def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set, decoder_params: Optional[dict] = None):
+    '''
+    Configure UF for all windows.
+
+    Inputs:
+    window_check_set: list of check matrices per window
+    window_observable_set: list of observables matrices per window
+    window_priors_set: list of priors per window
+    decoder_params: dictionary of decoder parameters (not used for UF)
+
+    Outputs:
+    uf_decoders: list of UF decoders per window
+    '''
+
+    uf_decoders = []
+    for k in range(len(window_check_set)):
+        decoder = uf.UFDecoder(window_check_set[k], error_channel=window_priors_set[k])
+        uf_decoders.append(decoder)
+
+    return uf_decoders

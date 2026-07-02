@@ -240,7 +240,7 @@ class UnionFindWrapper:
         erasures = np.ascontiguousarray(erasures, dtype=np.uint8)
         
         # 3. Process data via the method to populate internal attributes
-        found_cluster_sizes, cluster_map = self.decoder.ldpc_decode(binary_syndrome, erasures)
+        found_cluster_sizes, cluster_map = self.decoder.ldpc_decode(binary_syndrome, erasures) # sizes of cluster, list with index = fault id and value = cluster id
         
         # 4. Cache cluster stats metadata 
         self.cluster_sizes = found_cluster_sizes

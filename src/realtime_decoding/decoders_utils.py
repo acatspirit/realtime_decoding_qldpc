@@ -5,6 +5,11 @@ from tesseract_decoder import tesseract
 import relay_bp
 import numpy as np
 
+"""
+Helper functions for configuring decoders. Set parameters in this file for decoders
+"""
+
+
 def collect_default_decoder_params(decoder):
 
     if decoder=='tesseract':

@@ -65,7 +65,7 @@ def collect_cluster_norm(stats, num_faults_in_W, num_faults_in_F, order):
     Output:
     clusters: array of size # of faults. each entry has a unique identifier, that tells us in which cluster each fault mechanism belongs to.
     '''
-
+    # modify to work with UF
     soft_output_stats = stats["individual_cluster_stats"]
     
     clusters = np.zeros(num_faults_in_W,dtype=np.int_)

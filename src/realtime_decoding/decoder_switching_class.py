@@ -10,9 +10,9 @@ import warnings
 
 from quits.decoder import spacetime
 import numpy as np
-from helper_cluster_tools import *
+from realtime_decoding.helper_cluster_tools import * # figure out the improt
 
-
+# fix the imports
 from src.circuits import create_bb_codes_circuit
 from src.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, collect_default_decoder_params
 from typing import Optional
@@ -210,9 +210,11 @@ class decoder_switching_class:
         decoded_errors = self.weak_decode_function[k](diff_syndrome)
         correction     = self.window_observable_set[num_cor_rounds] @ decoded_errors % 2
 
+        # for UF say decoder.set_commit_region(num_faults_in_F)
+
         #TODO: This needs to be handled externally -- need a general wrapper applicable for UF & BPLSD -- ideally configured upon initialization of the object
         stats           = decoder.statistics
-        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order)      
+        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order)      # add option for UF / BPLSD
 
         accumulated_correction ^= (correction) 
 

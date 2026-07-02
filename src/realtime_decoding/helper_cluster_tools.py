@@ -69,18 +69,18 @@ def collect_cluster_norm(stats, num_faults_in_W, num_faults_in_F, order, decoder
     # modify to work with UF
     if decoder_type == 'bplsd':
         soft_output_stats = stats["individual_cluster_stats"]
+        clusters = np.zeros(num_faults_in_W,dtype=np.int_)
+        cluster_id = 1
+        for data in soft_output_stats.values():
+            if data.get("active",False):
+                final_bits = data["final_bits"]
+                clusters[final_bits] = cluster_id 
+                cluster_id +=1
+
     elif decoder_type == 'uf':
-        soft_output_stats = stats # this is just the map
+        clusters = stats
     else:
         raise ValueError(f"Unsupported decoder type: {decoder_type}")
-
-    clusters = np.zeros(num_faults_in_W,dtype=np.int_)
-    cluster_id = 1
-    for data in soft_output_stats.values():
-        if data.get("active",False):
-            final_bits = data["final_bits"]
-            clusters[final_bits] = cluster_id 
-            cluster_id +=1
 
     #restrict the clusters to the num_faults_in_F
     clusters = clusters[:num_faults_in_F]

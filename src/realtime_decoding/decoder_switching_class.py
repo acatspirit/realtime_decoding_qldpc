@@ -480,7 +480,7 @@ class decoder_switching_class:
             cluster_norms_per_shot.append(cluster_norm_per_window)
             switch_times_per_shot.append(switch_times)
 
-            failures_cnt += np.any(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
+            failures_cnt += np.mean(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
 
             if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
                 N = shot_index + 1
@@ -492,10 +492,10 @@ class decoder_switching_class:
 
                     print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
 
-                    return N, cluster_norms_per_shot, switch_times_per_shot, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)             
+                    return N, cluster_norms_per_shot, switch_times_per_shot, np.mean(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)             
 
         
-        return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.any(self.obs_flips ^ logical_pred,axis=1)
+        return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.mean(self.obs_flips ^ logical_pred,axis=1)
 
     def decode_with_sliding_window(self, decoder_option: str, norm_order: int, rel_error_tol = 0.2):
         '''
@@ -548,7 +548,7 @@ class decoder_switching_class:
                 logical_pred[shot_index, :] = accumulated_correction
                 cluster_norms_per_shot.append(cluster_norm_per_window)
 
-                failures_cnt += np.any(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
+                failures_cnt += np.mean(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
 
                 if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
                     N = shot_index + 1
@@ -560,10 +560,10 @@ class decoder_switching_class:
 
                         print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
 
-                        return N, cluster_norms_per_shot, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1) 
+                        return N, cluster_norms_per_shot, np.mean(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1) 
 
             
-            return self.num_shots,cluster_norms_per_shot, np.any(self.obs_flips ^ logical_pred,axis=1)
+            return self.num_shots,cluster_norms_per_shot, np.mean(self.obs_flips ^ logical_pred,axis=1)
 
         elif decoder_option=='strong':
 
@@ -582,7 +582,7 @@ class decoder_switching_class:
                 
                 logical_pred[shot_index, :] = accumulated_correction
 
-                failures_cnt += np.any(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
+                failures_cnt += np.mean(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
 
                 
                 if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
@@ -596,10 +596,10 @@ class decoder_switching_class:
 
                         print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
 
-                        return N, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1) #output updated shots
+                        return N, np.mean(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1) #output updated shots
 
 
-            return self.num_shots,np.any(self.obs_flips ^ logical_pred,axis=1)
+            return self.num_shots,np.mean(self.obs_flips ^ logical_pred,axis=1)
 
         return 
 
@@ -631,7 +631,7 @@ class decoder_switching_class:
             tesseract_decoder = config.compile_decoder()
 
             pred_flips   = tesseract_decoder.decode_batch(det_events) #decode_batch outputs directly the logical predictions
-            logical_pred = np.any(self.obs_flips ^ pred_flips, axis=1)
+            logical_pred = np.mean(self.obs_flips ^ pred_flips, axis=1)
 
             return self.num_shots,logical_pred
 
@@ -656,7 +656,7 @@ class decoder_switching_class:
                 decoded_errors    = relaybp_wrapper(relay_decoder)(det_events[i,:])
                 logical_pred[i,:] = obs @ decoded_errors % 2 
 
-                failures_cnt += np.any(self.obs_flips[i,:] ^ logical_pred[i,:])
+                failures_cnt += np.mean(self.obs_flips[i,:] ^ logical_pred[i,:])
 
                 if (i + 1) % shots_to_check == 0 and failures_cnt > 0:
                     N = i + 1
@@ -667,7 +667,7 @@ class decoder_switching_class:
                     if rel_err<epsilon:
 
                         print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
-                        return N, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)                
+                        return N, np.mean(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)                
 
         elif decoder=='bplsd':
 
@@ -687,7 +687,7 @@ class decoder_switching_class:
                 decoded_errors    = bplsd_decoder.decode(det_events[i,:])
                 logical_pred[i,:] = obs @ decoded_errors % 2 
 
-                failures_cnt += np.any(self.obs_flips[i,:] ^ logical_pred[i,:])
+                failures_cnt += np.mean(self.obs_flips[i,:] ^ logical_pred[i,:])
 
                 if (i + 1) % shots_to_check == 0 and failures_cnt > 0:
                     N = i + 1
@@ -698,13 +698,13 @@ class decoder_switching_class:
                     if rel_err<epsilon:
 
                         print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
-                        return N, np.any(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)
+                        return N, np.mean(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)
             
 
         else:
             raise NotImplemented("No other decoder choice besides tesseract, relay_bp and bplsd are available for now.")
 
-        return self.num_shots,np.any(self.obs_flips ^ logical_pred,axis=1)
+        return self.num_shots,np.mean(self.obs_flips ^ logical_pred,axis=1)
 
 
 

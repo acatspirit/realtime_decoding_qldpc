@@ -38,7 +38,7 @@ def collect_default_decoder_params(decoder):
         }    
 
     elif decoder == 'uf':
-        decoder_params = {}    # there are no params to pass to UF
+        decoder_params = {'num_qubits':0}    # there are no params to pass to UF
 
 
     return decoder_params
@@ -153,7 +153,7 @@ def configure_bplsd_decoder_per_sliding_window(window_check_set,window_priors_se
 
     return bplsd_decoders
 
-def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set, decoder_params: Optional[dict] = None):
+def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set, erasures=None,decoder_params: Optional[dict] = None):
     '''
     Configure UF for all windows.
 
@@ -168,9 +168,13 @@ def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set,
     '''
 
     uf_decoders = []
+    if erasures is None:
+        erasures = [np.zeros(window_check_set[k].shape[1], dtype=np.uint8) for k in range(len(window_check_set))]
+    else:
+        erasures = [erasures] * len(window_check_set) # to be changed
     for k in range(len(window_check_set)):
         # decoder = uf.UFDecoder(window_check_set[k], error_channel=window_priors_set[k]) # i think we don't need priors since unweighted
         decoder = uf.UFDecoder(window_check_set[k])
         uf_decoders.append(decoder)
 
-    return uf_decoders
+    return uf_decoders, erasures

@@ -39,10 +39,10 @@ class uf_wrapper:
         check_matrix : array_like or csr_matrix
             The parity-check matrix (H) associated with the current decoding window.
         """
-        if not isinstance(check_matrix, csr_matrix):
-            check_matrix = csr_matrix(check_matrix)
+        # if not isinstance(check_matrix, csr_matrix):
+        #     check_matrix = csr_matrix(check_matrix)
             
-        self.check_matrix = check_matrix
+        # self.check_matrix = check_matrix
         
         # Initialize the underlying C-wrapped Union Find decoder instance
         self.decoder = decoder
@@ -75,8 +75,9 @@ class uf_wrapper:
         binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
         
         # 2. Build a matching blank erasure vector corresponding to the window size's qubits
-        erasures = np.zeros(shape=self.check_matrix.shape[1], dtype=np.uint8)
-        erasures = np.ascontiguousarray(erasures, dtype=np.uint8)
+        # erasures = np.zeros(shape=self.check_matrix.shape[1], dtype=np.uint8)
+        # erasures = np.ascontiguousarray(erasures, dtype=np.uint8)
+        erasures = np.zeros(shape=self.decoder.num_qubits, dtype=np.uint8)  # Assuming the decoder has a num_qubits attribute
         
         # 3. Process data via the method to populate internal attributes
         found_cluster_sizes, cluster_map = self.decoder.ldpc_decode(binary_syndrome, erasures) # sizes of cluster, list with index = fault id and value = cluster id

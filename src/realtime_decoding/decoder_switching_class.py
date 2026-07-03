@@ -311,7 +311,7 @@ class decoder_switching_class:
         elif self.weak_decoder_option == 'uf':
             # Handle UF decoder specific logic here
             # decoder.set_commit_region(num_faults_in_F)
-            stats = self.weak_decode_function[k].cluster_map # the map of committed clusters in the region set by F
+            stats = np.array(self.weak_decode_function[k].cluster_map) # the map of committed clusters in the region set by F
         else:
             raise ValueError(f"Unsupported decoder type: {self.weak_decoder_option}")
         cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, self.weak_decoder_option)      # add option for UF / BPLSD
@@ -364,7 +364,7 @@ class decoder_switching_class:
         if self.weak_decoder_option == 'bplsd':
             stats           = decoder.statistics
         elif self.weak_decoder_option == 'uf':
-            stats           = self.weak_decode_function[k].cluster_map
+            stats           = np.array(self.weak_decode_function[k].cluster_map)
         else:
             raise ValueError(f"Unsupported decoder type: {self.weak_decoder_option}")
         

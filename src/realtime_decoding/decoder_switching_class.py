@@ -30,7 +30,7 @@ import relay_bp
 #ii)  sliding window decoding with one decoder
 #iii) sliding window decoding where it switches from weak to strong decoder, based on cluster norm cutoff
 class uf_wrapper:
-    def __init__(self, decoder, **params):
+    def __init__(self, decoder, erasures, **params):
         """
         A sliding-window compatible wrapper for the custom nbi-hyq Union Find decoder.
         
@@ -46,18 +46,15 @@ class uf_wrapper:
         
         # Initialize the underlying C-wrapped Union Find decoder instance
         self.decoder = decoder
+        self.erasures = erasures
         
         # Public instance attribute for DecoderSwitchingWrapper to read
         self.cluster_sizes = None
         self.cluster_dict = None
         self.commit_region = None
         self.committed_clusters = None
-    
-    def set_commit_region(self, commit_region):
-
-        self.commit_region = commit_region
         
-    def decode(self, syndrome):
+    def __call__(self, syndrome):
         """
         Decodes a window syndrome vector and returns a correction vector.
         
@@ -74,27 +71,25 @@ class uf_wrapper:
         # 1. Enforce strict contiguous data alignment types for the underlying C structures
         binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
         
-        # 2. Build a matching blank erasure vector corresponding to the window size's qubits
-        # erasures = np.zeros(shape=self.check_matrix.shape[1], dtype=np.uint8)
-        # erasures = np.ascontiguousarray(erasures, dtype=np.uint8)
-        erasures = np.zeros(shape=self.decoder.num_qubits, dtype=np.uint8)  # Assuming the decoder has a num_qubits attribute
+        # 2. Process data via the method to populate internal attributes
+        found_cluster_sizes, cluster_map = self.decoder.ldpc_decode(binary_syndrome, self.erasures) # sizes of cluster, list with index = fault id and value = cluster id
         
-        # 3. Process data via the method to populate internal attributes
-        found_cluster_sizes, cluster_map = self.decoder.ldpc_decode(binary_syndrome, erasures) # sizes of cluster, list with index = fault id and value = cluster id
-        
-        # 4. Cache cluster stats metadata 
+        # 3. Cache cluster stats metadata 
         # clusters in whole window
         self.cluster_sizes = found_cluster_sizes
         self.cluster_map = cluster_map
-
         # clusters in commit region
-        self.committed_clusters = np.append(self.cluster_map[:self.commit_region], np.zeros(self.cluster_map.shape[1] - self.commit_region, dtype=np.uint8))
+        self.committed_clusters = np.append(self.cluster_map[:self.commit_region], np.zeros(len(self.cluster_map) - self.commit_region, dtype=np.uint8))
         _, self.committed_cluster_sizes = np.unique(self.committed_clusters, return_counts=True)
 
-        # 5. Extract the actual correction pattern produced by the decode logic
+        # 4. Extract the actual correction pattern produced by the decode logic
         correction = self.decoder.correction
         
         return correction
+    
+    def set_commit_region(self, commit_region):
+        print("setting the commit region")
+        self.commit_region = commit_region
 
 class tesseract_wrapper:
     '''
@@ -253,9 +248,8 @@ class decoder_switching_class:
             self.weak_decode_function = [getattr(decoder,"decode",None)
                                          for decoder in self.weak_decoder] 
         elif weak_decoder_option == 'uf':
-            self.weak_decoder         = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,weak_decoder_params)
-            self.weak_decode_function = [uf_wrapper(decoder)
-                                         for decoder in self.weak_decoder] 
+            self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erasures=None, decoder_params=weak_decoder_params)
+            self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
         else:
             raise NotImplementedError("No other weak decoder besides bplsd and uf are implemented for now.")
         
@@ -301,7 +295,10 @@ class decoder_switching_class:
         decoder         = self.weak_decoder[k]
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region (num_faults_in_F=num_faults_in_W for last iteration)
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  
-
+        print(self.weak_decode_function[k].commit_region)
+        if decoder_type == 'uf':
+            self.weak_decode_function[k].set_commit_region(num_faults_in_F)
+        print(self.weak_decode_function[k].commit_region)
         diff_syndrome              = self.detection_events[shot_index, (F * num_cor_rounds) * num_checks:].copy()
         diff_syndrome[:num_checks] ^= syn_update
         
@@ -314,7 +311,7 @@ class decoder_switching_class:
             stats           = decoder.statistics
         elif decoder_type == 'uf':
             # Handle UF decoder specific logic here
-            decoder.set_commit_region(num_faults_in_F)
+            # decoder.set_commit_region(num_faults_in_F)
             stats = decoder.cluster_map # the map of committed clusters in the region set by F
         else:
             raise ValueError(f"Unsupported decoder type: {decoder_type}")
@@ -351,6 +348,10 @@ class decoder_switching_class:
         decoder         = self.weak_decoder[k]
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region F
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  #number of faults in the entire window W
+        print(self.weak_decode_function[k].commit_region)
+        if decoder_type == 'uf':
+            self.weak_decode_function[k].set_commit_region(num_faults_in_F)
+        print(self.weak_decode_function[k].commit_region)
 
         diff_syndrome              = self.detection_events[shot_index, F * k * num_checks:(F * k + W) * num_checks].copy()
         diff_syndrome[:num_checks] ^= syn_update   #update syndrome based on previous window decoding
@@ -366,7 +367,6 @@ class decoder_switching_class:
         if decoder_type == 'bplsd':
             stats           = decoder.statistics
         elif decoder_type == 'uf':
-            decoder.set_commit_region(num_faults_in_F)
             stats           = decoder.cluster_map
         else:
             raise ValueError(f"Unsupported decoder type: {decoder_type}")

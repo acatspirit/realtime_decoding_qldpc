@@ -4,6 +4,7 @@ from typing import Optional
 from tesseract_decoder import tesseract
 import relay_bp
 import numpy as np
+from scipy.sparse import csr_matrix
 import py_wrapper.py_decoder as uf
 """
 Helper functions for configuring decoders. Set parameters in this file for decoders
@@ -169,12 +170,12 @@ def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set,
 
     uf_decoders = []
     if erasures is None:
-        erasures = [np.zeros(window_check_set[k].shape[1], dtype=np.uint8) for k in range(len(window_check_set))]
+        erasure_array = [np.zeros(window_check_set[k].shape[1], dtype=np.uint8) for k in range(len(window_check_set))]
     else:
-        erasures = [erasures] * len(window_check_set) # to be changed
+        erasure_array = [erasures] * len(window_check_set) # to be changed
     for k in range(len(window_check_set)):
         # decoder = uf.UFDecoder(window_check_set[k], error_channel=window_priors_set[k]) # i think we don't need priors since unweighted
-        decoder = uf.UFDecoder(window_check_set[k])
+        decoder = uf.UFDecoder(csr_matrix(window_check_set[k]))
         uf_decoders.append(decoder)
 
-    return uf_decoders, erasures
+    return uf_decoders, erasure_array

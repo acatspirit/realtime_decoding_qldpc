@@ -88,7 +88,6 @@ class uf_wrapper:
         return correction
     
     def set_commit_region(self, commit_region):
-        print("setting the commit region")
         self.commit_region = commit_region
 
 class tesseract_wrapper:
@@ -210,6 +209,8 @@ class decoder_switching_class:
         self.h = h 
         self.W = W
         self.F = F
+        self.weak_decoder_option = weak_decoder_option
+        self.strong_decoder_option = strong_decoder_option
 
         # update the total number of windows for decoding, the size of the last window
         if 2 + num_rounds - W >= 0:
@@ -273,7 +274,7 @@ class decoder_switching_class:
 
         return window_check_set, window_observable_set, window_priors_set, window_update 
 
-    def decode_last_window_w_weak_decoder(self, F: int, num_checks: int, shot_index: int, syn_update, accumulated_correction, num_cor_rounds: int, norm_order=2, decoder_type: str = 'bplsd'):
+    def decode_last_window_w_weak_decoder(self, F: int, num_checks: int, shot_index: int, syn_update, accumulated_correction, num_cor_rounds: int, norm_order=2):
         '''
         Decode the last window w/ the weak decoder.
 
@@ -295,10 +296,8 @@ class decoder_switching_class:
         decoder         = self.weak_decoder[k]
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region (num_faults_in_F=num_faults_in_W for last iteration)
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  
-        print(self.weak_decode_function[k].commit_region)
-        if decoder_type == 'uf':
+        if self.weak_decoder_option == 'uf':
             self.weak_decode_function[k].set_commit_region(num_faults_in_F)
-        print(self.weak_decode_function[k].commit_region)
         diff_syndrome              = self.detection_events[shot_index, (F * num_cor_rounds) * num_checks:].copy()
         diff_syndrome[:num_checks] ^= syn_update
         
@@ -307,21 +306,21 @@ class decoder_switching_class:
 
 
         #TODO: This needs to be handled externally -- need a general wrapper applicable for UF & BPLSD -- ideally configured upon initialization of the object
-        if decoder_type == 'bplsd':
+        if self.weak_decoder_option == 'bplsd':
             stats           = decoder.statistics
-        elif decoder_type == 'uf':
+        elif self.weak_decoder_option == 'uf':
             # Handle UF decoder specific logic here
             # decoder.set_commit_region(num_faults_in_F)
-            stats = decoder.cluster_map # the map of committed clusters in the region set by F
+            stats = self.weak_decode_function[k].cluster_map # the map of committed clusters in the region set by F
         else:
-            raise ValueError(f"Unsupported decoder type: {decoder_type}")
-        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, decoder_type)      # add option for UF / BPLSD
+            raise ValueError(f"Unsupported decoder type: {self.weak_decoder_option}")
+        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, self.weak_decoder_option)      # add option for UF / BPLSD
 
         accumulated_correction ^= (correction) 
 
         return accumulated_correction,cluster_norm
 
-    def decode_main_window_w_weak_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2, decoder_type='bplsd'):
+    def decode_main_window_w_weak_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2):
         '''
         Decode any window besides last window w/ the weak decoder.
 
@@ -348,10 +347,8 @@ class decoder_switching_class:
         decoder         = self.weak_decoder[k]
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region F
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  #number of faults in the entire window W
-        print(self.weak_decode_function[k].commit_region)
-        if decoder_type == 'uf':
+        if self.weak_decoder_option == 'uf':
             self.weak_decode_function[k].set_commit_region(num_faults_in_F)
-        print(self.weak_decode_function[k].commit_region)
 
         diff_syndrome              = self.detection_events[shot_index, F * k * num_checks:(F * k + W) * num_checks].copy()
         diff_syndrome[:num_checks] ^= syn_update   #update syndrome based on previous window decoding
@@ -364,21 +361,21 @@ class decoder_switching_class:
 
         syn_update = self.window_update[k] @ decoded_errors_in_F % 2
 
-        if decoder_type == 'bplsd':
+        if self.weak_decoder_option == 'bplsd':
             stats           = decoder.statistics
-        elif decoder_type == 'uf':
-            stats           = decoder.cluster_map
+        elif self.weak_decoder_option == 'uf':
+            stats           = self.weak_decode_function[k].cluster_map
         else:
-            raise ValueError(f"Unsupported decoder type: {decoder_type}")
+            raise ValueError(f"Unsupported decoder type: {self.weak_decoder_option}")
         
         
-        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, decoder_type)      
+        cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, self.weak_decoder_option)      
 
         accumulated_correction ^= (correction) 
 
         return syn_update,accumulated_correction,cluster_norm
     
-    def decode_main_window_w_strong_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2, decoder_type='bplsd'):
+    def decode_main_window_w_strong_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2):
         '''
         Decode any window besides last window w/ the strong decoder.
 

@@ -169,7 +169,8 @@ def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set,
 
     uf_decoders = []
     for k in range(len(window_check_set)):
-        decoder = uf.UFDecoder(window_check_set[k], error_channel=window_priors_set[k])
+        # decoder = uf.UFDecoder(window_check_set[k], error_channel=window_priors_set[k]) # i think we don't need priors since unweighted
+        decoder = uf.UFDecoder(window_check_set[k])
         uf_decoders.append(decoder)
 
     return uf_decoders

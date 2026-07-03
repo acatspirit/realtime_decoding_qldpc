@@ -15,7 +15,7 @@ from scipy.sparse import csr_matrix
 from realtime_decoding.helper_cluster_tools import * # figure out the improt
 
 # fix the imports
-from src.circuits import create_bb_codes_circuit
+from src.circuits import create_bb_codes_circuit, create_bb_codes_circuit_ionic_model, add_independent_leakage_errors_per_round
 from src.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params
 from typing import Optional
 import relay_bp
@@ -142,7 +142,8 @@ class decoder_switching_class:
                  strong_decoder_option: str, 
                  weak_decoder_option: str, 
                  strong_decoder_params: Optional[dict] = None,
-                 weak_decoder_params: Optional[dict] = None):
+                 weak_decoder_params: Optional[dict] = None,
+                 p_leak = 0):
         
         '''
         Inputs:
@@ -157,17 +158,38 @@ class decoder_switching_class:
         weak_decoder_option: option to choose weak decoder from 'uf' or 'bplsd'
         strong_decoder_params: dictionary with strong decoder parameters 
         weak_decoder_params: dictionary with weak decoder parameters 
+        p_leak: leakage error rate per qubit, for each round (default set to 0)
 
         ---decoder_params are optional. default parameters can be found in decoders_utils.py---
         '''
 
      
-        circuit,bb = create_bb_codes_circuit(code_name, p, num_rounds, basis)
-        sampler    = circuit.compile_detector_sampler()
+        circuit,bb = create_bb_codes_circuit(code_name, p, num_rounds, basis) #for trapped ion model use: create_bb_codes_circuit_ionic_model
 
-        detection_events,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
+        #Add leakage errors here (In either case we use dem that has only regular dets -- no leakage-aware decoding implement for now):
 
-        self.detection_events = np.array(detection_events,dtype=np.uint8)
+        if p_leak>0: #Sample from circuit that has leakage 
+            n, _, _ = map(int, code_name.strip("[]").split(","))
+
+            circuit_w_leakage, det_types = add_independent_leakage_errors_per_round(circuit,n,p_leak=p_leak)
+            sampler    = circuit_w_leakage.compile_detector_sampler()
+
+            detection_events_init,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
+            detection_events_init = np.array(detection_events_init,dtype=np.uint8)
+
+            self.leakage_detection_events = detection_events_init[:,det_types['leakage_dets']] #store other det events, in case we want to postselect on the no-leakage events
+            
+            detection_events = detection_events_init[:,det_types['regular_dets']] #restrict det events only to regular detectors (exclude dets used for leakage tracking)
+
+
+        else: #Sample from regular circuit if there is no leakage
+
+            sampler    = circuit.compile_detector_sampler()
+            detection_events,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
+            detection_events = np.array(detection_events,dtype=np.uint8)
+
+
+        self.detection_events = detection_events
         self.obs_flips        = obs_flips
 
         self.circuit = circuit 

@@ -1,4 +1,4 @@
-from src.utils import get_window_dems
+from realtime_decoding.utils import get_window_dems
 from ldpc.bplsd_decoder import BpLsdDecoder
 from typing import Optional
 from tesseract_decoder import tesseract

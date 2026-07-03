@@ -1,5 +1,6 @@
 import numpy as np
-from ldpc_post_selection.src.ldpc_post_selection.cluster_tools import *
+
+from ldpc_post_selection.cluster_tools import compute_cluster_norm_fraction, compute_lp_norm
 
 def compute_cluster_stats(clusters: np.ndarray):
     """

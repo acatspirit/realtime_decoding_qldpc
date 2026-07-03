@@ -15,8 +15,8 @@ from scipy.sparse import csr_matrix
 from realtime_decoding.helper_cluster_tools import * # figure out the improt
 
 # fix the imports
-from src.circuits import create_bb_codes_circuit, create_bb_codes_circuit_ionic_model, add_independent_leakage_errors_per_round
-from src.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params
+from realtime_decoding.circuits import create_bb_codes_circuit, create_bb_codes_circuit_ionic_model, add_independent_leakage_errors_per_round
+from realtime_decoding.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params
 from typing import Optional
 import relay_bp
 
@@ -143,7 +143,8 @@ class decoder_switching_class:
                  weak_decoder_option: str, 
                  strong_decoder_params: Optional[dict] = None,
                  weak_decoder_params: Optional[dict] = None,
-                 p_leak = 0):
+                 p_leak = 0,
+                 noise_model = "ionic"):
         
         '''
         Inputs:
@@ -159,12 +160,18 @@ class decoder_switching_class:
         strong_decoder_params: dictionary with strong decoder parameters 
         weak_decoder_params: dictionary with weak decoder parameters 
         p_leak: leakage error rate per qubit, for each round (default set to 0)
+        noise_model: "ionic" or "standard"
 
         ---decoder_params are optional. default parameters can be found in decoders_utils.py---
         '''
 
-     
-        circuit,bb = create_bb_codes_circuit(code_name, p, num_rounds, basis) #for trapped ion model use: create_bb_codes_circuit_ionic_model
+        if noise_model == "standard":
+            circuit,bb = create_bb_codes_circuit(code_name, p, num_rounds, basis) #for trapped ion model use: create_bb_codes_circuit_ionic_model
+        elif noise_model == "ionic":
+            circuit, bb = create_bb_codes_circuit_ionic_model(code_name, p, num_rounds, basis)
+        else:
+            NotImplementedError("No other noise models have been implemented")
+
 
         #Add leakage errors here (In either case we use dem that has only regular dets -- no leakage-aware decoding implement for now):
 
@@ -196,11 +203,11 @@ class decoder_switching_class:
         self.bb      = bb 
         self.num_shots = num_shots
         
-        if basis=='Z':
+        if basis=='Z' or basis=='z':
             h = bb.hz 
             self.logical = bb.lz
             
-        elif basis=='X':
+        elif basis=='X' or basis=='x':
             h = bb.hx 
             self.logical = bb.lx
 

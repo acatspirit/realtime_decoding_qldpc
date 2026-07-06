@@ -343,7 +343,7 @@ class decoder_switching_class:
         '''
 
         k          = current_window_index
-    
+        print(len(self.window_check_set[k]))
         decoder         = self.weak_decoder[k]
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region F
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  #number of faults in the entire window W

@@ -105,18 +105,26 @@ def get_parity_and_logs_rsc(d, basis):
     l = bplsd.obs_matrix   # This is your logical operator matrix
     return h, l
 
-def get_BB_circuit(d, basis, p, rounds):
+def get_BB_circuit(d, basis, p, rounds, noise_model="ion"):
     d_dict = {6:{'l':6, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},
               10: {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]},
               12:{'l':12, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},}
     code_params = d_dict[d]
 
-    error_model = ErrorModel(
-        idle_error=p,
-        sqgate_error=p,
-        tqgate_error=p,
-        spam_error=p,
-        )
+    if noise_model == "ion":
+        error_model = ErrorModel(
+            idle_error=p/100,
+            sqgate_error=p/10,
+            tqgate_error=p,
+            spam_error=p/10,
+            )
+    else:
+        error_model = ErrorModel(
+            idle_error=p,
+            sqgate_error=p,
+            tqgate_error=p,
+            spam_error=p,
+            )
 
     bb = BbCode(
         l=code_params['l'],

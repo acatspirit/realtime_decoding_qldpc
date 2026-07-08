@@ -111,6 +111,7 @@ class RelayBpWrapper:
         return self.decoder.decode(binary_syndrome)
 
 class TesseractWrapper:
+    # TODO: bug in passing in the observables from sliding window
     def __init__(self, check_matrix, **kwargs):
         """
         Standardized wrapper for Google's Tesseract decoder to make it 
@@ -125,16 +126,17 @@ class TesseractWrapper:
         # 2. Extract the correct window observable matrix using the tracker
         window_observables = kwargs.get('window_observables')
         if window_observables is not None:
-            if 'window_index' in kwargs:
-                idx = kwargs['window_index']
-            elif 'window_index_tracker' in kwargs:
-                tracker = kwargs['window_index_tracker']
-                idx = tracker[0]
-                tracker[0] += 1  # Move tracker to the next window position
-            else:
-                raise ValueError("TesseractWrapper requires 'window_index' or 'window_index_tracker'.")
+            # if 'window_index' in kwargs:
+            #     idx = kwargs['window_index']
+            # elif 'window_index_tracker' in kwargs:
+            #     tracker = kwargs['window_index_tracker']
+            #     idx = tracker[0]
+            #     tracker[0] += 1  # Move tracker to the next window position
+            # else:
+            #     raise ValueError("TesseractWrapper requires 'window_index' or 'window_index_tracker'.")
             
-            self.obs = window_observables[idx]
+            # self.obs = window_observables[idx]
+            self.obs = window_observables
         else:
             raise ValueError("TesseractWrapper requires 'window_observables' to build the DEM.")
             

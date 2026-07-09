@@ -1,22 +1,20 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move one level back out of the src file (or i guess for arianna's package 2 levels)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..'))) #move to level before src file
 
 
 from quits import detector_error_model_to_matrix
 from tesseract_decoder import tesseract
 from ldpc.bplsd_decoder import BpLsdDecoder
-import py_wrapper.py_decoder as uf
 import warnings
 
 from quits.decoder import spacetime
 import numpy as np
-from scipy.sparse import csr_matrix
-from realtime_decoding.helper_cluster_tools import * # figure out the improt
+from src.realtime_decoding.helper_cluster_tools import * # figure out the improt
 
 # fix the imports
-from realtime_decoding.circuits import create_bb_codes_circuit, create_bb_codes_circuit_ionic_model, add_independent_leakage_errors_per_round
-from realtime_decoding.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params
+from src.realtime_decoding.circuits import create_bb_codes_circuit, create_bb_codes_circuit_ionic_model, add_independent_leakage_errors_per_round
+from src.realtime_decoding.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params
 from typing import Optional
 import relay_bp
 
@@ -161,7 +159,7 @@ class decoder_switching_class:
         '''
 
         if noise_model == "standard":
-            circuit,bb = create_bb_codes_circuit(code_name, p, num_rounds, basis) #for trapped ion model use: create_bb_codes_circuit_ionic_model
+            circuit,bb = create_bb_codes_circuit(code_name, p, num_rounds, basis)
         elif noise_model == "ionic":
             circuit, bb = create_bb_codes_circuit_ionic_model(code_name, p, num_rounds, basis)
         else:
@@ -184,7 +182,7 @@ class decoder_switching_class:
             detection_events = detection_events_init[:,det_types['regular_dets']] #restrict det events only to regular detectors (exclude dets used for leakage tracking)
 
 
-        else: #Sample from regular circuit if there is no leakage
+        else: #Sample from regular circuit 
 
             sampler    = circuit.compile_detector_sampler()
             detection_events,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)

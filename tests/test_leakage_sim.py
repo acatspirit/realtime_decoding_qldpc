@@ -8,7 +8,7 @@ matplotlib.rcParams.update({'font.size': 17})
 plt.rcParams["font.family"] = "Microsoft Sans Serif"
 
 import numpy as np
-from src.realtime_decoding import decoder_switching_class
+from src.realtime_decoding.decoder_switching_class import decoder_switching_class
 from joblib import Parallel, delayed
 
 
@@ -85,7 +85,7 @@ def test_postselection_on_no_leakage(num_shots=80_000):
 
         #Post-select on the no-leakage
         if p_leak>0:
-            det_events_of_leakage_dets = test.leakage_det_events
+            det_events_of_leakage_dets = test.leakage_detection_events
 
             keep_shots_inds = []
             for k in range(num_shots):
@@ -179,3 +179,8 @@ def test_postselection_on_no_leakage(num_shots=80_000):
     plt.show()    
 
     return 
+
+
+
+
+test_postselection_on_no_leakage(5_000)

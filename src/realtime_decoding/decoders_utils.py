@@ -1,11 +1,18 @@
-from realtime_decoding.utils import get_window_dems
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..'))) #move one level back out of the src file (or i guess for arianna's package 2 levels)
+
+
+
+from src.realtime_decoding.utils import get_window_dems
 from ldpc.bplsd_decoder import BpLsdDecoder
 from typing import Optional
 from tesseract_decoder import tesseract
 import relay_bp
 import numpy as np
 from scipy.sparse import csr_matrix
-import py_wrapper.py_decoder as uf
+# import py_wrapper.py_decoder as uf
+from uf_decoder.py_wrapper import py_decoder as uf
 """
 Helper functions for configuring decoders. Set parameters in this file for decoders
 """

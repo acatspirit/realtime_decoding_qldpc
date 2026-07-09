@@ -1,9 +1,8 @@
-#Test that our class simulator produces the same as QUITs
+#Test that our class simulator produces the same ler performance as QUITs
 
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move one level back out of the tests folder
-
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -11,9 +10,7 @@ import matplotlib
 matplotlib.rcParams.update({'font.size': 17})
 plt.rcParams["font.family"] = "Microsoft Sans Serif"
 from joblib import Parallel, delayed
-from src.decoder_switching_class import decoder_switching_class
-
-
+from src.realtime_decoding.decoder_switching_class import decoder_switching_class
 from quits import sliding_window_bplsd_circuit_mem
 
 

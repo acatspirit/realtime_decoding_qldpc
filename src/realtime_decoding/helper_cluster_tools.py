@@ -1,6 +1,48 @@
 import numpy as np
 
-from ldpc_post_selection.cluster_tools import compute_cluster_norm_fraction, compute_lp_norm
+'''
+The functions "compute_lp_norm" , "compute_cluster_stats" and "compute_cluster_norm_fraction"
+were created in https://github.com/seokhyung-lee/ldpc-post-selection/tree/main,
+and some features were modified here for our purposes. 
+All credits for these three functions go to the creators of https://github.com/seokhyung-lee/ldpc-post-selection/tree/main.
+
+'''
+
+def compute_lp_norm(values: np.ndarray, order: float, take_abs: bool = False) -> float:
+    """
+    Compute an L_p norm for 1D values with optional absolute values.
+
+    Parameters
+    ----------
+    values : 1D numpy array of float
+        Values for which the norm should be computed.
+    order : float
+        Order for the L_p norm (positive number or `np.inf`).
+    take_abs : bool, optional
+        If True, take absolute values before the norm calculation. Defaults to False.
+
+    Returns
+    -------
+    norm_value : float
+        Calculated norm of the provided values.
+    """
+    if values.size == 0:
+        return 0.0
+
+    processed = np.abs(values) if take_abs else values
+
+    if processed.size == 0:
+        return 0.0
+
+    if order == 1:
+        return float(np.sum(processed))
+    if order == 2:
+        return float(np.sqrt(np.sum(processed**2)))
+    if np.isinf(order):
+        return float(np.max(processed)) if processed.size > 0 else 0.0
+
+    return float(np.sum(processed**order) ** (1.0 / order))
+
 
 def compute_cluster_stats(clusters: np.ndarray):
     """

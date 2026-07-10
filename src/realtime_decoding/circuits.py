@@ -46,7 +46,7 @@ def create_bb_codes_circuit(code_name: str, p: float, num_rounds: int, basis: st
                 
                 # https://arxiv.org/pdf/2408.10001 some codes taken from this paper (all CSS).
                  "[[54,8,6]]":    {'l': 3, 'm': 9, 'A_x_pows': [0], 'A_y_pows': [2,4], 'B_x_pows': [1,2], 'B_y_pows': [3]},      
-                 "[[90,8,10]]]": {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]},      
+                 "[[90,8,10]]": {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]},      
                  "[[126,8,10]]":  {'l': 3, 'm': 21, 'A_x_pows': [0], 'A_y_pows': [2,10], 'B_x_pows': [1,2], 'B_y_pows': [3]}, 
                  "[[162,8,14]]":  {'l': 3, 'm': 27, 'A_x_pows': [0], 'A_y_pows': [10,14], 'B_x_pows': [1,2], 'B_y_pows': [12]}, 
                  "[[180,8,16]]": {'l': 6, 'm': 15, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [4,5], 'B_y_pows': [6]},    
@@ -148,7 +148,7 @@ def create_bb_codes_circuit_ionic_model(code_name: str, p: float, num_rounds: in
                 
                 # https://arxiv.org/pdf/2408.10001 some codes taken from this paper (all CSS).
                  "[[54,8,6]]":    {'l': 3, 'm': 9, 'A_x_pows': [0], 'A_y_pows': [2,4], 'B_x_pows': [1,2], 'B_y_pows': [3]},      
-                 "[[90,8,10]]]": {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]},      
+                 "[[90,8,10]]": {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]},      
                  "[[126,8,10]]":  {'l': 3, 'm': 21, 'A_x_pows': [0], 'A_y_pows': [2,10], 'B_x_pows': [1,2], 'B_y_pows': [3]}, 
                  "[[162,8,14]]":  {'l': 3, 'm': 27, 'A_x_pows': [0], 'A_y_pows': [10,14], 'B_x_pows': [1,2], 'B_y_pows': [12]}, 
                  "[[180,8,16]]": {'l': 6, 'm': 15, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [4,5], 'B_y_pows': [6]},    

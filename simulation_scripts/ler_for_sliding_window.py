@@ -1,5 +1,6 @@
 import sys
 import os
+from pathlib import Path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before src file
 
 
@@ -242,7 +243,7 @@ def get_ler_per_SEC_fitted_eps_from_many_rounds(num_shots=10_000,weak_decoder='b
 # get_ler_per_SEC_fitted_eps_from_many_rounds(num_shots=1_000)
 
 
-def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='bplsd',strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2):
+def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='uf',strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2):
     '''
     Get the ler per syndrome extraction cycle (\epsilon). This quantity is calculated by simulating some fixed r
     and then extracting epsilon = 1-(1-p_L)^{1/r}.
@@ -258,9 +259,12 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
     '''
 
     basis      = 'Z' #basis determining the memory experiment for the BB codes
-    code_names = ["[[72,12,6]]", "[[90,8,10]]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
+    # code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
+    code_names = ["[[72,12,6]]"]   
 
-    ps         = [6e-3,  7e-3,  8e-3, 9e-3, 1e-2]     
+    # ps         = [6e-3,  7e-3,  8e-3, 9e-3, 1e-2]    
+    # union find has a way lower threshold
+    ps = np.logspace(-4, -2.5, num=10)  #physical error rates 
     num_rounds = 25
     max_shots_above_8e_minus3 = 1000 #this can be adjusted
     
@@ -286,9 +290,9 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
                                             strong_decoder_option=strong_decoder,
                                             weak_decoder_option=weak_decoder)    
         if decoder_option=='strong':
-            new_shots,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order)
+            new_shots,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order, rel_error_tol=0.05)
         else:
-            new_shots,_,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order) #suppress cluster norms output
+            new_shots,_,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order, rel_error_tol=0.05) #suppress cluster norms output
 
         result = {"logical_errors": np.sum(logical_errors)}
 
@@ -396,7 +400,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
     
     
     
-    txt_to_save = sys.path[-1] + f'/saved_data/single_sliding_window_{decoder_label}_max_shots_{num_shots}.txt'
+    txt_to_save = sys.path[-1] + f'/data/single_sliding_window_{decoder_label}_max_shots_{num_shots}.txt'
 
     with open(txt_to_save, 'w') as file:
         file.write(str(dict_to_save))      
@@ -425,12 +429,198 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
 
     return 
 
+def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak_decoder='uf',strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2):
+    '''
+    Get the ler per syndrome extraction cycle (\epsilon). This quantity is calculated by simulating some fixed r
+    and then extracting epsilon = 1-(1-p_L)^{1/r}. This function runs as many parallel p, code pairs as you have, and does not divide again by shots. 
+    The buffer region is fixed to O(d) for each code & the commit region to d//2.
+
+    Inputs:
+        num_shots: max number of shots to run the simulation (for p<8e-3, for p>=8e-3 we run fewer shots)
+        weak_decoder: 'bplsd' or 'uf'
+        strong_decoder: 'relay_bp' or 'tesseract'
+        decoder_option: 'weak' or 'strong' to pick the weak/strong decoder for sliding window
+        norm_order: order for calculating the cluster norm
+        
+    '''
+
+    basis      = 'Z' #basis determining the memory experiment for the BB codes
+    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
+    # code_names = ["[[72,12,6]]"]   
+    # ps         = [6e-3,  7e-3,  8e-3, 9e-3, 1e-2]    
+    # union find has a way lower threshold
+    ps = np.logspace(-4, -2.5, num=10)  #physical error rates 
+    num_rounds = 25
+    max_shots_above_8e_minus3 = 1000 #this can be adjusted
+    
+
+    def process_one_round_value(code_name,p,num_shots,norm_order):
+        
+        print("Code_name,rds,p,shots:",(code_name,num_rounds,p,num_shots))
+
+        n, k, d = map(int, code_name.strip("[]").split(","))
+        
+
+        nbuffer = d            #Buffer region
+        F       = d//2         #Commit region
+        W       = nbuffer + F  #Entire window
+
+        test  = decoder_switching_class(code_name=code_name,
+                                            num_rounds=num_rounds,
+                                            p=p,
+                                            basis=basis,
+                                            num_shots=num_shots,
+                                            W=W,
+                                            F=F,
+                                            strong_decoder_option=strong_decoder,
+                                            weak_decoder_option=weak_decoder)    
+        if decoder_option=='strong':
+            new_shots,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order, rel_error_tol=0.05)
+        else:
+            new_shots,_,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order, rel_error_tol=0.05) #suppress cluster norms output
+
+        result = {"logical_errors": np.sum(logical_errors)}
+
+        print("Sim done.")
+
+        return code_name,p,new_shots,result
+
+    tasks = []
+    import multiprocessing as mp
+    n_jobs = mp.cpu_count()    
+    chunk_size = max(200, num_shots // (100 * n_jobs)) 
+
+    
+    for code_name in code_names:
+
+        for p in ps:
+
+            if p >= 8e-3:
+                
+                for _ in range(max_shots_above_8e_minus3//50): #break into batches of 50
+                    tasks.append((code_name, p, 50))
+
+            else:
+
+                tasks.extend(
+                    (code_name,p,chunk_size)
+                    for _ in range(num_shots // chunk_size) )       
+
+
+    results = Parallel(n_jobs=-1,verbose=10,)(delayed(process_one_round_value)(code_name,p,shots,norm_order) for code_name, p,shots in tasks)      
+
+
+    total_errors  = {}
+    total_shots   = {}
+    
+
+    for code_name,p,shot,result in results:
+        total_errors[(code_name, p, )] = 0
+        total_shots[(code_name,  p, )] = 0    
+        
+
+    for code_name,p,shot,result in results:
+
+        total_errors[(code_name,p)] += result["logical_errors"]
+        total_shots[(code_name,p,)] += shot
+        
+        
+    ler_results = {(code_name,p,): total_errors[(code_name,p,)] / total_shots[(code_name,p,)]
+                        for code_name in code_names
+                        for p in ps
+                        }
+    
+    
+    yerr_results = {(code_name,p, ): np.sqrt(ler_results[(code_name,p,)]*(1-ler_results[(code_name,p,)])/total_shots[(code_name,p,)])
+                        for code_name in code_names
+                        for p in ps
+                        }      
+    
+
+    fig, ax = plt.subplots()
+
+    colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
+    cnt=0
+
+
+    eps_to_save = {}
+    errs_in_eps_to_save = {}
+
+    if decoder_option =='weak':
+        decoder_label = weak_decoder 
+    else:
+        decoder_label = strong_decoder
+
+
+    for code_name in code_names:
+
+        n, k, d = map(int, code_name.strip("[]").split(","))
+
+        pL_vals = {p: ler_results[(code_name,p,)] for p in ps}
+        pL_errs = {p: yerr_results[(code_name,p,)] for p in ps}
+
+        eps = {p: 1-(1-pL_vals[p])**(1/num_rounds) for p in ps}
+
+        eps_errs = { p: (pL_errs[p] / num_rounds) * (1 - pL_vals[p])**(1 / num_rounds - 1)
+                    for p in ps }        
+
+        ax.errorbar(ps,eps.values(),yerr=eps_errs.values(),label=f"{code_name}, {decoder_label}",color=colors[cnt],marker='o',markeredgecolor='k')
+        cnt+=1
+
+        eps_to_save[code_name] = eps
+        errs_in_eps_to_save[code_name] = eps_errs
+
+    
+    dict_to_save = {"basis":basis,
+                    "codes": code_names,
+                    "ps": ps,
+                    "r":num_rounds,
+                    "max_shots_above_8e_minus3":max_shots_above_8e_minus3, #this is just the max we set for p>=8e-3
+                    "total_errors":total_errors,
+                    "shots":total_shots,                                   #these are the actual shots that were run for any code and p
+                    "pL@r":ler_results,
+                    "std_pL@r":yerr_results,
+                    "epsilons":eps_to_save,
+                    "std_epsilons":errs_in_eps_to_save}
+    
+    
+    script_dir = Path(__file__).parent.resolve()
+    data_dir = script_dir.parent / "data" / "raw"
+    txt_to_save = data_dir / f'single_sliding_window_{decoder_label}_max_shots_{num_shots}.txt'
+    data_dir.mkdir(parents=True, exist_ok=True)
+    with open(txt_to_save, 'w') as file:
+        file.write(str(dict_to_save))      
+
+    #To load the data simply do:
+    # with open(txt_to_load,"r") as f:
+    #     data = eval(f.read())
+
+    
+
+    ax.set_xlabel("$p$")
+    ax.set_ylabel("LER per SEC")
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.legend(fontsize=12)
+
+    plt.tight_layout()
+
+    
+    figure_plot = data_dir / f'single_sliding_window_{decoder_label}_max_shots_{num_shots}.pdf'
+    
+
+    fig.savefig(figure_plot,bbox_inches='tight')
+
+    plt.show()        
+
+    return 
+
 
 num_shots      = 15_000
-weak_decoder   = 'bplsd'
+weak_decoder   = 'uf'
 strong_decoder = 'relay_bp'
-decoder_option = 'strong'
-get_ler_per_SEC_eps_extracted_from_one_round(num_shots=num_shots,
+decoder_option = 'weak'
+get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=num_shots,
                                              weak_decoder=weak_decoder,
                                              strong_decoder=strong_decoder,
                                              decoder_option= decoder_option,

@@ -11,8 +11,8 @@ from tesseract_decoder import tesseract
 import relay_bp
 import numpy as np
 from scipy.sparse import csr_matrix
-# import py_wrapper.py_decoder as uf
-from uf_decoder.py_wrapper import py_decoder as uf
+import py_wrapper.py_decoder as uf
+# from uf_decoder.py_wrapper import py_decoder as uf
 """
 Helper functions for configuring decoders. Set parameters in this file for decoders
 """
@@ -22,10 +22,10 @@ def collect_default_decoder_params(decoder):
 
     if decoder=='tesseract':
         #We could change some of these parameters
-        decoder_params = {'det_beam': 10,
-                          'pqlimit': 50_000, 
-                          'beam_climbing': True,
-                          'no_revisit_dets': True}
+        decoder_params = {'det_beam': 10, # test larger too 
+                          'pqlimit': 50_000, # ? try increasing , test first
+                          'beam_climbing': True,# good
+                          'no_revisit_dets': True} # good
 
     elif decoder=='relay_bp':
         decoder_params =  {

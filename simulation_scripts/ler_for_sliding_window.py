@@ -618,8 +618,8 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
 
 num_shots      = 15_000
 weak_decoder   = 'uf'
-strong_decoder = 'relay_bp'
-decoder_option = 'weak'
+strong_decoder = 'tesseract'
+decoder_option = 'strong'
 get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=num_shots,
                                              weak_decoder=weak_decoder,
                                              strong_decoder=strong_decoder,

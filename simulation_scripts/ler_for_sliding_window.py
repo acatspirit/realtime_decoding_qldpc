@@ -259,12 +259,13 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
     '''
 
     basis      = 'Z' #basis determining the memory experiment for the BB codes
-    # code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
-    code_names = ["[[72,12,6]]"]   
+    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
+    # code_names = ["[[72,12,6]]"]   
 
     # ps         = [6e-3,  7e-3,  8e-3, 9e-3, 1e-2]    
     # union find has a way lower threshold
-    ps = np.logspace(-4, -2.5, num=10)  #physical error rates 
+    ps = np.logspace(-3, -2, num=5)  #physical error rates 
+    # ps = [1e-4, 5e-4]
     num_rounds = 25
     max_shots_above_8e_minus3 = 1000 #this can be adjusted
     
@@ -449,7 +450,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
     # code_names = ["[[72,12,6]]"]   
     # ps         = [6e-3,  7e-3,  8e-3, 9e-3, 1e-2]    
     # union find has a way lower threshold
-    ps = np.logspace(-4, -2.5, num=10)  #physical error rates 
+    ps = np.logspace(-4, -2.5, num=5)  #physical error rates 
     num_rounds = 25
     max_shots_above_8e_minus3 = 1000 #this can be adjusted
     
@@ -616,11 +617,11 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
     return 
 
 
-num_shots      = 15_000
+num_shots      = 10_000
 weak_decoder   = 'uf'
 strong_decoder = 'tesseract'
 decoder_option = 'strong'
-get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=num_shots,
+get_ler_per_SEC_eps_extracted_from_one_round(num_shots=num_shots,
                                              weak_decoder=weak_decoder,
                                              strong_decoder=strong_decoder,
                                              decoder_option= decoder_option,

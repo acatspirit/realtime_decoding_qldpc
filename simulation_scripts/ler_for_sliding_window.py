@@ -264,7 +264,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
 
     # ps         = [6e-3,  7e-3,  8e-3, 9e-3, 1e-2]    
     # union find has a way lower threshold
-    ps = np.logspace(-3, -2, num=5)  #physical error rates 
+    ps = np.logspace(-4, -2.5, num=10)  #physical error rates 
     # ps = [1e-4, 5e-4]
     num_rounds = 25
     max_shots_above_8e_minus3 = 1000 #this can be adjusted
@@ -617,7 +617,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
     return 
 
 
-num_shots      = 10_000
+num_shots      = 50_000
 weak_decoder   = 'uf'
 strong_decoder = 'tesseract'
 decoder_option = 'strong'

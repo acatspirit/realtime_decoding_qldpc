@@ -401,7 +401,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
     
     
     
-    txt_to_save = sys.path[-1] + f'/data/single_sliding_window_{decoder_label}_max_shots_{num_shots}.txt'
+    txt_to_save = sys.path[-1] + f'/data/raw/single_sliding_window_{decoder_label}_max_shots_{num_shots}.txt'
 
     with open(txt_to_save, 'w') as file:
         file.write(str(dict_to_save))      
@@ -421,7 +421,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
     plt.tight_layout()
 
     
-    figure_plot = sys.path[-1] + f'/saved_data/single_sliding_window_{decoder_label}_max_shots_{num_shots}.pdf'
+    figure_plot = sys.path[-1] + f'/data/plots/single_sliding_window_{decoder_label}_max_shots_{num_shots}.pdf'
     
 
     fig.savefig(figure_plot,bbox_inches='tight')
@@ -617,7 +617,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
     return 
 
 
-num_shots      = 50_000
+num_shots      = 100_000
 weak_decoder   = 'uf'
 strong_decoder = 'tesseract'
 decoder_option = 'strong'

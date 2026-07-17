@@ -20,7 +20,7 @@ Helper functions for configuring decoders. Set parameters in this file for decod
 
 def collect_default_decoder_params(decoder):
 
-    if decoder=='tesseract':
+    if decoder=='tesseract': # make params a little worse
         #We could change some of these parameters
         decoder_params = {'det_beam': 10, # test larger too 
                           'pqlimit': 50_000, # ? try increasing , test first

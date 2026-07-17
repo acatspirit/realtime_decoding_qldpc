@@ -91,5 +91,8 @@ def get_cluster_soft_output_from_bplsd_glocal_decoding(circuit:stim.Circuit,  cl
 
     return fails, norm_fracs, frac_conditioned_PL
 
+def get_conditioned_pL(decoder_list):
+    pass
+
 
 

@@ -53,7 +53,7 @@ def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_sho
                                             strong_decoder_option=strong_decoder,
                                             weak_decoder_option=weak_decoder)    
         
-        new_shots,cluster_norms,logical_errors,_ = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order) 
+        new_shots,cluster_norms,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order) 
 
         result = {"logical_errors": np.sum(logical_errors), "cluster_norms": cluster_norms}
 

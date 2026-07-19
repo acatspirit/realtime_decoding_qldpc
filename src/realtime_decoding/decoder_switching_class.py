@@ -209,10 +209,7 @@ class decoder_switching_class:
         self.F = F
         self.weak_decoder_option = weak_decoder_option
         self.strong_decoder_option = strong_decoder_option
-        # TODO: update these during decoding to track the committed clusters (clusters in F), and the cluster norm
-        # TODO: change our convention for per window cluster norm / cumulative cluster norm as the thing we return during decoding
         self.committed_clusters = []
-        self.cumulative_cluster_norm = 0
 
         # update the total number of windows for decoding, the size of the last window
         if 2 + num_rounds - W >= 0:
@@ -322,7 +319,6 @@ class decoder_switching_class:
 
         # TODO update this
         self.committed_clusters.append(stats) # check this
-        self.cumulative_cluster_norm = collect_cluster_norm(self.committed_clusters.flatten())
 
         return accumulated_correction,cluster_norm
 
@@ -380,7 +376,6 @@ class decoder_switching_class:
 
         # TODO update this
         self.committed_clusters.append(stats) # check this
-        self.cumulative_cluster_norm = collect_cluster_norm(self.committed_clusters.flatten())
 
         return syn_update,accumulated_correction,cluster_norm
     

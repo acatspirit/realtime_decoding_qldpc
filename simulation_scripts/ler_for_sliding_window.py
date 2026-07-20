@@ -165,8 +165,6 @@ def get_ler_per_SEC_fitted_eps_from_many_rounds(num_shots=10_000,weak_decoder='b
     pL_d_err = {(code_name,p): 0 for code_name in code_names for p in ps}
 
 
-    
-
     for code_name in code_names:
 
         n, k, d = map(int, code_name.strip("[]").split(","))
@@ -194,39 +192,38 @@ def get_ler_per_SEC_fitted_eps_from_many_rounds(num_shots=10_000,weak_decoder='b
     #Now plot pL_d and its error
     colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
 
-    fig, ax = plt.subplots(2,1)
+    fig, ax = plt.subplots()
     cnt=0
     for code_name in code_names:
         y = {p: epsilon_fitted[(code_name,p)] for p in ps}
         yerr = {p: epsilon_err_fitted[(code_name,p)] for p in ps}
 
-        ax[0].errorbar(ps,y.values(),yerr=yerr.values(),label=f"{code_name}, {weak_decoder}",color=colors[cnt],marker='o')
+        ax.errorbar(ps,y.values(),yerr=yerr.values(),label=f"{code_name}, {decoder_label}",color=colors[cnt],marker='o',
+                    markeredgecolor='k')
         cnt+=1
 
-    ax[0].set_xlabel("$p$")
-    ax[0].set_ylabel("$\epsilon$")
-    ax[0].set_yscale('log')
-    ax[0].set_xscale('log')
-    ax[0].legend(fontsize=12)
+    ax.set_xlabel("$p$")
+    ax.set_ylabel("LER per SEC")
+    ax.set_yscale('log')
+    ax.set_xscale('log')
+    ax.legend(fontsize=12)
 
 
+    # cnt=0
+    # for code_name in code_names:
+    #     y = {p: pL_d[(code_name,p)] for p in ps}
+    #     yerr = {p: pL_d_err[(code_name,p)] for p in ps}
 
-    
-    cnt=0
-    for code_name in code_names:
-        y = {p: pL_d[(code_name,p)] for p in ps}
-        yerr = {p: pL_d_err[(code_name,p)] for p in ps}
-
-        ax[1].errorbar(ps,y.values(),yerr=yerr.values(),label=f"{code_name}, {strong_decoder}",color=colors[cnt],marker='o')
+    #     ax[1].errorbar(ps,y.values(),yerr=yerr.values(),label=f"{code_name}, {decoder_label}",color=colors[cnt],marker='o')
 
 
-        cnt+=1
+    #     cnt+=1
         
-    ax[1].set_xlabel("$p$")
-    ax[1].set_ylabel("$p_L(d)$")
-    ax[1].set_yscale('log')
-    ax[1].set_xscale('log')
-    ax[1].legend(fontsize=12)
+    # ax[1].set_xlabel("$p$")
+    # ax[1].set_ylabel("$p_L(d)$")
+    # ax[1].set_yscale('log')
+    # ax[1].set_xscale('log')
+    # ax[1].legend(fontsize=12)
     
 
     plt.tight_layout()

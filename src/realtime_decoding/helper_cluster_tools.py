@@ -99,17 +99,22 @@ def compute_cluster_norm_fraction(values: np.ndarray, order: float) -> float:
 
 def collect_cluster_norm(stats, num_faults_in_W, num_faults_in_F, order, decoder_type = 'bplsd'):
     '''
+    Get the cluster norm for a particular window W that was decoded, but for which cluster are
+    restricted into the commit region F.
+
     Inputs:
-    stats: the stats from bplsd for the particular committed region
+    stats: the stats from bplsd for the particular committed region / or directly the clusters array for uf 
+          (clusters array: each value is cluster id of where error mechanism belongs to)
     num_faults_in_W: total # of faults in the entire window 
     num_faults_in_F: total # of faults in the commit region F
     order: order for cluster norm 
     decoder_type: type of decoder used. Either 'bplsd' or 'uf'
 
     Output:
-    clusters: array of size # of faults. each entry has a unique identifier, that tells us in which cluster each fault mechanism belongs to.
+    cluster_norm:  (\sum_{i clusters} |C_i|^{order})^{1/order} / |E|, where |E| is the size of the entire region
+                   inside of which some clusters can exist. |C_i| is the cluster size of the i-th cluster (# of elements it contains).
     '''
-    # modify to work with UF
+    
     if decoder_type == 'bplsd':
         soft_output_stats = stats["individual_cluster_stats"]
         clusters = np.zeros(num_faults_in_W,dtype=np.int_)

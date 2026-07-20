@@ -430,10 +430,12 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
 
     return 
 
-def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak_decoder='uf',strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2):
+
+# finish updating this before I get back
+def get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=10_000,weak_decoder='uf',strong_decoder='relay_bp',decoder_option= 'weak',cutoff=0.8,norm_order=2):
     '''
     Get the ler per syndrome extraction cycle (\epsilon). This quantity is calculated by simulating some fixed r
-    and then extracting epsilon = 1-(1-p_L)^{1/r}. This function runs as many parallel p, code pairs as you have, and does not divide again by shots. 
+    and then extracting epsilon = 1-(1-p_L)^{1/r}.
     The buffer region is fixed to O(d) for each code & the commit region to d//2.
 
     Inputs:
@@ -448,9 +450,11 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
     basis      = 'Z' #basis determining the memory experiment for the BB codes
     code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
     # code_names = ["[[72,12,6]]"]   
+
     # ps         = [6e-3,  7e-3,  8e-3, 9e-3, 1e-2]    
     # union find has a way lower threshold
-    ps = np.logspace(-4, -2.5, num=5)  #physical error rates 
+    ps = np.logspace(-4, -2.5, num=10)  #physical error rates 
+    # ps = [1e-4, 5e-4]
     num_rounds = 25
     max_shots_above_8e_minus3 = 1000 #this can be adjusted
     
@@ -475,16 +479,13 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
                                             F=F,
                                             strong_decoder_option=strong_decoder,
                                             weak_decoder_option=weak_decoder)    
-        if decoder_option=='strong':
-            new_shots,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order, rel_error_tol=0.05)
-        else:
-            new_shots,_,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order, rel_error_tol=0.05) #suppress cluster norms output
+        new_shots,_,switch_times_per_shot, logical_errors = test.decode_with_sliding_window_and_decoder_switching(cluster_norm_cutoff=cutoff,norm_order=norm_order, rel_error_tol=0.05) #suppress cluster norms output
 
         result = {"logical_errors": np.sum(logical_errors)}
 
         print("Sim done.")
 
-        return code_name,p,new_shots,result
+        return code_name,p,new_shots,result, np.sum(switch_times_per_shot)
 
     tasks = []
     import multiprocessing as mp
@@ -515,12 +516,12 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
     total_shots   = {}
     
 
-    for code_name,p,shot,result in results:
+    for code_name,p,shot,result,switch_times in results:
         total_errors[(code_name, p, )] = 0
         total_shots[(code_name,  p, )] = 0    
         
 
-    for code_name,p,shot,result in results:
+    for code_name,p,shot,result,switch_times in results:
 
         total_errors[(code_name,p)] += result["logical_errors"]
         total_shots[(code_name,p,)] += shot
@@ -585,10 +586,9 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
                     "std_epsilons":errs_in_eps_to_save}
     
     
-    script_dir = Path(__file__).parent.resolve()
-    data_dir = script_dir.parent / "data" / "raw"
-    txt_to_save = data_dir / f'single_sliding_window_{decoder_label}_max_shots_{num_shots}.txt'
-    data_dir.mkdir(parents=True, exist_ok=True)
+    
+    txt_to_save = sys.path[-1] + f'/data/raw/single_sliding_window_switching_{decoder_label}_max_shots_{num_shots}_cutoff0.8.txt'
+
     with open(txt_to_save, 'w') as file:
         file.write(str(dict_to_save))      
 
@@ -607,7 +607,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
     plt.tight_layout()
 
     
-    figure_plot = data_dir / f'single_sliding_window_{decoder_label}_max_shots_{num_shots}.pdf'
+    figure_plot = sys.path[-1] + f'/data/plots/single_sliding_window_switching_{decoder_label}_max_shots_{num_shots}_cutoff0.8.pdf'
     
 
     fig.savefig(figure_plot,bbox_inches='tight')
@@ -617,14 +617,17 @@ def get_ler_per_SEC_eps_extracted_from_one_round_set_shots(num_shots=10_000,weak
     return 
 
 
+
 num_shots      = 100_000
 weak_decoder   = 'uf'
 strong_decoder = 'tesseract'
 decoder_option = 'strong'
-get_ler_per_SEC_eps_extracted_from_one_round(num_shots=num_shots,
+cutoff=0.8
+get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=num_shots,
                                              weak_decoder=weak_decoder,
                                              strong_decoder=strong_decoder,
                                              decoder_option= decoder_option,
+                                             cutoff=cutoff,
                                              norm_order=2)
 
 

@@ -321,8 +321,8 @@ class decoder_switching_class:
         accumulated_correction ^= (correction) 
 
         # TODO update this
-        self.committed_clusters.append(stats) # check this
-        self.cumulative_cluster_norm = collect_cluster_norm(self.committed_clusters.flatten())
+        # self.committed_clusters.append(stats) # check this
+        # self.cumulative_cluster_norm = collect_cluster_norm(self.committed_clusters.flatten())
 
         return accumulated_correction,cluster_norm
 
@@ -379,8 +379,8 @@ class decoder_switching_class:
         accumulated_correction ^= (correction) 
 
         # TODO update this
-        self.committed_clusters.append(stats) # check this
-        self.cumulative_cluster_norm = collect_cluster_norm(self.committed_clusters.flatten())
+        # self.committed_clusters.append(stats) # check this
+        # self.cumulative_cluster_norm = collect_cluster_norm(self.committed_clusters.flatten())
 
         return syn_update,accumulated_correction,cluster_norm
     

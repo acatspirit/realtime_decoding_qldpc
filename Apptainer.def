@@ -27,13 +27,8 @@ From: condaforge/mambaforge:latest
   cd /opt/src
   
   # Clone your repositories
-  git clone https://github.com/quantumlib/tesseract-decoder.git
   git clone https://github.com/acatspirit/uf_decoder.git
-  git clone https://github.com/seokhyung-lee/ldpc-post-selection.git
 
-  # Build Tesseract
-  cd tesseract-decoder
-  bazel build //...
 
   # Build UF-Decoder
   cd /opt/src/uf_decoder
@@ -43,10 +38,7 @@ From: condaforge/mambaforge:latest
   ninja
 
   # Install Python packages
-  cd /opt/src/ldpc-post-selection
-  pip install -e .
-  cd /opt/src/uf_decoder
-  pip install -e .
+  pip install tesseract-decoder
 
 %environment
   export PATH=/opt/conda/bin:$PATH

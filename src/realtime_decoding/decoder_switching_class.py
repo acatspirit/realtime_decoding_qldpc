@@ -409,11 +409,11 @@ class decoder_switching_class:
         
         correction = self.window_observable_set[k] @ decoded_errors_in_F % 2  #the window_observable_set is set of observables only in region F. # of observables x # of faults in region F
 
-        syn_update = self.window_update[k] @ decoded_errors_in_F % 2
+        # syn_update = self.window_update[k] @ decoded_errors_in_F % 2
 
-        accumulated_correction ^= (correction) 
+        # accumulated_correction ^= (correction) 
 
-        return syn_update,accumulated_correction
+        return self.window_update[k] @ decoded_errors_in_F % 2, accumulated_correction ^ correction
     
     def decode_last_window_w_strong_decoder(self, F: int, num_checks: int, shot_index: int, syn_update, num_cor_rounds: int, accumulated_correction):
         '''
@@ -439,9 +439,9 @@ class decoder_switching_class:
         decoded_errors = self.strong_decode_function[k](diff_syndrome)
         correction     = self.window_observable_set[num_cor_rounds] @ decoded_errors % 2
 
-        accumulated_correction ^= (correction) 
+        # accumulated_correction ^= (correction) 
 
-        return accumulated_correction
+        return accumulated_correction ^ correction
 
     def decode_with_sliding_window_and_decoder_switching(self, cluster_norm_cutoff: float, norm_order=2, rel_error_tol = 0.2):
         '''

@@ -50,7 +50,7 @@ class uf_wrapper:
         self.cluster_sizes = None
         self.cluster_dict = None
         self.commit_region = None
-        self.committed_clusters = None
+        # self.committed_clusters = None
         
     def __call__(self, syndrome):
         """
@@ -209,7 +209,7 @@ class decoder_switching_class:
         self.F = F
         self.weak_decoder_option = weak_decoder_option
         self.strong_decoder_option = strong_decoder_option
-        self.committed_clusters = []
+        # self.committed_clusters = []
 
         # update the total number of windows for decoding, the size of the last window
         if 2 + num_rounds - W >= 0:
@@ -318,7 +318,7 @@ class decoder_switching_class:
         # accumulated_correction ^= (correction) 
 
         # TODO update this
-        self.committed_clusters.append(stats) # check this
+        # self.committed_clusters.append(stats) # check this
 
         return accumulated_correction ^ correction,cluster_norm
 
@@ -375,7 +375,7 @@ class decoder_switching_class:
         # accumulated_correction ^= (correction) 
 
         # TODO update this
-        self.committed_clusters.append(stats) # check this
+        # self.committed_clusters.append(stats) # check this
 
         return self.window_update[k] @ decoded_errors_in_F % 2, accumulated_correction ^ correction, cluster_norm
     

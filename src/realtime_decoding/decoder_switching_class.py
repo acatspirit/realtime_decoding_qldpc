@@ -315,12 +315,12 @@ class decoder_switching_class:
             raise ValueError(f"Unsupported decoder type: {self.weak_decoder_option}")
         cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, self.weak_decoder_option)      # add option for UF / BPLSD
 
-        accumulated_correction ^= (correction) 
+        # accumulated_correction ^= (correction) 
 
         # TODO update this
         self.committed_clusters.append(stats) # check this
 
-        return accumulated_correction,cluster_norm
+        return accumulated_correction ^ correction,cluster_norm
 
     def decode_main_window_w_weak_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2):
         '''
@@ -360,7 +360,7 @@ class decoder_switching_class:
         
         correction = self.window_observable_set[k] @ decoded_errors_in_F % 2  #the window_observable_set is set of observables only in region F. # of observables x # of faults in region F
 
-        syn_update = self.window_update[k] @ decoded_errors_in_F % 2
+        # syn_update = self.window_update[k] @ decoded_errors_in_F % 2
 
         if self.weak_decoder_option == 'bplsd':
             stats           = decoder.statistics
@@ -372,14 +372,14 @@ class decoder_switching_class:
         
         cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, self.weak_decoder_option)      
 
-        accumulated_correction ^= (correction) 
+        # accumulated_correction ^= (correction) 
 
         # TODO update this
         self.committed_clusters.append(stats) # check this
 
-        return syn_update,accumulated_correction,cluster_norm
+        return self.window_update[k] @ decoded_errors_in_F % 2, accumulated_correction ^ correction, cluster_norm
     
-    def decode_main_window_w_strong_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction, norm_order=2):
+    def decode_main_window_w_strong_decoder(self, W: int, F: int, num_checks: int, current_window_index: int, shot_index: int, syn_update, accumulated_correction):
         '''
         Decode any window besides last window w/ the strong decoder.
 

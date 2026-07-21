@@ -42,3 +42,4 @@ From: condaforge/mambaforge:latest
 
 %environment
   export PATH=/opt/conda/bin:$PATH
+  # debugging for the dcc

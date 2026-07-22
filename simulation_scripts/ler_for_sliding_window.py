@@ -479,10 +479,11 @@ def get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=10_000,weak
         new_shots,_,switch_times_per_shot, logical_errors = test.decode_with_sliding_window_and_decoder_switching(cluster_norm_cutoff=cutoff,norm_order=norm_order, rel_error_tol=0.05) #suppress cluster norms output
 
         result = {"logical_errors": np.sum(logical_errors)}
+        switches= {"num_switches": np.sum(switch_times_per_shot)}
 
         print("Sim done.")
 
-        return code_name,p,new_shots,result, np.sum(switch_times_per_shot)
+        return code_name,p,new_shots,result, switches
 
     tasks = []
     import multiprocessing as mp
@@ -613,6 +614,79 @@ def get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=10_000,weak
 
     return 
 
+
+def get_ler_per_SEC_switching_cluster():
+    task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID"),0)
+    basis = 'Z'
+    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]
+    ps = np.logspace(-4, -2.5, num=10)
+    num_rounds = 25
+    weak_decoder = 'uf'
+    strong_decoder = 'relay_bp'
+    decoder_option = 'weak'
+    cutoff = 0.8
+    norm_order = 2
+    num_shots = 10_000
+    max_shots_above_8e_minus3 = 1000
+    
+
+    # Explode the parameter space into a flat list of tasks: (code_name, p, shots_for_this_task)
+    tasks = []
+    for code_name in code_names:
+        for p in ps:
+            if p >= 8e-3:
+                # Break higher p into smaller batches of 50 shots
+                num_batches = max_shots_above_8e_minus3 // 50
+                for _ in range(num_batches):
+                    tasks.append((code_name, p, 50))
+            else:
+                # Standard chunking for lower error rates
+                chunk_size = max(200, num_shots // 100)
+                num_chunks = num_shots // chunk_size
+                for _ in range(num_chunks):
+                    tasks.append((code_name, p, chunk_size))
+
+    # Safety check for array bounds
+    if task_id >= len(tasks):
+        print(f"Task ID {task_id} exceeds total tasks {len(tasks)}. Exiting.")
+        return
+
+    code_name, p, current_shots = tasks[task_id] # get the right task for task_id
+
+
+    def process_one_round_value(code_name,p,num_shots,norm_order):
+        
+        print("Code_name,rds,p,shots:",(code_name,num_rounds,p,num_shots))
+
+        n, k, d = map(int, code_name.strip("[]").split(","))
+        
+
+        nbuffer = d            #Buffer region
+        F       = d//2         #Commit region
+        W       = nbuffer + F  #Entire window
+
+        test  = decoder_switching_class(code_name=code_name,
+                                            num_rounds=num_rounds,
+                                            p=p,
+                                            basis=basis,
+                                            num_shots=num_shots,
+                                            W=W,
+                                            F=F,
+                                            strong_decoder_option=strong_decoder,
+                                            weak_decoder_option=weak_decoder)    
+        new_shots,_,switch_times_per_shot, logical_errors = test.decode_with_sliding_window_and_decoder_switching(cluster_norm_cutoff=cutoff,norm_order=norm_order, rel_error_tol=0.05) #suppress cluster norms output
+
+        result = {"logical_errors": np.sum(logical_errors)}
+        switches= {"num_switches": np.sum(switch_times_per_shot)}
+
+        print("Sim done.")
+
+        return code_name,p,new_shots,result, switches
+    
+    
+
+
+    return
 
 
 num_shots      = 100_000

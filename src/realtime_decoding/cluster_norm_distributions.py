@@ -118,6 +118,28 @@ def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_sho
     
     return cluster_norms, ler_results, yerr_results
 
+
+
+def get_cutoff_for_desired_switch_rate(switch_rate, p, cluster_norms, code_names=["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]):
+    """
+    Given a desired switching rate, find the cutoff at which that switching rate occurs for a given p for the computed cluster norm distribution
+    """
+    cutoffs = []
+    for code_name in code_names:
+        data = cluster_norms[(code_name,p)].flatten()
+
+        sorted_data = np.sort(data)
+        cdf = np.arange(1, len(data)+1) / len(data) #gamma_switch = 1-CDF(g_th)
+        gamma_switch = 1 - cdf
+        below_switch_rate_indices = np.where(gamma_switch < switch_rate)[0]
+        if len(below_switch_rate_indices) > 0:
+            idx_gth = below_switch_rate_indices[0]
+            g_th = sorted_data[idx_gth]
+        else: # switches too much for cutoff, return that the cutoff is 0 (always switch)
+            g_th = 1
+        cutoffs.append(g_th)
+    return min(cutoffs) # return the first cutoff where stuff gets interesting
+
 def plot_cluster_norm_distributions_and_switch_probs(code_names, cluster_norms, p, num_rounds):
     fig, ax = plt.subplots(2,1)
 
@@ -156,7 +178,7 @@ def plot_cluster_norm_distributions_and_switch_probs(code_names, cluster_norms, 
         data = cluster_norms[(code_name,p)].flatten()
 
         sorted_data = np.sort(data)
-        cdf = np.arange(1, len(data)+1) / len(data) #gamma_siwtch = 1-CDF(g_th)
+        cdf = np.arange(1, len(data)+1) / len(data) #gamma_switch = 1-CDF(g_th)
 
         ax[1].plot(sorted_data, 1-cdf, label=f"{code_name}",marker='o')
 

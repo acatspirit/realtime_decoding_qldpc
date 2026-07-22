@@ -15,24 +15,7 @@ from src.realtime_decoding.decoder_switching_class import decoder_switching_clas
    the switching rates.'''
 
 
-
-def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_shots=10_000,norm_order=2, p=1e-4):
-
-    basis      = 'Z' #basis determining the memory experiment for the BB codes
-    code_names = ["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
-
-    decoder_option = 'weak'
-    strong_decoder = 'relay_bp' #doesnt matter
-    num_rounds = 25
-
-    # if weak_decoder == 'bplsd':
-    #     p = 2e-3
-    # elif weak_decoder=='uf':
-    #     p = 1e-4     
-        
-    num_rounds = 25
-
-    def process_one_round_value(code_name,p,num_shots,norm_order):
+def process_one_round_value(code_name,p,num_shots,norm_order, num_rounds=25, basis='Z', strong_decoder='relay_bp', decoder_option='weak', weak_decoder='bplsd'):
         
         print("Code_name,rds,p,shots:",(code_name,num_rounds,p,num_shots))
 
@@ -60,6 +43,25 @@ def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_sho
         print("Sim done.")
 
         return code_name,p,new_shots,result,logical_errors
+
+
+
+
+def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_shots=10_000,norm_order=2, p=1e-4):
+
+    basis      = 'Z' #basis determining the memory experiment for the BB codes
+    code_names = ["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
+
+    decoder_option = 'weak'
+    strong_decoder = 'relay_bp' #doesnt matter
+    num_rounds = 25
+
+    # if weak_decoder == 'bplsd':
+    #     p = 2e-3
+    # elif weak_decoder=='uf':
+    #     p = 1e-4     
+        
+    num_rounds = 25
 
 
     tasks = []

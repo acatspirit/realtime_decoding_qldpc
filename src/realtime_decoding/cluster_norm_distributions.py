@@ -1,6 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
+# sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
 
 
 import numpy as np
@@ -9,7 +9,8 @@ import matplotlib
 matplotlib.rcParams.update({'font.size': 17})
 plt.rcParams["font.family"] = "Microsoft Sans Serif"
 from joblib import Parallel, delayed
-from src.realtime_decoding.decoder_switching_class import decoder_switching_class
+# from src.realtime_decoding.decoder_switching_class import decoder_switching_class
+from realtime_decoding.decoder_switching_class import decoder_switching_class
 
 '''Plot the distribution of cluster norms for all windows, and
    the switching rates.'''

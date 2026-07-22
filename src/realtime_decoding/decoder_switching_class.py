@@ -117,9 +117,9 @@ class relaybp_wrapper:
 
     def __call__(self,syndrome):
 
-        # decoded_errors = self.decoder.decode_batch(np.expand_dims(np.array(syndrome,dtype=np.uint8),axis=0)) 
-        # decoded_errors = np.squeeze(decoded_errors)
-        decoded_errors = self.decoder.decode(np.array(syndrome,dtype=np.uint8))
+        decoded_errors = self.decoder.decode_batch(np.expand_dims(np.array(syndrome,dtype=np.uint8),axis=0)) 
+        decoded_errors = np.squeeze(decoded_errors)
+        # decoded_errors = self.decoder.decode(np.array(syndrome,dtype=np.uint8))
 
         return decoded_errors
 

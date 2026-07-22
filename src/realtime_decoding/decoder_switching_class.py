@@ -66,27 +66,19 @@ class uf_wrapper:
         correction : np.ndarray
             The predicted correction vector extracted from the decoder instance.
         """
-        # 1. Enforce strict contiguous data alignment types for the underlying C structures
-        binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8)
-        
-        # 2. Process data via the method to populate internal attributes
+        binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8) # play well with C
+
         found_cluster_sizes, cluster_map = self.decoder.ldpc_decode(binary_syndrome, self.erasures) # sizes of cluster, list with index = fault id and value = cluster id
-        
-        # 3. Cache cluster stats metadata 
-        # clusters in whole window
+
         self.cluster_sizes = found_cluster_sizes
         self.cluster_map = cluster_map
-        # clusters in commit region
-        # self.committed_clusters = np.append(self.cluster_map[:self.commit_region], np.zeros(len(self.cluster_map) - self.commit_region, dtype=np.uint8))
-        # _, self.committed_cluster_sizes = np.unique(self.committed_clusters, return_counts=True)
 
-        # 4. Extract the actual correction pattern produced by the decode logic
         correction = self.decoder.correction
         
         return correction
     
-    def set_commit_region(self, commit_region):
-        self.commit_region = commit_region
+    # def set_commit_region(self, commit_region):
+    #     self.commit_region = commit_region
 
 class tesseract_wrapper:
     '''
@@ -210,7 +202,6 @@ class decoder_switching_class:
         self.F = F
         self.weak_decoder_option = weak_decoder_option
         self.strong_decoder_option = strong_decoder_option
-        # self.committed_clusters = []
 
         # update the total number of windows for decoding, the size of the last window
         if 2 + num_rounds - W >= 0:
@@ -301,9 +292,6 @@ class decoder_switching_class:
 
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region (num_faults_in_F=num_faults_in_W for last iteration)
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  
-        
-        if self.weak_decoder_option == 'uf':
-            self.weak_decode_function[k].set_commit_region(num_faults_in_F)
 
         diff_syndrome              = self.detection_events[shot_index, (F * num_cor_rounds) * num_checks:].copy()
         diff_syndrome[:num_checks] ^= syn_update
@@ -315,18 +303,12 @@ class decoder_switching_class:
         if self.weak_decoder_option == 'bplsd':
             stats           = decoder.statistics
         elif self.weak_decoder_option == 'uf':
-            # Handle UF decoder specific logic here
-            # decoder.set_commit_region(num_faults_in_F)
             stats = np.array(self.weak_decode_function[k].cluster_map) # the map of committed clusters in the region set by F
         else:
             raise ValueError(f"Unsupported decoder type: {self.weak_decoder_option}")
         
         cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, self.weak_decoder_option)      # add option for UF / BPLSD
-        
-        # accumulated_correction ^= (correction) 
-
-        # TODO update this
-        # self.committed_clusters.append(stats) # check this
+  
 
         return accumulated_correction ^ correction,cluster_norm
 
@@ -356,8 +338,6 @@ class decoder_switching_class:
         decoder         = self.weak_decoder[k]
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region F
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  #number of faults in the entire window W
-        if self.weak_decoder_option == 'uf':
-            self.weak_decode_function[k].set_commit_region(num_faults_in_F)
 
         diff_syndrome              = self.detection_events[shot_index, F * k * num_checks:(F * k + W) * num_checks].copy()
         diff_syndrome[:num_checks] ^= syn_update   #update syndrome based on previous window decoding
@@ -379,10 +359,6 @@ class decoder_switching_class:
         
         cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, self.weak_decoder_option)      
 
-        # accumulated_correction ^= (correction) 
-
-        # TODO update this
-        # self.committed_clusters.append(stats) # check this
 
         return self.window_update[k] @ decoded_errors_in_F % 2, accumulated_correction ^ correction, cluster_norm
     

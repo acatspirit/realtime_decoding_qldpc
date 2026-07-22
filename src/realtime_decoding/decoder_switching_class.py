@@ -412,7 +412,7 @@ class decoder_switching_class:
         decoded_errors_in_F = decoded_errors[:self.window_observable_set[k].shape[1]]
         
         correction = self.window_observable_set[k] @ decoded_errors_in_F % 2  #the window_observable_set is set of observables only in region F. # of observables x # of faults in region F
-
+        print(f"residual syndrome converged: {np.array_equal((self.window_check_set[k]@diff_syndrome)%2, decoded_errors)}")
         # syn_update = self.window_update[k] @ decoded_errors_in_F % 2
 
         # accumulated_correction ^= (correction) 
@@ -499,14 +499,14 @@ class decoder_switching_class:
 
                 if cluster_norm>cluster_norm_cutoff:
                     print("switched.")
-                    if current_window_index != 5: # remove after debug
+                    # if current_window_index != 5: # remove after debug
                         
-                        switch_times+=1
+                    switch_times+=1
 
-                        syn_update, accumulated_correction = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction)
-                    else: # remove after debug
-                        syn_update             = syn_update_weak
-                        accumulated_correction = accumulated_correction_weak
+                    syn_update, accumulated_correction = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction)
+                    # else: # remove after debug
+                    #     syn_update             = syn_update_weak
+                    #     accumulated_correction = accumulated_correction_weak
                 else: #keep syndrome update and accumulated correction from weak decoder
                     syn_update             = syn_update_weak
                     accumulated_correction = accumulated_correction_weak

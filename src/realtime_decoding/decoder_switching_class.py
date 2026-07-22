@@ -77,8 +77,8 @@ class uf_wrapper:
         self.cluster_sizes = found_cluster_sizes
         self.cluster_map = cluster_map
         # clusters in commit region
-        self.committed_clusters = np.append(self.cluster_map[:self.commit_region], np.zeros(len(self.cluster_map) - self.commit_region, dtype=np.uint8))
-        _, self.committed_cluster_sizes = np.unique(self.committed_clusters, return_counts=True)
+        # self.committed_clusters = np.append(self.cluster_map[:self.commit_region], np.zeros(len(self.cluster_map) - self.commit_region, dtype=np.uint8))
+        # _, self.committed_cluster_sizes = np.unique(self.committed_clusters, return_counts=True)
 
         # 4. Extract the actual correction pattern produced by the decode logic
         correction = self.decoder.correction
@@ -290,6 +290,8 @@ class decoder_switching_class:
             accumulated_correction: updated predicted logical flip (length of # of logical qubits)
             cluster_norm: the calculated cluster norm for this window, calculated and normalized only over faults in commit region F
         '''
+
+        # print("entered last decoding window w/ weak...")
         k          = -1
 
         decoder         = self.weak_decoder[k]
@@ -300,9 +302,11 @@ class decoder_switching_class:
         diff_syndrome              = self.detection_events[shot_index, (F * num_cor_rounds) * num_checks:].copy()
         diff_syndrome[:num_checks] ^= syn_update
         
+        # print("Decoding w/ weak...")
         decoded_errors = self.weak_decode_function[k](diff_syndrome)
         correction     = self.window_observable_set[num_cor_rounds] @ decoded_errors % 2
 
+        # print("Correction obtained.")
 
         #TODO: This needs to be handled externally -- need a general wrapper applicable for UF & BPLSD -- ideally configured upon initialization of the object
         if self.weak_decoder_option == 'bplsd':
@@ -313,8 +317,9 @@ class decoder_switching_class:
             stats = np.array(self.weak_decode_function[k].cluster_map) # the map of committed clusters in the region set by F
         else:
             raise ValueError(f"Unsupported decoder type: {self.weak_decoder_option}")
+        # print("Cluster norm calculating...")
         cluster_norm    = collect_cluster_norm(stats, num_faults_in_W,num_faults_in_F, norm_order, self.weak_decoder_option)      # add option for UF / BPLSD
-
+        # print("Cluster norm done.")
         # accumulated_correction ^= (correction) 
 
         # TODO update this
@@ -344,7 +349,7 @@ class decoder_switching_class:
             
         '''
 
-        k          = current_window_index
+        k               = current_window_index
         decoder         = self.weak_decoder[k]
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region F
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  #number of faults in the entire window W
@@ -353,7 +358,6 @@ class decoder_switching_class:
 
         diff_syndrome              = self.detection_events[shot_index, F * k * num_checks:(F * k + W) * num_checks].copy()
         diff_syndrome[:num_checks] ^= syn_update   #update syndrome based on previous window decoding
-
         
         decoded_errors      = self.weak_decode_function[k](diff_syndrome) #Correction in entire window W, (only part F is committed)
         decoded_errors_in_F = decoded_errors[:self.window_observable_set[k].shape[1]]
@@ -460,7 +464,7 @@ class decoder_switching_class:
             logical_errors_per_shot: returned both for weak/strong decoder and gives a 0/1 array of whether or not we made a logical error per shot
         '''
 
-        num_checks       = self.h.shape[0]
+        num_checks   = self.h.shape[0]
         logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
 
         cluster_norms_per_shot = []
@@ -477,6 +481,8 @@ class decoder_switching_class:
 
         for shot_index in range(self.num_shots):
 
+            print("shot:",shot_index)
+
             accumulated_correction = np.zeros(self.window_observable_set[0].shape[0], dtype=np.uint8)
             syn_update = np.zeros(num_checks, dtype=np.uint8)            
 
@@ -485,24 +491,33 @@ class decoder_switching_class:
 
             for current_window_index in range(num_cor_rounds): #all windows besides last
 
+                print("window index:",current_window_index)
+
                 syn_update_weak,accumulated_correction_weak,cluster_norm = self.decode_main_window_w_weak_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction, norm_order=norm_order)
                 cluster_norm_per_window.append(cluster_norm)
 
                 if cluster_norm>cluster_norm_cutoff:
+                    print("switched.")
                     switch_times+=1
-                    syn_update, accumulated_correction = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction)
-                
+
+                    syn_update_strong, accumulated_correction_strong = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction)
+
                 else: #keep syndrome update and accumulated correction from weak decoder
                     syn_update             = syn_update_weak
                     accumulated_correction = accumulated_correction_weak
-
+            
+            print("decoding last window w/ weak...")
             #decode the last window
             accumulated_correction_weak,cluster_norm = self.decode_last_window_w_weak_decoder(F, num_checks, shot_index, syn_update, accumulated_correction, num_cor_rounds,norm_order=norm_order)
             cluster_norm_per_window.append(cluster_norm)
+            print("done.")
 
             if cluster_norm>cluster_norm_cutoff:
+                print("switched.")
                 switch_times+=1
+                print("decoding last window /w strong...")
                 accumulated_correction = self.decode_last_window_w_strong_decoder(F, num_checks, shot_index, syn_update, num_cor_rounds, accumulated_correction)
+                print("done.")
             else: #keep accumulated correction from weak decoder
                 accumulated_correction = accumulated_correction_weak
 
@@ -518,6 +533,10 @@ class decoder_switching_class:
                 p = failures_cnt / N
                 sigma = np.sqrt(p * (1 - p) / N)
                 rel_err = sigma / p
+
+                print("failures_cnt:",failures_cnt)
+                print("rel_err:",rel_err)
+                print("pL:",p)
 
                 if rel_err<epsilon:
 

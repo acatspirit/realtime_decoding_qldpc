@@ -16,7 +16,7 @@ from src.realtime_decoding.decoder_switching_class import decoder_switching_clas
 
 
 
-def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_shots=10_000,norm_order=2):
+def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_shots=10_000,norm_order=2, p=1e-4):
 
     basis      = 'Z' #basis determining the memory experiment for the BB codes
     code_names = ["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
@@ -25,10 +25,10 @@ def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_sho
     strong_decoder = 'relay_bp' #doesnt matter
     num_rounds = 25
 
-    if weak_decoder == 'bplsd':
-        p = 2e-3
-    elif weak_decoder=='uf':
-        p = 1e-4     
+    # if weak_decoder == 'bplsd':
+    #     p = 2e-3
+    # elif weak_decoder=='uf':
+    #     p = 1e-4     
         
     num_rounds = 25
 

@@ -116,8 +116,9 @@ def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_sho
                         
                         }      
     
+    return cluster_norms, ler_results, yerr_results
 
-
+def plot_cluster_norm_distributions_and_switch_probs(code_names, cluster_norms, p, num_rounds):
     fig, ax = plt.subplots(2,1)
 
     colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]

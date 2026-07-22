@@ -302,11 +302,11 @@ class decoder_switching_class:
         diff_syndrome              = self.detection_events[shot_index, (F * num_cor_rounds) * num_checks:].copy()
         diff_syndrome[:num_checks] ^= syn_update
         
-        # print("Decoding w/ weak...")
+        print("Decoding w/ weak...")
         decoded_errors = self.weak_decode_function[k](diff_syndrome)
         correction     = self.window_observable_set[num_cor_rounds] @ decoded_errors % 2
 
-        # print("Correction obtained.")
+        print("Correction obtained.")
 
         #TODO: This needs to be handled externally -- need a general wrapper applicable for UF & BPLSD -- ideally configured upon initialization of the object
         if self.weak_decoder_option == 'bplsd':
@@ -492,16 +492,21 @@ class decoder_switching_class:
             for current_window_index in range(num_cor_rounds): #all windows besides last
 
                 print("window index:",current_window_index)
+                print("")
 
                 syn_update_weak,accumulated_correction_weak,cluster_norm = self.decode_main_window_w_weak_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction, norm_order=norm_order)
                 cluster_norm_per_window.append(cluster_norm)
 
                 if cluster_norm>cluster_norm_cutoff:
                     print("switched.")
-                    switch_times+=1
+                    if current_window_index != 5: # remove after debug
+                        
+                        switch_times+=1
 
-                    syn_update_strong, accumulated_correction_strong = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction)
-
+                        syn_update, accumulated_correction = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction)
+                    else: # remove after debug
+                        syn_update             = syn_update_weak
+                        accumulated_correction = accumulated_correction_weak
                 else: #keep syndrome update and accumulated correction from weak decoder
                     syn_update             = syn_update_weak
                     accumulated_correction = accumulated_correction_weak

@@ -412,7 +412,7 @@ class decoder_switching_class:
         decoded_errors_in_F = decoded_errors[:self.window_observable_set[k].shape[1]]
         
         correction = self.window_observable_set[k] @ decoded_errors_in_F % 2  #the window_observable_set is set of observables only in region F. # of observables x # of faults in region F
-        print(f"residual syndrome converged: {np.array_equal((self.window_check_set[k]@diff_syndrome)%2, decoded_errors)}")
+        # print(f"residual syndrome converged: {np.array_equal((self.window_check_set[k]@diff_syndrome)%2, decoded_errors)}")
         # syn_update = self.window_update[k] @ decoded_errors_in_F % 2
 
         # accumulated_correction ^= (correction) 

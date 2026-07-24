@@ -140,7 +140,18 @@ def get_cutoff_for_desired_switch_rate(switch_rate, p, cluster_norms, code_names
         cutoffs.append(g_th)
     return min(cutoffs) # return the first cutoff where stuff gets interesting
 
-def plot_cluster_norm_distributions_and_switch_probs(code_names, cluster_norms, p, num_rounds, num_shots, cutoff=None):
+
+def cutoffs_over_p(p_list, switch_rate, code_names=["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]):
+    
+
+def plot_cluster_norm_distributions_and_switch_probs(code_names, p, num_rounds, num_shots, switch_rate=None, weak_decoder='uf', norm_order=2, basis='Z', strong_decoder='relay_bp'):
+
+    cluster_norms, ler_results, yerr_results =  get_cluster_norm_distributions_and_switch_probs(code_names=code_names, p=p, num_shots=num_shots, num_rounds=num_rounds, norm_order=norm_order, basis=basis, strong_decoder=strong_decoder, weak_decoder=weak_decoder, decoder_option='weak')
+
+    if switch_rate:
+        min_cutoff = get_cutoff_for_desired_switch_rate(switch_rate=switch_rate, p=p, cluster_norms=cluster_norms, code_names=code_names)
+        print(min_cutoff)
+
     fig, ax = plt.subplots(2,1)
 
     colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
@@ -180,8 +191,8 @@ def plot_cluster_norm_distributions_and_switch_probs(code_names, cluster_norms, 
         sorted_data = np.sort(data)
         cdf = np.arange(1, len(data)+1) / len(data) #gamma_switch = 1-CDF(g_th)
 
-        if cutoff is not None:
-            ax[1].axvline(x=cutoff, color='red', linestyle='--')
+        if switch_rate is not None:
+            ax[1].axvline(x=min_cutoff, color='red', linestyle='--')
 
         ax[1].plot(sorted_data, 1-cdf, label=f"{code_name}",marker='o')
 

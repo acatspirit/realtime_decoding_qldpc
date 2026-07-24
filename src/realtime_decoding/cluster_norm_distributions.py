@@ -135,19 +135,61 @@ def get_cutoff_for_desired_switch_rate(switch_rate, p, cluster_norms, code_names
         if len(below_switch_rate_indices) > 0:
             idx_gth = below_switch_rate_indices[0]
             g_th = sorted_data[idx_gth]
-        else: # switches too much for cutoff, return that the cutoff is 1 (always switch)
-            g_th = 1
+        else: # switches too much for cutoff, return that the cutoff is 0 (always switch)
+            g_th = 0
         cutoffs.append(g_th)
     return min(cutoffs) # return the first cutoff where stuff gets interesting
 
 
-def cutoffs_over_p(p_list, switch_rate, code_names=["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]):
-    
+def cutoffs_over_p(p_list, switch_rate, num_shots=10_000, num_rounds=25, code_names=["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],weak_decoder='uf', norm_order=2, basis='Z', strong_decoder='relay_bp', plot=True, save_to_file=True):
+    cutoff_list = []
+    for p in p_list:
+        cluster_norms, ler_results, yerr_results =  get_cluster_norm_distributions_and_switch_probs(code_names=code_names, p=p, num_shots=num_shots, num_rounds=num_rounds, norm_order=norm_order, basis=basis, strong_decoder=strong_decoder, weak_decoder=weak_decoder, decoder_option='weak')
+        cutoff = get_cutoff_for_desired_switch_rate(switch_rate=switch_rate, p=p, cluster_norms=cluster_norms, code_names=code_names)
+        cutoff_list.append(cutoff)
 
-def plot_cluster_norm_distributions_and_switch_probs(code_names, p, num_rounds, num_shots, switch_rate=None, weak_decoder='uf', norm_order=2, basis='Z', strong_decoder='relay_bp'):
 
-    cluster_norms, ler_results, yerr_results =  get_cluster_norm_distributions_and_switch_probs(code_names=code_names, p=p, num_shots=num_shots, num_rounds=num_rounds, norm_order=norm_order, basis=basis, strong_decoder=strong_decoder, weak_decoder=weak_decoder, decoder_option='weak')
+    if save_to_file:
+        dict_to_save = {"basis":basis,
+                            "codes": code_names,
+                            "ps": p_list,
+                            "r":num_rounds,
+                            "shots":num_shots,
+                            "switch_rate":switch_rate,
+                            "pL@r":ler_results,
+                            "std_pL@r":yerr_results,
+                            "cluster_norms":cluster_norms,
+                            "cutoffs":cutoff_list}
+            
+            
+        txt_to_save = sys.path[-1] + f'/data/raw/cutoff_scan_over_p_{weak_decoder}_shots_{num_shots}_switch_rate_{switch_rate}.txt'
 
+        with open(txt_to_save, 'w') as file:
+            file.write(str(dict_to_save))
+
+    if plot:
+        fig, ax = plt.subplots(1,1)
+        ax.scatter(p_list, cutoff_list)
+        ax.set_xlabel(r'physical error rate (p)')
+        ax.set_ylabel("Cluster norm cutoff")
+        ax.set_title(f"{weak_decoder} decoding, $p_s=${switch_rate}, $N=${num_shots}, $r={num_rounds}$")
+        ax.legend(fontsize=13)
+
+        if save_to_file:
+            figure_plot = sys.path[-1] + f'/data/plots/cutoff_scan_over_p_{weak_decoder}_shots_{num_shots}_switch_rate_{switch_rate}.pdf'
+            fig.savefig(figure_plot,bbox_inches='tight')
+
+    return
+
+def plot_cluster_norm_distributions_and_switch_probs(code_names, p, num_rounds, num_shots, switch_rate=None, weak_decoder='uf', norm_order=2, basis='Z', strong_decoder='relay_bp', input_cluster_norms=None):
+
+    # whether to get data or use data passed in
+    if input_cluster_norms:
+        cluster_norms = input_cluster_norms
+    else:
+        cluster_norms, ler_results, yerr_results =  get_cluster_norm_distributions_and_switch_probs(code_names=code_names, p=p, num_shots=num_shots, num_rounds=num_rounds, norm_order=norm_order, basis=basis, strong_decoder=strong_decoder, weak_decoder=weak_decoder, decoder_option='weak')
+
+    # if want to plot the switching cutoff
     if switch_rate:
         min_cutoff = get_cutoff_for_desired_switch_rate(switch_rate=switch_rate, p=p, cluster_norms=cluster_norms, code_names=code_names)
         print(min_cutoff)

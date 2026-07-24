@@ -18,51 +18,50 @@ from realtime_decoding.decoder_switching_class import decoder_switching_class
 
 def process_one_round_value(code_name,p,num_shots,norm_order, num_rounds=25, basis='Z', strong_decoder='relay_bp', decoder_option='weak', weak_decoder='bplsd'):
         
-        print("Code_name,rds,p,shots:",(code_name,num_rounds,p,num_shots))
+    print("Code_name,rds,p,shots:",(code_name,num_rounds,p,num_shots))
 
-        n, k, d = map(int, code_name.strip("[]").split(","))
-        
+    n, k, d = map(int, code_name.strip("[]").split(","))
+    
 
-        nbuffer = d            #Buffer region
-        F       = d//2         #Commit region
-        W       = nbuffer + F  #Entire window
+    nbuffer = d            #Buffer region
+    F       = d//2         #Commit region
+    W       = nbuffer + F  #Entire window
 
-        test  = decoder_switching_class(code_name=code_name,
-                                            num_rounds=num_rounds,
-                                            p=p,
-                                            basis=basis,
-                                            num_shots=num_shots,
-                                            W=W,
-                                            F=F,
-                                            strong_decoder_option=strong_decoder,
-                                            weak_decoder_option=weak_decoder)    
-        
-        new_shots,cluster_norms,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order) 
+    test  = decoder_switching_class(code_name=code_name,
+                                        num_rounds=num_rounds,
+                                        p=p,
+                                        basis=basis,
+                                        num_shots=num_shots,
+                                        W=W,
+                                        F=F,
+                                        strong_decoder_option=strong_decoder,
+                                        weak_decoder_option=weak_decoder)    
+    
+    new_shots,cluster_norms,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order) 
 
-        result = {"logical_errors": np.sum(logical_errors), "cluster_norms": cluster_norms}
+    result = {"logical_errors": np.sum(logical_errors), "cluster_norms": cluster_norms}
 
-        print("Sim done.")
+    print("Sim done.")
 
-        return code_name,p,new_shots,result,logical_errors
-
-
+    return code_name,p,new_shots,result,logical_errors
 
 
-def get_cluster_norm_distributions_and_switch_probs(weak_decoder='bplsd',num_shots=10_000,norm_order=2, p=1e-4):
 
-    basis      = 'Z' #basis determining the memory experiment for the BB codes
-    code_names = ["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]   
 
-    decoder_option = 'weak'
-    strong_decoder = 'relay_bp' #doesnt matter
-    num_rounds = 25
+def get_cluster_norm_distributions_and_switch_probs( basis      = 'Z',
+                                                    code_names = ["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
+                                                    strong_decoder = 'realy_bp',
+                                                    weak_decoder='bplsd',
+                                                    decoder_option = 'weak',
+                                                    num_shots=10_000,
+                                                    num_rounds = 25,
+                                                    norm_order=2, 
+                                                    p=1e-4):
 
     # if weak_decoder == 'bplsd':
     #     p = 2e-3
     # elif weak_decoder=='uf':
-    #     p = 1e-4     
-        
-    num_rounds = 25
+    #     p = 1e-4    
 
 
     tasks = []
@@ -136,12 +135,12 @@ def get_cutoff_for_desired_switch_rate(switch_rate, p, cluster_norms, code_names
         if len(below_switch_rate_indices) > 0:
             idx_gth = below_switch_rate_indices[0]
             g_th = sorted_data[idx_gth]
-        else: # switches too much for cutoff, return that the cutoff is 0 (always switch)
+        else: # switches too much for cutoff, return that the cutoff is 1 (always switch)
             g_th = 1
         cutoffs.append(g_th)
     return min(cutoffs) # return the first cutoff where stuff gets interesting
 
-def plot_cluster_norm_distributions_and_switch_probs(code_names, cluster_norms, p, num_rounds):
+def plot_cluster_norm_distributions_and_switch_probs(code_names, cluster_norms, p, num_rounds, num_shots, cutoff=None):
     fig, ax = plt.subplots(2,1)
 
     colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
@@ -181,6 +180,9 @@ def plot_cluster_norm_distributions_and_switch_probs(code_names, cluster_norms, 
         sorted_data = np.sort(data)
         cdf = np.arange(1, len(data)+1) / len(data) #gamma_switch = 1-CDF(g_th)
 
+        if cutoff is not None:
+            ax[1].axvline(x=cutoff, color='red', linestyle='--')
+
         ax[1].plot(sorted_data, 1-cdf, label=f"{code_name}",marker='o')
 
     ax[1].set_ylabel("$p_{switch}$")
@@ -196,11 +198,14 @@ def plot_cluster_norm_distributions_and_switch_probs(code_names, cluster_norms, 
     return 
 
 
-weak_decoder = 'uf'
-num_shots    = 20_000
-norm_order   = 2
 
+if __name__ == '__main__':
+    weak_decoder= 'uf'
+    num_shots = 10_000
+    norm_order = 2
 
-get_cluster_norm_distributions_and_switch_probs(weak_decoder=weak_decoder,
-                                                num_shots=num_shots,
-                                                norm_order=norm_order)
+    get_cluster_norm_distributions_and_switch_probs(
+        weak_decoder=weak_decoder,
+        num_shots=num_shots,
+        norm_order=norm_order
+    )

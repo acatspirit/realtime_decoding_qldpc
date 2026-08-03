@@ -472,14 +472,15 @@ class decoder_switching_class:
 
                 if cluster_norm>cluster_norm_cutoff:
                     
-                    switch_times+=1
-
+                    
                     syn_update_strong, accumulated_correction_strong, convergence_check = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction)
 
                     if convergence_check>0:  #did not converge
+                        
                         syn_update = syn_update_weak 
                         accumulated_correction = accumulated_correction_weak
                     else: #we trust strong decoder
+                        switch_times+=1
                         syn_update             = syn_update_strong 
                         accumulated_correction = accumulated_correction_strong
 

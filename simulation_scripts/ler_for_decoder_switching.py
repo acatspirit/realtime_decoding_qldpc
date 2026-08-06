@@ -15,6 +15,7 @@ plt.rcParams["font.family"] = "Microsoft Sans Serif"
 
 from joblib import Parallel, delayed
 import json
+from pathlib import Path
 from src.realtime_decoding.decoder_switching_class import decoder_switching_class
 
 import pickle 
@@ -309,7 +310,7 @@ def get_ler_for_decoder_switching(num_shots,shots_per_job,target_switch_rate=5e-
     return 
 
 
-def get_ler_for_decoder_switching_dcc(target_switch_rate, num_shots, shots_per_job, weak_decoder, strong_decoder):
+def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_000, shots_per_job=10_000, weak_decoder='uf', strong_decoder='tesseract'):
     '''
     Inputs:
     num_shots: max # of shots per (p,code)
@@ -397,7 +398,159 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate, num_shots, shots_per_j
     print(f"Task {task_id} finished successfully. Saved to {file_name}")
     return
 
+def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max):
+    """
+    after running on the DCC, converts data that belongs to one task into full statistics version / calculating LERs 
+    """
 
-    return 
+    # Setup paths using pathlib
+    script_dir = Path(__file__).resolve().parent
+    input_dir = script_dir / "data" / "decoder_switching_data" / f"raw_batches_target_{target_switch_rate}"
+    
+    if not input_dir.exists():
+        print(f"Directory not found: {input_dir}")
+        return
+        
+    # Initialize aggregators
+    total_errors = {}
+    total_shots = {}
+    total_switch_times = {}
+    total_windows = {}
+    
+    # Track static parameters to rebuild the final dictionary
+    basis = None
+    num_rounds = None
+    code_names = set()
+    ps = set()
+    
+    # 1. Find and aggregate all JSON files
+    json_files = list(input_dir.glob("*.json"))
+    print(f"Found {len(json_files)} result files. Merging...")
+    
+    for file_path in json_files:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+            
+        code = data["code_name"]
+        p = data["p"]
+        key = (code, p)
+        
+        code_names.add(code)
+        ps.add(p)
+        
+        # Grab static values from the first file we open
+        if basis is None:
+            basis = data["basis"]
+            num_rounds = data["r"]
+            
+        # Initialize keys if they don't exist yet
+        if key not in total_errors:
+            total_errors[key] = 0
+            total_shots[key] = 0
+            total_switch_times[key] = 0
+            total_windows[key] = 0
+            
+        # Add up the raw counts
+        total_errors[key] += data["logical_errors"]
+        total_shots[key] += data["shots_run"]
+        total_switch_times[key] += data["switch_times"]
+        
+        # Note: in your original script this was result['num_windows'] * shot
+        total_windows[key] += data["num_windows"] * data["shots_run"]
 
+    code_names = sorted(list(code_names))
+    ps = sorted(list(ps))
 
+    # 2. Calculate LER & Standard Errors
+    ler_results = {}
+    yerr_results = {}
+    
+    for code in code_names:
+        for p in ps:
+            key = (code, p)
+            if key in total_shots and total_shots[key] > 0:
+                ler = total_errors[key] / total_shots[key]
+                ler_results[key] = ler
+                yerr_results[key] = np.sqrt(ler * (1 - ler) / total_shots[key])
+            else:
+                ler_results[key] = np.nan
+                yerr_results[key] = np.nan
+
+    # 3. Calculate Epsilons
+    eps_to_save = {}
+    errs_in_eps_to_save = {}
+    
+    for code in code_names:
+        pL_vals = {p: ler_results.get((code, p), np.nan) for p in ps}
+        pL_errs = {p: yerr_results.get((code, p), np.nan) for p in ps}
+        
+        eps = {}
+        eps_errs = {}
+        for p in ps:
+            ler = pL_vals[p]
+            err = pL_errs[p]
+            if not np.isnan(ler) and ler < 1.0: # safety check against 0 division/complex numbers
+                eps[p] = 1 - (1 - ler)**(1 / num_rounds)
+                eps_errs[p] = (err / num_rounds) * (1 - ler)**((1 / num_rounds) - 1)
+            else:
+                eps[p] = np.nan
+                eps_errs[p] = np.nan
+                
+        eps_to_save[code] = eps
+        errs_in_eps_to_save[code] = eps_errs
+
+    # 4. Calculate Switch Rates
+    switch_rates = {
+        key: total_switch_times[key] / total_windows[key] if total_windows[key] > 0 else np.nan
+        for key in total_switch_times
+    }    
+
+    switch_yerr = {
+        key: np.sqrt(switch_rates[key] * (1 - switch_rates[key]) / total_windows[key]) if total_windows[key] > 0 else np.nan
+        for key in switch_rates
+    }
+    
+    # 5. Build Final Target Dictionary
+    dict_to_save = {
+        "basis": basis,
+        "weak_decoder": weak_decoder,
+        "strong_decoder": strong_decoder,
+        "target_switch_rate": target_switch_rate,
+        "codes": code_names,
+        "ps": ps,
+        "r": num_rounds,
+        "total_errors": total_errors,
+        "shots": total_shots,
+        "pL@r": ler_results,
+        "std_pL@r": yerr_results,
+        "epsilons": eps_to_save,
+        "std_epsilons": errs_in_eps_to_save,
+        "switch_rates": switch_rates,
+        "switch_rate_err": switch_yerr,
+        "total_switch_times": total_switch_times,
+        "total_windows": total_windows
+    }
+    
+    # 6. Save back to original .txt format
+    out_dir = script_dir / "data" / "decoder_switching_data"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    
+    txt_to_save = out_dir / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}.txt'
+    
+    with open(txt_to_save, 'w') as file:
+        file.write(str(dict_to_save))
+        
+    print(f"Merge complete! Saved master dictionary to:\n{txt_to_save}")
+    return dict_to_save
+
+if __name__ == "__main__":
+    # to run on the cluster
+    get_ler_for_decoder_switching_dcc()
+
+    # run this once you have stuff from the cluster
+    # merge_dcc_results(
+    #     target_switch_rate=0.01, # Update with the switch rate you ran
+    #     weak_decoder='bplsd', 
+    #     strong_decoder='relay_bp', 
+    #     num_shots_max=100000     # Update to your actual num_shots
+    # )

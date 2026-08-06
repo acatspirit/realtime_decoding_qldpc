@@ -14,6 +14,7 @@ matplotlib.rcParams.update({'font.size': 17})
 plt.rcParams["font.family"] = "Microsoft Sans Serif"
 
 from joblib import Parallel, delayed
+import json
 from src.realtime_decoding.decoder_switching_class import decoder_switching_class
 
 import pickle 
@@ -369,95 +370,32 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate, num_shots, shots_per_j
 
     num_windows =len(test.weak_decoder) #total # of windows -- needed for getting switch rates
 
-    total_errors  = {}
-    total_shots   = {}
-    total_switch_times = {}
-    total_windows = {}
+    script_dir = Path(__file__).resolve().parent
+    output_dir = script_dir / "data" / "decoder_switching_data" / f"raw_batches_target_{target_switch_rate}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_name = output_dir / f"task_{task_id}_{code_name}_p{p:.6f}.json"
+    
+    dict_to_save = {
+        "task_id": task_id,
+        "basis": basis,
+        "weak_decoder": weak_decoder,
+        "strong_decoder": strong_decoder,
+        "target_switch_rate": target_switch_rate,
+        "code_name": code_name,
+        "p": p,
+        "r": num_rounds,
+        "shots_run": new_shots,
+        "logical_errors": int(np.sum(logical_errors)),
+        "switch_times": int(np.sum(switch_times)),
+        "num_windows": num_windows
+    }
 
-    for code_name,p,shot,result in results:
-        key = (code_name,p)
-        total_errors[key] = 0
-        total_shots[key] = 0    
-        total_switch_times[key] = 0    
-        total_windows[key] = 0
+    with open(file_name, 'w') as file:
+        json.dump(dict_to_save, file)
         
-
-    for code_name,p,shot,result in results:
-        key = (code_name,p)
-        total_errors[key] += result["logical_errors"]
-        total_shots[key] += shot
-        total_switch_times[key] += result["switch_times"]
-
-        total_windows[key] += result['num_windows'] * shot
-        
-        
-    ler_results = {(code_name,p,): total_errors[(code_name,p,)] / total_shots[(code_name,p,)]
-                        for code_name in code_names
-                        for p in ps
-                        }
-    
-    
-    yerr_results = {(code_name,p, ): np.sqrt(ler_results[(code_name,p,)]*(1-ler_results[(code_name,p,)])/total_shots[(code_name,p,)])
-                        for code_name in code_names
-                        for p in ps
-                        }      
-    
-
-    eps_to_save = {}
-    errs_in_eps_to_save ={}
-    
-    for code_name in code_names:
-
-        n, k, d = map(int, code_name.strip("[]").split(","))
-
-        pL_vals = {p: ler_results[(code_name,p,)] for p in ps}
-        pL_errs = {p: yerr_results[(code_name,p,)] for p in ps}
-
-        eps = {p: 1-(1-pL_vals[p])**(1/num_rounds) for p in ps}
-
-        eps_errs = { p: (pL_errs[p] / num_rounds) * (1 - pL_vals[p])**(1 / num_rounds - 1)
-                    for p in ps }        
-
-        eps_to_save[code_name] = eps
-        errs_in_eps_to_save[code_name] = eps_errs 
-
-
-    switch_rates = {
-        key: total_switch_times[key] / total_windows[key]
-        for key in total_switch_times
-    }    
-
-    switch_yerr = {
-        key: np.sqrt(
-            switch_rates[key] * (1 - switch_rates[key]) / total_windows[key]
-        )
-        for key in switch_rates
-    }    
-
-
-    dict_to_save = {"basis":basis,
-                    "weak_decoder": weak_decoder,
-                    "strong_decoder": strong_decoder,
-                    "target_switch_rate": target_switch_rate,
-                    "codes": code_names,
-                    "ps": ps,
-                    "r":num_rounds,
-                    "total_errors":total_errors,
-                    "shots":total_shots,                                   #these are the actual shots that were run for any code and p
-                    "pL@r":ler_results,
-                    "std_pL@r":yerr_results,
-                    "epsilons":eps_to_save,
-                    "std_epsilons":errs_in_eps_to_save,
-                    "switch_rates": switch_rates,
-                    "switch_rate_err": switch_yerr,
-                    "total_switch_times": total_switch_times,
-                    "total_windows": total_windows}         
-    
-
-    txt_to_save = sys.path[-1] + f'/data/decoder_switching_data/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}.txt' #p_2e_minus_3_Gross_only
-
-    with open(txt_to_save, 'w') as file:
-        file.write(str(dict_to_save))      
+    print(f"Task {task_id} finished successfully. Saved to {file_name}")
+    return
 
 
     return 

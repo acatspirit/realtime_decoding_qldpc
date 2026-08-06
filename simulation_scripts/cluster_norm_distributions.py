@@ -1,5 +1,6 @@
 import sys
 import os
+from pathlib import Path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
 
 
@@ -31,9 +32,9 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     rel_error_tol = 0.1 #10%
 
     if weak_decoder == 'bplsd':
-        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] #
+        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] # p_switch
     elif weak_decoder=='uf':
-        ps = [1e-4,2e-4,3e-4,4e-4,5e-4]
+        ps = np.logspace(-4,-2.5,6)
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
         
@@ -189,8 +190,11 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     }
 
      
+    
+    txt_to_save = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+    file_path = Path(txt_to_save)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
 
     with open(txt_to_save, "wb") as file:
         pickle.dump(dict_to_save, file)
@@ -202,11 +206,11 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     return 
 
 
-code_name = "[[72,12,6]]" 
+# code_name = "[[72,12,6]]" 
 # code_name = "[[90,8,10]]" 
 # code_name = "[[126,8,10]]"
 # code_name = "[[144,12,12]]"
-# code_name = "[[162,8,14]]"
+code_name = "[[162,8,14]]"
 num_shots = 100_000
 shots_per_job = 10_000
 

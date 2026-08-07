@@ -10,5 +10,8 @@
 # Navigate to your project directory
 cd /hpc/group/brownlab/am1155/realtime_decoding_qldpc
 
-# Run using Apptainer, passing the array task ID to your script
-apptainer exec realtime_decoding_qldpc.sif python simulation_scripts/ler_for_decoder_switching.py
+# Unset host python variables to prevent them from bleeding into the container
+unset PYTHONPATH
+
+# Run using Apptainer, forcing the exact path to the container's internal Python
+apptainer exec realtime_decoding_qldpc.sif /opt/conda/envs/realtime_decoding/bin/python simulation_scripts/ler_for_decoder_switching.py

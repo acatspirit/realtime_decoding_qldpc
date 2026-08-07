@@ -13,8 +13,8 @@ echo "Starting job $SLURM_ARRAY_JOB_ID, task $SLURM_ARRAY_TASK_ID"
 echo "Running on node: $(hostname)"
 
 
-# 2. Activate your environment
-conda activate realtime_decoding
+# # 2. Activate your environment
+# conda activate realtime_decoding
 
 # 3. Create the logs directory if it doesn't exist yet
 mkdir -p logs

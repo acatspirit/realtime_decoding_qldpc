@@ -11,4 +11,4 @@
 cd /hpc/group/brownlab/am1155/realtime_decoding_qldpc
 
 # Run using Apptainer, passing the array task ID to your script
-apptainer exec realtime_decoding_qldpc.sif python simulation_scripts/run_cluster_simulation.py $SLURM_ARRAY_TASK_ID
+apptainer exec realtime_decoding_qldpc.sif python simulation_scripts/ler_for_decoder_switching.py

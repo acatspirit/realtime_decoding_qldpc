@@ -1,9 +1,7 @@
 Bootstrap: docker
 From: condaforge/mambaforge:latest
-
 %files
-    # Copy your environment.yml into the container build context
-    environment.yml /opt/environment.yml
+  env/environment.yml /opt/environment.yml
 
 %post
     export DEBIAN_FRONTEND=noninteractive

@@ -20,6 +20,9 @@ from src.realtime_decoding.decoder_switching_class import decoder_switching_clas
 
 import pickle 
 
+script_dir = Path(__file__).resolve().parent
+sys.path.insert(0, str(script_dir.parent))
+
 '''This is my function for how to load bplsd data of cluster norm distributions
 Adjust for UF
 '''

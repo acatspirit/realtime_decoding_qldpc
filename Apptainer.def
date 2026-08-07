@@ -1,45 +1,43 @@
-BootStrap: docker
+Bootstrap: docker
 From: condaforge/mambaforge:latest
 
+%files
+    # Copy your environment.yml into the container build context
+    environment.yml /opt/environment.yml
+
 %post
-  # stuff gemini told me to put so that the code runs
-  export DEBIAN_FRONTEND=noninteractive
-  export TZ=Etc/UTC
-  # 1. Update apt and install software-properties-common to get newer gcc
-  apt-get update && apt-get install -y git make cmake ninja-build python3-pip wget software-properties-common
+    export DEBIAN_FRONTEND=noninteractive
 
-  # 2. Add the toolchain repository for modern GCC
-  add-apt-repository -y ppa:ubuntu-toolchain-r/test
-  apt-get update && apt-get install -y gcc-12 g++-12
+    # 1. Install system essentials and tools (git, curl, build tools)
+    apt-get update && apt-get install -y git wget curl build-essential
 
-  # 3. Symlink the new compilers to the system defaults
-  update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 100
-  update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 100
+    # 2. Install Rust (required for compiling packages like stim / relay)
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+    export PATH="/root/.cargo/bin:$PATH"
 
-  # Install Bazelisk (instead of raw bazel)
-  # This automatically manages versions via the .bazelversion file
-  apt-get install -y wget
-  wget https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64 -O /usr/local/bin/bazel
-  chmod +x /usr/local/bin/bazel
+    # 3. Create the Mamba environment from your environment.yml
+    mamba env create -f /opt/environment.yml
+    
+    # Activate the environment for the remaining build steps
+    export PATH=/opt/conda/envs/realtime_decoding/bin:$PATH
 
-  # Clone and Build Repositories
-  mkdir -p /opt/src
-  cd /opt/src
-  
-  # Clone your repositories
-  git clone https://github.com/acatspirit/uf_decoder.git
+    # 4. Register the Jupyter kernel spec inside the container
+    python -m ipykernel install --user --name realtime_decoding
 
+    # 5. Clone and install the Relay-BP repository
+    mkdir -p /opt/external_repos
+    cd /opt/external_repos
+    if [ ! -d relay ]; then
+        git clone https://github.com/trmue/relay.git
+    fi
+    cd relay
+    pip install ".[stim]"
 
-  # Build UF-Decoder
-  cd /opt/src/uf_decoder
-  pip install meson ninja
-  meson setup build --buildtype=release
-  cd build
-  ninja
-
-  # Install Python packages
-  pip install tesseract-decoder
+    # Clean cache to optimize container file size
+    mamba clean -a -y
 
 %environment
-  export PATH=/opt/conda/bin:$PATH
-  pip install -e .
+    # Set default path to use your conda environment inside the container
+    export PATH=/opt/conda/envs/realtime_decoding/bin:$PATH
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8

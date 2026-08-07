@@ -21,6 +21,6 @@ mkdir -p logs
 
 # 4. Run the python script
 # (Make sure this points to the file where you saved the refactored function!)
-apptainer exec realtime_decoding_qldpc.sif ler_for_decoder_switching.py
+apptainer exec /hpc/group/brownlab/am1155/realtime_decoding_qldpc/realtime_decoding_qldpc.sif python ler_for_decoder_switching.py
 
 echo "Task $SLURM_ARRAY_TASK_ID completed."

@@ -6,23 +6,23 @@ From: condaforge/mambaforge:latest
 %post
     export DEBIAN_FRONTEND=noninteractive
 
-    # 1. Install system essentials and tools (git, curl, build tools)
+    # 1. Install system essentials and tools
     apt-get update && apt-get install -y git wget curl build-essential
 
-    # 2. Install Rust (required for compiling packages like stim / relay)
+    # 2. Install Rust
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
     export PATH="/root/.cargo/bin:$PATH"
 
-    # 3. Create the Mamba environment from your environment.yml
+    # 3. Create the Mamba environment
     mamba env create -f /opt/environment.yml
     
-    # Activate the environment for the remaining build steps
+    # Activate the environment
     export PATH=/opt/conda/envs/realtime_decoding/bin:$PATH
 
-    # 4. Register the Jupyter kernel spec inside the container
+    # 4. Register the Jupyter kernel spec
     python -m ipykernel install --user --name realtime_decoding
 
-    # 5. Clone and install the Relay-BP repository
+    # 5. Clone and install Relay-BP
     mkdir -p /opt/external_repos
     cd /opt/external_repos
     if [ ! -d relay ]; then
@@ -31,19 +31,22 @@ From: condaforge/mambaforge:latest
     cd relay
     pip install ".[stim]"
 
-    # 6. Clone and install your custom uf_decoder fork
+    # 6. Clone and compile uf_decoder (NO pip install)
     cd /opt/external_repos
     if [ ! -d uf_decoder ]; then
         git clone https://github.com/acatspirit/uf_decoder.git
     fi
     cd uf_decoder
-    pip install .
+    make  # Compiles the underlying C code required by the wrapper
 
-    # Clean cache to optimize container file size
+    # Clean cache
     mamba clean -a -y
 
 %environment
-    # Set default path to use your conda environment inside the container
+    # Set default path
     export PATH=/opt/conda/envs/realtime_decoding/bin:$PATH
     export LC_ALL=C.UTF-8
     export LANG=C.UTF-8
+    
+    # Tell Python where to find the py_wrapper folder
+    export PYTHONPATH="/opt/external_repos/uf_decoder:$PYTHONPATH"

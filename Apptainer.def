@@ -1,7 +1,7 @@
 Bootstrap: docker
 From: condaforge/mambaforge:latest
 %files
-  env/environment.yml /opt/environment.yml
+    env/environment.yml /opt/environment.yml
 
 %post
     export DEBIAN_FRONTEND=noninteractive
@@ -16,7 +16,7 @@ From: condaforge/mambaforge:latest
     # 3. Create the Mamba environment
     mamba env create -f /opt/environment.yml
     
-    # Activate the environment
+    # Activate the environment for the remaining build steps
     export PATH=/opt/conda/envs/realtime_decoding/bin:$PATH
 
     # 4. Register the Jupyter kernel spec
@@ -31,13 +31,20 @@ From: condaforge/mambaforge:latest
     cd relay
     pip install ".[stim]"
 
-    # 6. Clone and compile uf_decoder (NO pip install)
+    # 6. Clone and compile uf_decoder (Using Meson/Ninja)
     cd /opt/external_repos
     if [ ! -d uf_decoder ]; then
         git clone https://github.com/acatspirit/uf_decoder.git
     fi
     cd uf_decoder
-    make  # Compiles the underlying C code required by the wrapper
+    
+    # Install the build tools required by the repository
+    pip install meson ninja
+    
+    # Configure the build and compile the C code
+    meson setup build --buildtype=release
+    cd build
+    ninja
 
     # Clean cache
     mamba clean -a -y

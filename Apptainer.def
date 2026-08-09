@@ -31,6 +31,14 @@ From: condaforge/mambaforge:latest
     cd relay
     pip install ".[stim]"
 
+    # 6. Clone and install your custom uf_decoder fork
+    cd /opt/external_repos
+    if [ ! -d uf_decoder ]; then
+        git clone https://github.com/acatspirit/uf_decoder.git
+    fi
+    cd uf_decoder
+    pip install .
+
     # Clean cache to optimize container file size
     mamba clean -a -y
 

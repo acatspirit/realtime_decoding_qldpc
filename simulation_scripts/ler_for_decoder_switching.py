@@ -324,7 +324,7 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
     '''
 
 
-    cutoffs_to_set,_ = get_cutoffs_for_input_switch_rate(target_switch_rate=target_switch_rate) 
+    cutoffs_to_set,_ = get_cutoffs_for_input_switch_rate(target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, num_shots=num_shots) 
 
     # colors = ["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
     task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID"),0)

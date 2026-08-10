@@ -623,7 +623,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
     strong_dec = data_dict.get("strong_decoder", strong_decoder)
     ps_target = data_dict.get("target_switch_rate", target_switch_rate)
     
-    fig, ax = plt.subplots(1, 2) # Removed figsize=(12, 5) to match original sizing
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5)) 
     
     colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
     
@@ -677,16 +677,24 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
     plt.tight_layout()
     plt.show()
 
+
+
 if __name__ == "__main__":
     # to run on the cluster
     # get_ler_for_decoder_switching_dcc()
 
     # run this once you have stuff from the cluster
-    merge_dcc_results(
-        target_switch_rate=0.25, # Update with the switch rate you ran
-        weak_decoder='uf', 
-        strong_decoder='tesseract', 
-        num_shots_max=100_000     # Update to your actual num_shots
-    )
+    # merge_dcc_results(
+    #     target_switch_rate=0.25, # Update with the switch rate you ran
+    #     weak_decoder='uf', 
+    #     strong_decoder='tesseract', 
+    #     num_shots_max=100_000     # Update to your actual num_shots
+    # )
 
     # run this to plot the results from decoder switching
+    # plot_decoder_switching_results(
+    #     target_switch_rate=0.25, # Update with the switch rate you ran
+    #     weak_decoder='uf',
+    #     strong_decoder='tesseract',
+    #     num_shots_max=100_000     # Update to your actual num_shots
+    # )

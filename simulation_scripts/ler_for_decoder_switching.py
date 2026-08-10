@@ -595,46 +595,87 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         print(f"⚠️ Could not delete directory {input_dir.parent}. Error: {e}")
     return dict_to_save
 
-def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max):
+def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, data_dict=None):
     """
     Plots the results from the merged decoder switching data.
     """
-    script_dir = Path(__file__).resolve().parent
-    results_file = script_dir.parent / "data" / "decoder_switching_results" / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}.txt'
+    if data_dict is None:
+        script_dir = Path(__file__).resolve().parent
+        results_file = script_dir.parent / "data" / "decoder_switching_results" / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}.txt'
+        
+        if not results_file.exists():
+            print(f"Results file not found: {results_file}")
+            return
+        
+        with open(results_file, 'r') as file:
+            # eval handles tuple keys correctly for the dictionary
+            data_dict = eval(file.read())
     
-    if not results_file.exists():
-        print(f"Results file not found: {results_file}")
-        return
+    code_names = data_dict["codes"]
+    ps = data_dict["ps"]
+    eps_to_save = data_dict["epsilons"]
+    errs_in_eps_to_save = data_dict["std_epsilons"]
+    switch_rates = data_dict["switch_rates"]
+    switch_yerr = data_dict["switch_rate_err"]
     
-    with open(results_file, 'r') as file:
-        data = eval(file.read())
+    # Grab parameters from dict if available, otherwise use function arguments
+    weak_dec = data_dict.get("weak_decoder", weak_decoder)
+    strong_dec = data_dict.get("strong_decoder", strong_decoder)
+    ps_target = data_dict.get("target_switch_rate", target_switch_rate)
     
-    code_names = data["codes"]
-    ps = data["ps"]
-    eps_to_save = data["epsilons"]
-    errs_in_eps_to_save = data["std_epsilons"]
-    
-    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    fig, ax = plt.subplots(1, 2) # Removed figsize=(12, 5) to match original sizing
     
     colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
     
-    for idx, code_name in enumerate(code_names):
+    #================= Plot ler from decoder switching ===============================================
+    cnt = 0
+    for code_name in code_names:
         eps_vals = [eps_to_save[code_name][p] for p in ps]
         eps_errs = [errs_in_eps_to_save[code_name][p] for p in ps]
         
-        ax[0].errorbar(ps, eps_vals, yerr=eps_errs, label=f"{code_name}", color=colors[idx], marker='o', markeredgecolor='k')
+        ax[0].errorbar(
+            ps, 
+            eps_vals, 
+            yerr=eps_errs, 
+            label=f"{code_name}, {weak_dec} to {strong_dec}", 
+            color=colors[cnt % len(colors)], 
+            marker='o', 
+            markeredgecolor='k'
+        )
+        cnt += 1
         
-        switch_rates = [data["switch_rates"][(code_name, p)] for p in ps]
-        switch_errs = [data["switch_rate_err"][(code_name, p)] for p in ps]
-        
-        ax[1].errorbar(ps, switch_rates, yerr=switch_errs, label=f"{code_name}", color=colors[idx], marker='o', markeredgecolor='k')
-    
-    ax[0].set_xscale('log')
     ax[0].set_yscale('log')
-    ax[0].set_xlabel("Physical Error Rate (p)")
-    ax[0].set_ylabel("LER per SEC")
-    ax[0].set_title(f"LER vs Physical Error Rate\nWeak: {weak_decoder}, Strong: {strong_decoder}")
+    ax[0].set_xscale('log')
     ax[0].legend(fontsize=9)
+    ax[0].set_xlabel("physical error rate")
+    ax[0].set_ylabel("LER per SEC")
+    
+    #================= Plot the switch rate ===============================================
+    cnt = 0
+    for code_name in code_names:
+        # Tuple keys are preserved, so we can access them natively
+        y = np.array([switch_rates[(code_name, p)] for p in ps])
+        yerr = np.array([switch_yerr[(code_name, p)] for p in ps])
+        
+        ax[1].errorbar(
+            ps, 
+            y, 
+            yerr=yerr, 
+            marker='o', 
+            color=colors[cnt % len(colors)], 
+            label=f"{code_name}"
+        )   
+        cnt += 1
+        
+    ax[1].set_ylabel("$p_{switch}$")
+    ax[1].set_xlabel("physical error rate")
+    ax[1].set_title(f"for $p_s$: {ps_target}")
+    ax[1].set_yscale('log')
+    ax[1].set_xscale('log')
+    ax[1].legend(fontsize=9)
+    
+    plt.tight_layout()
+    plt.show()
 
 if __name__ == "__main__":
     # to run on the cluster

@@ -2,7 +2,8 @@
 Use this to run decoder switching simulations, given a fixed target switch rate
 '''
 
-from asyncio import subprocess
+import subprocess
+import shutil
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
@@ -446,10 +447,10 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
 
     # Setup paths using pathlib
     script_dir = Path(__file__).resolve().parent
-    input_dir = script_dir / "data" / "decoder_switching_data" / f"raw_batches_target_{target_switch_rate}"
+    input_dir = script_dir / "decoder_switching_data_temp" / f"raw_batches_target_{target_switch_rate}"
 
     download_from_dcc(
-            remote_path=dcc_data_dir / f"raw_batches_target_{target_switch_rate}/*.json",
+            remote_path=dcc_data_dir + f"/raw_batches_target_{target_switch_rate}/*.json",
             local_dir=input_dir
         )
     
@@ -578,7 +579,7 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
     }
     
     # 6. Save back to original .txt format
-    out_dir = script_dir.parent / "decoder_switching_results"
+    out_dir = script_dir.parent / "data" / "decoder_switching_results"
     out_dir.mkdir(parents=True, exist_ok=True)
     
     txt_to_save = out_dir / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}.txt'
@@ -587,7 +588,53 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         file.write(str(dict_to_save))
         
     print(f"Merge complete! Saved master dictionary to:\n{txt_to_save}")
+    try:
+        shutil.rmtree(input_dir.parent)
+        print(f"🧹 Cleanup successful: Deleted raw data directory {input_dir.parent}")
+    except Exception as e:
+        print(f"⚠️ Could not delete directory {input_dir.parent}. Error: {e}")
     return dict_to_save
+
+def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max):
+    """
+    Plots the results from the merged decoder switching data.
+    """
+    script_dir = Path(__file__).resolve().parent
+    results_file = script_dir.parent / "data" / "decoder_switching_results" / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}.txt'
+    
+    if not results_file.exists():
+        print(f"Results file not found: {results_file}")
+        return
+    
+    with open(results_file, 'r') as file:
+        data = eval(file.read())
+    
+    code_names = data["codes"]
+    ps = data["ps"]
+    eps_to_save = data["epsilons"]
+    errs_in_eps_to_save = data["std_epsilons"]
+    
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    
+    colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
+    
+    for idx, code_name in enumerate(code_names):
+        eps_vals = [eps_to_save[code_name][p] for p in ps]
+        eps_errs = [errs_in_eps_to_save[code_name][p] for p in ps]
+        
+        ax[0].errorbar(ps, eps_vals, yerr=eps_errs, label=f"{code_name}", color=colors[idx], marker='o', markeredgecolor='k')
+        
+        switch_rates = [data["switch_rates"][(code_name, p)] for p in ps]
+        switch_errs = [data["switch_rate_err"][(code_name, p)] for p in ps]
+        
+        ax[1].errorbar(ps, switch_rates, yerr=switch_errs, label=f"{code_name}", color=colors[idx], marker='o', markeredgecolor='k')
+    
+    ax[0].set_xscale('log')
+    ax[0].set_yscale('log')
+    ax[0].set_xlabel("Physical Error Rate (p)")
+    ax[0].set_ylabel("LER per SEC")
+    ax[0].set_title(f"LER vs Physical Error Rate\nWeak: {weak_decoder}, Strong: {strong_decoder}")
+    ax[0].legend(fontsize=9)
 
 if __name__ == "__main__":
     # to run on the cluster
@@ -600,3 +647,5 @@ if __name__ == "__main__":
         strong_decoder='tesseract', 
         num_shots_max=100_000     # Update to your actual num_shots
     )
+
+    # run this to plot the results from decoder switching

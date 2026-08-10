@@ -2,6 +2,7 @@
 Use this to run decoder switching simulations, given a fixed target switch rate
 '''
 
+from asyncio import subprocess
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
@@ -401,7 +402,44 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
     print(f"Task {task_id} finished successfully. Saved to {file_name}")
     return
 
-def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max):
+def download_from_dcc(remote_path, local_dir, username="am1155", host="dcc-login.oit.duke.edu"):
+    """
+    Downloads a file or directory from the Duke Compute Cluster (DCC) using scp.
+    
+    Parameters:
+    - username (str): Your Duke NetID (e.g., 'am1155').
+    - remote_path (str): The absolute path to the data on the cluster.
+    - local_dir (str/Path): The local directory where you want to save the data.
+    - host (str): The DCC login node address.
+    """
+    
+    # Ensure the local directory exists
+    local_path = Path(local_dir)
+    local_path.mkdir(parents=True, exist_ok=True)
+    
+    # Build the scp command
+    # We include '-r' (recursive) by default so it works for both single files and entire folders of CSVs
+    scp_command = [
+        "scp",
+        "-r", 
+        f"{username}@{host}:{remote_path}",
+        str(local_path)
+    ]
+    
+    print(f"Executing: {' '.join(scp_command)}")
+    
+    try:
+        # Execute the command
+        # Note: We don't use capture_output=True here so that if Duo/password 
+        # prompts occur, they still show up in your terminal for you to interact with.
+        subprocess.run(scp_command, check=True)
+        print(f"✅ Success! Data downloaded to: {local_path.absolute()}")
+        
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Error occurred during download. Return code: {e.returncode}")
+        print("Check if the remote path is correct and that you are connected to the Duke VPN.")
+
+def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, dcc_data_dir="/hpc/group/brownlab/am1155/realtime_decoding_qldpc/simulation_scripts/data/decoder_switching_data"):
     """
     after running on the DCC, converts data that belongs to one task into full statistics version / calculating LERs 
     """
@@ -409,6 +447,11 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
     # Setup paths using pathlib
     script_dir = Path(__file__).resolve().parent
     input_dir = script_dir / "data" / "decoder_switching_data" / f"raw_batches_target_{target_switch_rate}"
+
+    download_from_dcc(
+            remote_path=dcc_data_dir / f"raw_batches_target_{target_switch_rate}/*.json",
+            local_dir=input_dir
+        )
     
     if not input_dir.exists():
         print(f"Directory not found: {input_dir}")
@@ -535,7 +578,7 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
     }
     
     # 6. Save back to original .txt format
-    out_dir = script_dir / "data" / "decoder_switching_data"
+    out_dir = script_dir.parent / "decoder_switching_results"
     out_dir.mkdir(parents=True, exist_ok=True)
     
     txt_to_save = out_dir / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}.txt'
@@ -548,12 +591,12 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
 
 if __name__ == "__main__":
     # to run on the cluster
-    get_ler_for_decoder_switching_dcc()
+    # get_ler_for_decoder_switching_dcc()
 
     # run this once you have stuff from the cluster
-    # merge_dcc_results(
-    #     target_switch_rate=0.01, # Update with the switch rate you ran
-    #     weak_decoder='bplsd', 
-    #     strong_decoder='relay_bp', 
-    #     num_shots_max=100000     # Update to your actual num_shots
-    # )
+    merge_dcc_results(
+        target_switch_rate=0.25, # Update with the switch rate you ran
+        weak_decoder='uf', 
+        strong_decoder='tesseract', 
+        num_shots_max=100_000     # Update to your actual num_shots
+    )

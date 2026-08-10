@@ -2,9 +2,9 @@
 #SBATCH --job-name=qec_sim
 #SBATCH --output=logs_%A_%a.out
 #SBATCH --error=logs_%A_%a.err
-#SBATCH --array=0-299
+#SBATCH --array=0-599 # should be len(ps) * len(code_names) * (num_shots // shots_per_job) - 1 , 6*20*5-1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=4G
+#SBATCH --mem=1G
 #SBATCH --time=8:00:00
 
 # Navigate to your project directory

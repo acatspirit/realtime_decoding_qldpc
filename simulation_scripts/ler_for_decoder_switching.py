@@ -681,7 +681,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 
 if __name__ == "__main__":
     # to run on the cluster
-    get_ler_for_decoder_switching_dcc(num_shots=1_000_000, shots_per_job=50_000, target_switch_rate=2.5e-1, weak_decoder='uf', strong_decoder='tesseract')
+    get_ler_for_decoder_switching_dcc(num_shots=1_000_000, shots_per_job=50_000, target_switch_rate=1e-3, weak_decoder='uf', strong_decoder='tesseract')
 
     # run this once you have stuff from the cluster
     # merge_dcc_results(
@@ -692,9 +692,9 @@ if __name__ == "__main__":
     # )
 
     # run this to plot the results from decoder switching
-    plot_decoder_switching_results(
-        target_switch_rate=0.25, # Update with the switch rate you ran
-        weak_decoder='uf',
-        strong_decoder='tesseract',
-        num_shots_max=100_000     # Update to your actual num_shots
-    )
+    # plot_decoder_switching_results(
+    #     target_switch_rate=0.25, # Update with the switch rate you ran
+    #     weak_decoder='uf',
+    #     strong_decoder='tesseract',
+    #     num_shots_max=100_000     # Update to your actual num_shots
+    # )

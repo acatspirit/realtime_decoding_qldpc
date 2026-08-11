@@ -682,9 +682,9 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 if __name__ == "__main__":
     num_shots = 1_000_000
     shots_per_job = 50_000
-    target_switch_rate = 1e-2
+    target_switch_rate = 1e-3
     weak_decoder = 'uf'
-    strong_decoder = 'tesseract'
+    strong_decoder = 'relay_bp'
 
     # to run on the cluster
     get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)

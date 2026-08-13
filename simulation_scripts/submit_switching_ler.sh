@@ -7,11 +7,11 @@
 #SBATCH --mem=1G
 #SBATCH --time=8:00:00
 
-# Navigate to your project directory
+# Navigate to your project directory (CHANGE THIS TO YOUR PROJECT DIRECTORY)
 cd /hpc/group/brownlab/am1155/realtime_decoding_qldpc
 
 # Unset host python variables to prevent them from bleeding into the container
 unset PYTHONPATH
 
-# Run using Apptainer, forcing the exact path to the container's internal Python
+# Run using Apptainer, forcing the exact path to the container's internal Python (DO NOT CHANGE THIS PATH)
 apptainer exec realtime_decoding_qldpc.sif /opt/conda/envs/realtime_decoding/bin/python simulation_scripts/ler_for_decoder_switching.py

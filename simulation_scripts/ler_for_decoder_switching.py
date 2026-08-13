@@ -595,7 +595,7 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         print(f"⚠️ Could not delete directory {input_dir.parent}. Error: {e}")
     return dict_to_save
 
-def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, data_dict=None):
+def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, data_dict=None, include_strong_and_weak=True):
     """
     Plots the results from the merged decoder switching data.
     """
@@ -610,7 +610,25 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
         with open(results_file, 'r') as file:
             # eval handles tuple keys correctly for the dictionary
             data_dict = eval(file.read())
-    
+
+    if include_strong_and_weak:
+        script_dir = Path(__file__).resolve().parent
+        if weak_decoder == 'uf':
+            weak_results_file = script_dir.parent / "data" / "raw" / "single_sliding_window_uf_max_shots_15000.txt"
+        elif weak_decoder == 'bplsd':
+            weak_results_file = script_dir.parent / "saved_data" / "single_sliding_window_bplsd_max_shots_30000.txt"
+
+        if strong_decoder == 'relay_bp':
+            strong_results_file = script_dir.parent / "saved_data" / "single_sliding_window_relay_bp_max_shots_20000.txt"
+        elif strong_decoder == 'tesseract':
+            strong_results_file = script_dir.parent / "data" / "raw" / "single_sliding_window_tesseract_max_shots_1000000.txt"
+
+        if weak_results_file and weak_results_file.exists():
+            with open(weak_results_file, 'r') as file:
+                weak_data = eval(file.read())
+            data_dict["epsilons"]["weak"] = weak_data["epsilons"]
+            data_dict["std_epsilons"]["weak"] = weak_data["std_epsilons"]
+
     code_names = data_dict["codes"]
     ps = data_dict["ps"]
     eps_to_save = data_dict["epsilons"]
@@ -690,17 +708,17 @@ if __name__ == "__main__":
     # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
 
     # run this once you have stuff from the cluster
-    merge_dcc_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots     # Update to your actual num_shots
-    )
+    # merge_dcc_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots     # Update to your actual num_shots
+    # )
 
     # run this to plot the results from decoder switching
-    plot_decoder_switching_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots     # Update to your actual num_shots
-    )
+    # plot_decoder_switching_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots     # Update to your actual num_shots
+    # )

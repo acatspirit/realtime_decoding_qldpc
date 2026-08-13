@@ -19,7 +19,7 @@ from joblib import Parallel, delayed
 import json
 from pathlib import Path
 from src.realtime_decoding.decoder_switching_class import decoder_switching_class
-
+from numpy import array
 import pickle 
 
 script_dir = Path(__file__).resolve().parent
@@ -621,13 +621,22 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
         if strong_decoder == 'relay_bp':
             strong_results_file = script_dir.parent / "saved_data" / "single_sliding_window_relay_bp_max_shots_20000.txt"
         elif strong_decoder == 'tesseract':
-            strong_results_file = script_dir.parent / "data" / "raw" / "single_sliding_window_tesseract_max_shots_1000000.txt"
+            strong_results_file = script_dir.parent / "data" / "raw" / "single_sliding_window_tesseract_max_shots_100000.txt"
 
         if weak_results_file and weak_results_file.exists():
             with open(weak_results_file, 'r') as file:
-                weak_data = eval(file.read())
-            data_dict["epsilons"]["weak"] = weak_data["epsilons"]
-            data_dict["std_epsilons"]["weak"] = weak_data["std_epsilons"]
+                weak_data_dict = eval(file.read())
+        else:
+            print(f"Weak decoder results file not found: {weak_results_file}")
+            weak_data_dict = None
+
+        if strong_results_file and strong_results_file.exists():
+            with open(strong_results_file, 'r') as file:
+                strong_data_dict = eval(file.read())
+        else:
+            print(f"Strong decoder results file not found: {strong_results_file}")
+            strong_data_dict = None
+
 
     code_names = data_dict["codes"]
     ps = data_dict["ps"]
@@ -660,6 +669,30 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
             marker='o', 
             markeredgecolor='k'
         )
+
+        if weak_data_dict and code_name in weak_data_dict.get("epsilons", {}):
+            w_ps = sorted(list(weak_data_dict["epsilons"][code_name].keys()))
+            w_eps_vals = [weak_data_dict["epsilons"][code_name][p] for p in w_ps]
+            w_eps_errs = [weak_data_dict["std_epsilons"][code_name].get(p, 0) for p in w_ps]
+            
+            ax[0].errorbar(
+                w_ps, w_eps_vals, yerr=w_eps_errs, 
+                label=f"{code_name}, {weak_dec}", 
+                color=colors[cnt % len(colors)], marker='s', markeredgecolor='k', linestyle='--'
+            )
+
+        # 3. Plot the Strong Decoder Baseline (Dotted Line, Triangle Marker)
+        if strong_data_dict and code_name in strong_data_dict.get("epsilons", {}):
+            s_ps = sorted(list(strong_data_dict["epsilons"][code_name].keys()))
+            s_eps_vals = [strong_data_dict["epsilons"][code_name][p] for p in s_ps]
+            s_eps_errs = [strong_data_dict["std_epsilons"][code_name].get(p, 0) for p in s_ps]
+            
+            ax[0].errorbar(
+                s_ps, s_eps_vals, yerr=s_eps_errs, 
+                label=f"{code_name}, {strong_dec}", 
+                color=colors[cnt % len(colors)], marker='^', markeredgecolor='k', linestyle=':'
+            )
+
         cnt += 1
         
     ax[0].set_yscale('log')
@@ -702,7 +735,7 @@ if __name__ == "__main__":
     shots_per_job = 50_000
     target_switch_rate = 1e-2
     weak_decoder = 'uf'
-    strong_decoder = 'relay_bp'
+    strong_decoder = 'tesseract'
 
     # to run on the cluster
     # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
@@ -716,9 +749,9 @@ if __name__ == "__main__":
     # )
 
     # run this to plot the results from decoder switching
-    # plot_decoder_switching_results(
-    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-    #     weak_decoder=weak_decoder,
-    #     strong_decoder=strong_decoder,
-    #     num_shots_max=num_shots     # Update to your actual num_shots
-    # )
+    plot_decoder_switching_results(
+        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+        weak_decoder=weak_decoder,
+        strong_decoder=strong_decoder,
+        num_shots_max=num_shots     # Update to your actual num_shots
+    )

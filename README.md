@@ -71,8 +71,9 @@ The workflow that I find most useful is continuously pushing from my local compu
 or use mine to download from the DCC to your local computer. 
 
 ### Pull the Apptainer image
-Download the realtime_decoding_qldpc.sif file to your local computer from the most recent GitLab commit. This will need to be downloaded each time we update
-the environment or install new packages, since the full sync doesn't work on the DCC.
+Download the realtime_decoding_qldpc.sif file to your local computer from the most recent GitLab commit. This will need to be downloaded each time we update the environment or install new packages, since the full sync doesn't work on the DCC.
+
+To download the .sif file, go to the most recent commit on the GitLab. Go to the "job artifacts" of the "build" stage. Download the apptainer image to your local computer. If there are no job artifacts, go ahead and push something to this repo to generate a fresh image.
 
 Once it is downloaded, scp the realtime_decoding_qldpc.sif file to the DCC realtime_decoding_qlpdc repo. This should live in the outermost folder. Now you are
 good to run things on the DCC! This .sif image should create a local version of the exact environment and doesn't require any additional installs.

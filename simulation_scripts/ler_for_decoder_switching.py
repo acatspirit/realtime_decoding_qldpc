@@ -737,10 +737,10 @@ if __name__ == "__main__":
     weak_decoder = 'bplsd'
     strong_decoder = 'tesseract'
 
-    # to run on the cluster
-    # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
+    # to run on the cluster / get data on cluster
+    get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
 
-    # run this once you have stuff from the cluster
+    # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
     # merge_dcc_results(
     #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
     #     weak_decoder=weak_decoder,
@@ -749,9 +749,9 @@ if __name__ == "__main__":
     # )
 
     # run this to plot the results from decoder switching
-    plot_decoder_switching_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots     # Update to your actual num_shots
-    )
+    # plot_decoder_switching_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots     # Update to your actual num_shots
+    # )

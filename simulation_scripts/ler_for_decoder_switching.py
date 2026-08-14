@@ -734,7 +734,7 @@ if __name__ == "__main__":
     num_shots = 1_000_000
     shots_per_job = 50_000
     target_switch_rate = 1e-2
-    weak_decoder = 'uf'
+    weak_decoder = 'bplsd'
     strong_decoder = 'tesseract'
 
     # to run on the cluster

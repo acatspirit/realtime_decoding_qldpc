@@ -714,29 +714,29 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
             marker='o', 
             markeredgecolor='k'
         )
+        if include_strong_and_weak:
+            if weak_data_dict and code_name in weak_data_dict.get("epsilons", {}):
+                w_ps = sorted(list(weak_data_dict["epsilons"][code_name].keys()))
+                w_eps_vals = [weak_data_dict["epsilons"][code_name][p] for p in w_ps]
+                w_eps_errs = [weak_data_dict["std_epsilons"][code_name].get(p, 0) for p in w_ps]
+                
+                ax[0].errorbar(
+                    w_ps, w_eps_vals, yerr=w_eps_errs, 
+                    label=f"{code_name}, {weak_dec}", 
+                    color=colors[cnt % len(colors)], marker='s', markeredgecolor='k', linestyle='--'
+                )
 
-        if weak_data_dict and code_name in weak_data_dict.get("epsilons", {}):
-            w_ps = sorted(list(weak_data_dict["epsilons"][code_name].keys()))
-            w_eps_vals = [weak_data_dict["epsilons"][code_name][p] for p in w_ps]
-            w_eps_errs = [weak_data_dict["std_epsilons"][code_name].get(p, 0) for p in w_ps]
-            
-            ax[0].errorbar(
-                w_ps, w_eps_vals, yerr=w_eps_errs, 
-                label=f"{code_name}, {weak_dec}", 
-                color=colors[cnt % len(colors)], marker='s', markeredgecolor='k', linestyle='--'
-            )
-
-        # 3. Plot the Strong Decoder Baseline (Dotted Line, Triangle Marker)
-        if strong_data_dict and code_name in strong_data_dict.get("epsilons", {}):
-            s_ps = sorted(list(strong_data_dict["epsilons"][code_name].keys()))
-            s_eps_vals = [strong_data_dict["epsilons"][code_name][p] for p in s_ps]
-            s_eps_errs = [strong_data_dict["std_epsilons"][code_name].get(p, 0) for p in s_ps]
-            
-            ax[0].errorbar(
-                s_ps, s_eps_vals, yerr=s_eps_errs, 
-                label=f"{code_name}, {strong_dec}", 
-                color=colors[cnt % len(colors)], marker='^', markeredgecolor='k', linestyle=':'
-            )
+            # 3. Plot the Strong Decoder Baseline (Dotted Line, Triangle Marker)
+            if strong_data_dict and code_name in strong_data_dict.get("epsilons", {}):
+                s_ps = sorted(list(strong_data_dict["epsilons"][code_name].keys()))
+                s_eps_vals = [strong_data_dict["epsilons"][code_name][p] for p in s_ps]
+                s_eps_errs = [strong_data_dict["std_epsilons"][code_name].get(p, 0) for p in s_ps]
+                
+                ax[0].errorbar(
+                    s_ps, s_eps_vals, yerr=s_eps_errs, 
+                    label=f"{code_name}, {strong_dec}", 
+                    color=colors[cnt % len(colors)], marker='^', markeredgecolor='k', linestyle=':'
+                )
 
         cnt += 1
         
@@ -798,5 +798,6 @@ if __name__ == "__main__":
     #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
     #     weak_decoder=weak_decoder,
     #     strong_decoder=strong_decoder,
-    #     num_shots_max=num_shots     # Update to your actual num_shots
+    #     num_shots_max=num_shots,     # Update to your actual num_shots
+    #     include_strong_and_weak=False
     # )

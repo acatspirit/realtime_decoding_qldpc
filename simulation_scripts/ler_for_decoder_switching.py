@@ -539,7 +539,21 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         total_switch_times[key] += data["switch_times"]
         total_windows[key] += data["num_windows"] * data["shots_run"]
 
-    code_names = sorted(list(code_names))
+    def sort_by_d_then_k(code_str):
+        try:
+            # Strip the brackets and split the string into a list of numbers
+            parts = code_str.strip("[]").split(",")
+            
+            # parts[0] is n, parts[1] is k, parts[2] is d
+            k = int(parts[1])
+            d = int(parts[2])
+            
+            # Return tuple (d, k) so it sorts by d first, then breaks ties with k
+            return (d, k)
+        except (IndexError, ValueError):
+            return (0, 0) # Fallback
+        
+    code_names = sorted(list(code_names), key=sort_by_d_then_k)
     ps = sorted(list(ps))
 
     # 2. Calculate LER & Standard Errors (This now computes on the COMBINED shots and errors)

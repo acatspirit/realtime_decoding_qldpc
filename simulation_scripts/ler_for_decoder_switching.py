@@ -448,6 +448,10 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
     # Setup paths using pathlib
     script_dir = Path(__file__).resolve().parent
     input_dir = script_dir / "decoder_switching_data_temp" / f"raw_batches_target_{target_switch_rate}"
+    
+    out_dir = script_dir.parent / "data" / "decoder_switching_results"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    txt_to_save = out_dir / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}.txt'
 
     download_from_dcc(
             remote_path=dcc_data_dir + f"/raw_batches_target_{target_switch_rate}/*.json",
@@ -470,7 +474,39 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
     code_names = set()
     ps = set()
     
-    # 1. Find and aggregate all JSON files
+    # --- NEW: STEP 0. Read existing file to prepopulate the dictionaries ---
+    if txt_to_save.exists():
+        try:
+            with open(txt_to_save, 'r') as file:
+                existing_dict = eval(file.read())
+                
+            print("Found existing file. Loading previous shots and errors...")
+            
+            # Carry over static parameters
+            basis = existing_dict.get("basis")
+            num_rounds = existing_dict.get("r")
+            
+            # Prepopulate the aggregators with the old data
+            old_errors = existing_dict.get("total_errors", {})
+            old_shots = existing_dict.get("shots", {})
+            old_switch_times = existing_dict.get("total_switch_times", {})
+            old_windows = existing_dict.get("total_windows", {})
+            
+            for key in old_shots:
+                total_errors[key] = old_errors.get(key, 0)
+                total_shots[key] = old_shots.get(key, 0)
+                total_switch_times[key] = old_switch_times.get(key, 0)
+                total_windows[key] = old_windows.get(key, 0)
+                
+                # Add the old codes and p's to the sets so they are preserved
+                code_names.add(key[0]) 
+                ps.add(key[1])
+                
+        except Exception as e:
+            print(f"⚠️ Could not load existing file. Starting fresh. Error: {e}")
+            
+            
+    # 1. Find and aggregate all JSON files (This now adds to the old data)
     json_files = list(input_dir.glob("*.json"))
     print(f"Found {len(json_files)} result files. Merging...")
     
@@ -485,7 +521,7 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         code_names.add(code)
         ps.add(p)
         
-        # Grab static values from the first file we open
+        # Grab static values from the first file we open (if not already set by the old dict)
         if basis is None:
             basis = data["basis"]
             num_rounds = data["r"]
@@ -497,18 +533,16 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
             total_switch_times[key] = 0
             total_windows[key] = 0
             
-        # Add up the raw counts
+        # Add up the raw counts (Old data + New data)
         total_errors[key] += data["logical_errors"]
         total_shots[key] += data["shots_run"]
         total_switch_times[key] += data["switch_times"]
-        
-        # Note: in your original script this was result['num_windows'] * shot
         total_windows[key] += data["num_windows"] * data["shots_run"]
 
     code_names = sorted(list(code_names))
     ps = sorted(list(ps))
 
-    # 2. Calculate LER & Standard Errors
+    # 2. Calculate LER & Standard Errors (This now computes on the COMBINED shots and errors)
     ler_results = {}
     yerr_results = {}
     
@@ -523,7 +557,7 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
                 ler_results[key] = np.nan
                 yerr_results[key] = np.nan
 
-    # 3. Calculate Epsilons
+    # 3. Calculate Epsilons (Computed on COMBINED LER)
     eps_to_save = {}
     errs_in_eps_to_save = {}
     
@@ -546,7 +580,7 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         eps_to_save[code] = eps
         errs_in_eps_to_save[code] = eps_errs
 
-    # 4. Calculate Switch Rates
+    # 4. Calculate Switch Rates (Computed on COMBINED windows)
     switch_rates = {
         key: total_switch_times[key] / total_windows[key] if total_windows[key] > 0 else np.nan
         for key in total_switch_times
@@ -578,21 +612,18 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         "total_windows": total_windows
     }
     
-    # 6. Save back to original .txt format
-    out_dir = script_dir.parent / "data" / "decoder_switching_results"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    
-    txt_to_save = out_dir / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}.txt'
-    
+    # 6. Save back to original .txt format, replacing the old file with the newly updated one
     with open(txt_to_save, 'w') as file:
         file.write(str(dict_to_save))
         
     print(f"Merge complete! Saved master dictionary to:\n{txt_to_save}")
+    
     try:
         shutil.rmtree(input_dir.parent)
         print(f"🧹 Cleanup successful: Deleted raw data directory {input_dir.parent}")
     except Exception as e:
         print(f"⚠️ Could not delete directory {input_dir.parent}. Error: {e}")
+        
     return dict_to_save
 
 def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, data_dict=None, include_strong_and_weak=True):
@@ -738,7 +769,7 @@ if __name__ == "__main__":
     strong_decoder = 'relay_bp'
 
     # to run on the cluster / get data on cluster
-    # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
+    get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
     # merge_dcc_results(
@@ -749,9 +780,9 @@ if __name__ == "__main__":
     # )
 
     # run this to plot the results from decoder switching
-    plot_decoder_switching_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots     # Update to your actual num_shots
-    )
+    # plot_decoder_switching_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots     # Update to your actual num_shots
+    # )

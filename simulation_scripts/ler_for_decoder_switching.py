@@ -334,7 +334,7 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
     basis      = 'Z'
     code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]    
     # ps         = [2e-3,3e-3,4e-3,5e-3] #I RUN THESE RATES ONLY FOR BPLSD
-    ps = np.logspace(-4,-2.5,6)
+    ps = np.logspace(-4,-3.5,6)
     num_rounds = 25
     
     tasks = []

@@ -42,7 +42,7 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False, weak_decode
     cnt=0
     for code_name in code_names:
     
-        txt_to_load = folder_name + f'cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+        txt_to_load = folder_name + f'cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.pkl.gz'
 
         with open(txt_to_load, "rb") as file:
             data = pickle.load(file)

@@ -6,6 +6,8 @@ import subprocess
 import shutil
 import sys
 import os
+import gzip
+from pathlib import Path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
 import numpy as np
 
@@ -44,8 +46,12 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False, weak_decode
     
         txt_to_load = folder_name + f'cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.pkl.gz'
 
-        with open(txt_to_load, "rb") as file:
-            data = pickle.load(file)
+        if Path(txt_to_load).endswith('.pkl.gz'):
+            with gzip.open(txt_to_load, "rb") as file:
+                data = pickle.load(file)
+        else:
+            with open(txt_to_load, "rb") as file:
+                data = pickle.load(file)
 
         data_per_code.append(data)
 

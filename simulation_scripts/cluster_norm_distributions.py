@@ -34,7 +34,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     if weak_decoder == 'bplsd':
         ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] # p_switch
     elif weak_decoder=='uf':
-        ps = np.logspace(-4,-2.5,6)
+        ps = np.logspace(-4,-3.5,6)
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
         
@@ -211,7 +211,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
 # code_name = "[[126,8,10]]"
 # code_name = "[[144,12,12]]"
 code_name = "[[162,8,14]]"
-num_shots = 100_000
-shots_per_job = 10_000
+num_shots = 500_000
+shots_per_job = 20_000
 
 switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)

@@ -4,7 +4,7 @@
 #SBATCH --error=logs_%A_%a.err
 #SBATCH --array=0-599 # should be len(ps) * len(code_names) * (num_shots // shots_per_job) - 1 , 6*20*5-1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=1G
+#SBATCH --mem=4G
 #SBATCH --time=8:00:00
 
 # Navigate to your project directory (CHANGE THIS TO YOUR PROJECT DIRECTORY)

@@ -553,11 +553,12 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
             # parts[0] is n, parts[1] is k, parts[2] is d
             k = int(parts[1])
             d = int(parts[2])
+            n = int(parts[0])
             
             # Return tuple (d, k) so it sorts by d first, then breaks ties with k
-            return (d, k)
+            return (d, n, k)
         except (IndexError, ValueError):
-            return (0, 0) # Fallback
+            return (0, 0, 0) # Fallback
         
     code_names = sorted(list(code_names), key=sort_by_d_then_k)
     ps = sorted(list(ps))
@@ -784,7 +785,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 if __name__ == "__main__":
     num_shots = 10_000_000
     shots_per_job = 500_000
-    target_switch_rate = 1e-3
+    target_switch_rate = 5e-3
     weak_decoder = 'uf'
     strong_decoder = 'tesseract'
 
@@ -799,7 +800,7 @@ if __name__ == "__main__":
     #     num_shots_max=num_shots     # Update to your actual num_shots
     # )
 
-    # run this to plot the results from decoder switching
+    # # run this to plot the results from decoder switching
     # plot_decoder_switching_results(
     #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
     #     weak_decoder=weak_decoder,

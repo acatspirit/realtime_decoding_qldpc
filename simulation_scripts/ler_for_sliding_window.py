@@ -903,13 +903,13 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     return dict_to_save
 
 if __name__ == "__main__":
-    num_shots      = 100_000
+    num_shots      = 10_000
     weak_decoder   = 'uf'
-    strong_decoder = 'tesseract'
+    strong_decoder = 'relay_bp'
     decoder_option = 'strong'
-    cutoff=0.8
+    # cutoff=0.8
 
-    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, decoder_option=decoder_option, num_shots=num_shots, shots_per_job=50_000, norm_order=2, rel_error_tol=0.05)
+    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=100_000, norm_order=2, rel_error_tol=0.05)
     # get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=num_shots,
     #                                             weak_decoder=weak_decoder,
     #                                             strong_decoder=strong_decoder,

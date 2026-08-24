@@ -617,7 +617,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=10_000,weak
 
     return 
 
-def get_ler_for_sliding_window_dcc(decoder_name, decoder_option='weak', num_shots=100_000, shots_per_job=10_000, norm_order=2, rel_error_tol=0.2):
+def get_ler_for_sliding_window_dcc(decoder_name, num_shots=100_000, shots_per_job=10_000, norm_order=2, rel_error_tol=0.05):
     '''
     Inputs:
     decoder_name: the name of the decoder to use (e.g., 'uf', 'bplsd', 'relay_bp', 'tesseract')
@@ -648,13 +648,16 @@ def get_ler_for_sliding_window_dcc(decoder_name, decoder_option='weak', num_shot
     code_name, p, shots = tasks[task_id]
 
     print(f"--- RUNNING ARRAY TASK {task_id} ---")
-    print(f"Code: {code_name}, p: {p}, shots: {shots}, Decoder: {decoder_name} ({decoder_option})")
+    print(f"Code: {code_name}, p: {p}, shots: {shots}, Decoder: {decoder_name}")
 
     n, k, d = map(int, code_name.strip("[]").split(","))
             
     nbuffer = d            # Buffer region
     F       = d//2         # Commit region
     W       = nbuffer + F  # Entire window
+
+
+    decoder_option = 'weak' if decoder_name in ['uf', 'bplsd'] else 'strong'
 
     # Route the decoder name to the proper initialization slot for the class
     weak_dec = decoder_name if decoder_option == 'weak' else 'uf' # uf is a dummy placeholder if strong is chosen

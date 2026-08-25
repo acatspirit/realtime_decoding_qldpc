@@ -824,14 +824,14 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
         total_errors[key] += data["logical_errors"]
         total_shots[key] += data["shots_run"]
 
-    def sort_by_d_then_k(code_str):
+    def sort_by_d_then_n_then_k(code_str):
         try:
             parts = code_str.strip("[]").split(",")
-            return (int(parts[2]), int(parts[1]))
+            return (int(parts[2]), int(parts[0]), int(parts[1]))
         except (IndexError, ValueError):
-            return (0, 0)
-        
-    code_names = sorted(list(code_names), key=sort_by_d_then_k)
+            return (0, 0, 0)
+
+    code_names = sorted(list(code_names), key=sort_by_d_then_n_then_k)
     ps = sorted(list(ps))
 
     # 2. Calculate LER & Standard Errors
@@ -903,19 +903,14 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     return dict_to_save
 
 if __name__ == "__main__":
-    num_shots      = 10_000
+    num_shots      = 1_000
     weak_decoder   = 'uf'
     strong_decoder = 'relay_bp'
     decoder_option = 'strong'
     # cutoff=0.8
 
-    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=100_000, norm_order=2, rel_error_tol=0.05)
-    # get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=num_shots,
-    #                                             weak_decoder=weak_decoder,
-    #                                             strong_decoder=strong_decoder,
-    #                                             decoder_option= decoder_option,
-    #                                             cutoff=cutoff,
-    #                                             norm_order=2)
+    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//1, norm_order=2, rel_error_tol=0.05)
+
 
 
     # txt_to_load = sys.path[-1] + f'/saved_data/single_sliding_window_{strong_decoder}_max_shots_{num_shots}.txt'

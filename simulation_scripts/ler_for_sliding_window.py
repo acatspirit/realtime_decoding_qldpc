@@ -1,4 +1,5 @@
 import sys
+print(">>> STAGE 1: Python started, beginning module imports...", flush=True)
 import os
 from pathlib import Path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before src file
@@ -19,7 +20,7 @@ from joblib import Parallel, delayed
 from src.realtime_decoding.decoder_switching_class import decoder_switching_class
 from scipy.optimize import curve_fit
 
-
+print(">>> STAGE 2: All imports completed successfully!", flush=True)
 '''Run this to get LER per syndrome extraction cycle by fitting epsilon'''
 def get_ler_per_SEC_fitted_eps_from_many_rounds(num_shots=10_000,weak_decoder='bplsd',strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2):
     '''
@@ -625,7 +626,7 @@ def get_ler_for_sliding_window_dcc(decoder_name, num_shots=100_000, shots_per_jo
     num_shots: max # of shots per (p,code)
     shots_per_job: how many shots to consider per job of joblib
     '''
-
+    print(f"starting LER calculation")
     # Handle local testing fallback natively
     task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
 
@@ -903,6 +904,7 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     return dict_to_save
 
 if __name__ == "__main__":
+    print(">>> STAGE 3: Entered main block, calling get_ler_for_sliding_window_dcc...", flush=True)
     num_shots      = 1_000
     weak_decoder   = 'uf'
     strong_decoder = 'relay_bp'

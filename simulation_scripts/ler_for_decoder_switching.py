@@ -105,6 +105,21 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False, weak_decode
 -Adjust the physical error rate range for uf
 
 '''
+def sort_by_d_then_k(code_str):
+        try:
+            # Strip the brackets and split the string into a list of numbers
+            parts = code_str.strip("[]").split(",")
+            
+            # parts[0] is n, parts[1] is k, parts[2] is d
+            k = int(parts[1])
+            d = int(parts[2])
+            n = int(parts[0])
+            
+            # Return tuple (d, k) so it sorts by d first, then breaks ties with k
+            return (d, n, k)
+        except (IndexError, ValueError):
+            return (0, 0, 0) # Fallback
+
 
 def get_ler_for_decoder_switching(num_shots,shots_per_job,target_switch_rate=5e-3,weak_decoder='bplsd',strong_decoder='relay_bp'):
     '''
@@ -545,20 +560,6 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         total_switch_times[key] += data["switch_times"]
         total_windows[key] += data["num_windows"] * data["shots_run"]
 
-    def sort_by_d_then_k(code_str):
-        try:
-            # Strip the brackets and split the string into a list of numbers
-            parts = code_str.strip("[]").split(",")
-            
-            # parts[0] is n, parts[1] is k, parts[2] is d
-            k = int(parts[1])
-            d = int(parts[2])
-            n = int(parts[0])
-            
-            # Return tuple (d, k) so it sorts by d first, then breaks ties with k
-            return (d, n, k)
-        except (IndexError, ValueError):
-            return (0, 0, 0) # Fallback
         
     code_names = sorted(list(code_names), key=sort_by_d_then_k)
     ps = sorted(list(ps))
@@ -692,16 +693,12 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
             strong_data_dict = None
 
 
-    code_names = data_dict["codes"]
+    code_names = sorted(list(data_dict["codes"]), key=sort_by_d_then_k)
     ps = data_dict["ps"]
     if p_range is not None:
         ps = [p for p in ps if p_range[0] <= p <= p_range[1]]
     eps_to_save = data_dict["epsilons"]
     errs_in_eps_to_save = data_dict["std_epsilons"]
-    
-    # Grab parameters from dict if available, otherwise use function arguments
-    weak_dec = data_dict.get("weak_decoder", weak_decoder)
-    strong_dec = data_dict.get("strong_decoder", strong_decoder)
 
     
     fig, ax = plt.subplots(1, 1, figsize=(5, 7)) 

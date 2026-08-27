@@ -895,7 +895,7 @@ def plot_decoder_switching_results_switch_rate(target_switch_rate, weak_decoder,
 
 
 if __name__ == "__main__":
-    num_shots = 10_000_000
+    num_shots = 100_000_000
     shots_per_job = 500_000
     target_switch_rate = 1e-2
     weak_decoder = 'uf'

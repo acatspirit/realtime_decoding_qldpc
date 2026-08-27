@@ -906,12 +906,13 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
 if __name__ == "__main__":
     print(">>> STAGE 3: Entered main block, calling get_ler_for_sliding_window_dcc...", flush=True)
     num_shots      = 1_000
+    batches = 1
     weak_decoder   = 'uf'
-    strong_decoder = 'relay_bp'
-    decoder_option = 'strong'
+    strong_decoder = 'uf'
+    decoder_option = 'weak'
     # cutoff=0.8
 
-    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//1, norm_order=2, rel_error_tol=0.05)
+    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, norm_order=2, rel_error_tol=0.05)
 
 
 

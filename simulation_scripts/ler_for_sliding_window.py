@@ -905,7 +905,7 @@ if __name__ == "__main__":
     num_shots      = 1_000_000
     batches = 20
     weak_decoder   = 'bplsd'
-    strong_decoder = 'bplsd'
+    strong_decoder = 'relay_bp'
     decoder_option = 'weak'
     # cutoff=0.8
 

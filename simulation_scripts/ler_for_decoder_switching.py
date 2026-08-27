@@ -898,7 +898,7 @@ def plot_decoder_switching_results_switch_rate(target_switch_rate, weak_decoder,
 if __name__ == "__main__":
     num_shots = 10_000_000
     shots_per_job = 500_000
-    target_switch_rate = 1e-2
+    target_switch_rate = 5e-3
     weak_decoder = 'uf'
     strong_decoder = 'tesseract' # change back to tesseract
 
@@ -913,7 +913,7 @@ if __name__ == "__main__":
     #     num_shots_max=num_shots     # Update to your actual num_shots
     # )
 
-    # run this to plot the results from decoder switching
+    # # run this to plot the results from decoder switching
     # plot_decoder_switching_results(
     #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
     #     weak_decoder=weak_decoder,

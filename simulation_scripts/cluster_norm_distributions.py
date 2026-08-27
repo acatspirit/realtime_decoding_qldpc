@@ -1,9 +1,10 @@
+import math
 import sys
 import os
 from pathlib import Path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
 
-
+import gzip
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
@@ -206,12 +207,86 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     return 
 
 
-# code_name = "[[72,12,6]]" 
-# code_name = "[[90,8,10]]" 
-# code_name = "[[126,8,10]]"
-# code_name = "[[144,12,12]]"
-code_name = "[[162,8,14]]"
-num_shots = 500_000
-shots_per_job = 20_000
+def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False):
 
-switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
+    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]
+
+    weak_decoder = 'bplsd'
+    num_shots = 100_000
+
+    cutoffs_to_set = {}
+
+    if plot:
+        fig,ax = plt.subplots(1,5,figsize=(20,5))
+
+    data_per_code = []
+    cnt=0
+    for code_name in code_names: 
+
+        if weak_decoder == 'bplsd':
+            txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+        elif weak_decoder=='uf':
+            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.pkl.gz'
+
+        if Path(txt_to_load).name.endswith('.pkl.gz'):
+            with gzip.open(txt_to_load, "rb") as file:
+                data = pickle.load(file)
+        else:
+            with open(txt_to_load, "rb") as file:
+                data = pickle.load(file)
+
+        data_per_code.append(data)
+
+        ps = data['ps']
+
+        switch_rates   = data['switch_rates']
+        cutoffs = data['cutoffs']
+
+
+        for k in range(len(ps)):
+
+            key = (code_name,ps[k])
+            diff = np.abs(switch_rates[k] - target_switch_rate)
+            locs = np.argmin(diff)                   #Find location for which switch rate is closest to our target switch rate
+            cutoffs_to_set[key] = cutoffs[locs]      #Collect the cutoff value
+
+            if plot:
+
+                ax[cnt].semilogx(cutoffs, switch_rates[k], marker='.',label=f' p={round(ps[k],5)}')
+                ax[cnt].axhline(target_switch_rate)
+
+                # ax[cnt].set_xlabel("cutoff")
+                # if cnt==0:
+                #     ax[cnt].set_ylabel("switch rate")
+                ax[cnt].grid()
+                ax[cnt].set_yscale('log')
+                # ax[cnt].set_xscale('log')
+                ax[cnt].legend(fontsize=10)
+                ax[cnt].set_title(code_name)
+        cnt+=1
+        fig.supxlabel("cutoff")
+        fig.supylabel("switch rate")
+        fig.suptitle(rf"{weak_decoder} with $p_s$ = {target_switch_rate}")
+
+    if plot:
+        print(cutoffs_to_set)
+        plt.tight_layout()
+        plt.show()
+
+
+
+    return cutoffs_to_set,data_per_code
+
+
+if __name__ == "__main__":
+
+    code_name = "[[72,12,6]]" 
+    # code_name = "[[90,8,10]]" 
+    # code_name = "[[126,8,10]]"
+    # code_name = "[[144,12,12]]"
+    # code_name = "[[162,8,14]]"
+    num_shots = 500_000
+    shots_per_job = 20_000
+
+    # switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
+    get_cutoffs_for_input_switch_rate(target_switch_rate=0.1,plot=True)

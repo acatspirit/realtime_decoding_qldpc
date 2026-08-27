@@ -667,7 +667,8 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 
     if include_weak: # right now we just want to plot the weak / switching comparison
         if weak_decoder == 'uf':
-            weak_results_file = script_dir.parent / "data" / "raw" / "single_sliding_window_uf_max_shots_15000.txt"
+            #data/sliding_window_results/sliding_window_uf_weak_max_shots_1000000.txt
+            weak_results_file = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_uf_weak_max_shots_1000000.txt"
         elif weak_decoder == 'bplsd':
             weak_results_file = script_dir.parent / "saved_data" / "single_sliding_window_bplsd_max_shots_30000.txt"
 
@@ -899,7 +900,7 @@ if __name__ == "__main__":
     shots_per_job = 500_000
     target_switch_rate = 1e-2
     weak_decoder = 'uf'
-    strong_decoder = 'tesseract'
+    strong_decoder = 'tesseract' # change back to tesseract
 
     # to run on the cluster / get data on cluster
     get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
@@ -919,7 +920,7 @@ if __name__ == "__main__":
     #     strong_decoder=strong_decoder,
     #     num_shots_max=num_shots,     # Update to your actual num_shots
     #     include_strong=False,
-    #     include_weak=False,
+    #     include_weak=True,
     #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
     # )
     

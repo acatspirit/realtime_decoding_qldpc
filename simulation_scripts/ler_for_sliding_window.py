@@ -1,5 +1,4 @@
 import sys
-print(">>> STAGE 1: Python started, beginning module imports...", flush=True)
 import os
 from pathlib import Path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before src file
@@ -20,10 +19,9 @@ from joblib import Parallel, delayed
 from src.realtime_decoding.decoder_switching_class import decoder_switching_class
 from scipy.optimize import curve_fit
 
-print(">>> STAGE 2: All imports completed successfully!", flush=True)
 '''Run this to get LER per syndrome extraction cycle by fitting epsilon'''
 def get_ler_per_SEC_fitted_eps_from_many_rounds(num_shots=10_000,weak_decoder='bplsd',strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2):
-    '''
+    r'''
     Get the ler per syndrome extraction cycle (\epsilon). This quantity is fitted by calculating p_L(r) for different "r"
     and then fitting p_L(r)=1-(1-\epsilon)^r to get \epsilon. 
     The buffer region is fixed to O(d) for each code & the commit region to d//2.
@@ -245,7 +243,7 @@ def get_ler_per_SEC_fitted_eps_from_many_rounds(num_shots=10_000,weak_decoder='b
 
 
 def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='uf',strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2):
-    '''
+    r'''
     Get the ler per syndrome extraction cycle (\epsilon). This quantity is calculated by simulating some fixed r
     and then extracting epsilon = 1-(1-p_L)^{1/r}.
     The buffer region is fixed to O(d) for each code & the commit region to d//2.
@@ -434,7 +432,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round(num_shots=10_000,weak_decoder='
 
 # finish updating this before I get back
 def get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=10_000,weak_decoder='uf',strong_decoder='relay_bp',decoder_option= 'weak',cutoff=0.8,norm_order=2):
-    '''
+    r'''
     Get the ler per syndrome extraction cycle (\epsilon). This quantity is calculated by simulating some fixed r
     and then extracting epsilon = 1-(1-p_L)^{1/r}.
     The buffer region is fixed to O(d) for each code & the commit region to d//2.
@@ -618,7 +616,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=10_000,weak
 
     return 
 
-def get_ler_for_sliding_window_dcc(decoder_name, num_shots=100_000, shots_per_job=10_000, norm_order=2, rel_error_tol=0.05):
+def get_ler_for_sliding_window_dcc(decoder_name, num_shots=100_000, shots_per_job=10_000, norm_order=2, rel_error_tol=0.01):
     '''
     Inputs:
     decoder_name: the name of the decoder to use (e.g., 'uf', 'bplsd', 'relay_bp', 'tesseract')
@@ -904,9 +902,8 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     return dict_to_save
 
 if __name__ == "__main__":
-    print(">>> STAGE 3: Entered main block, calling get_ler_for_sliding_window_dcc...", flush=True)
-    num_shots      = 1_000
-    batches = 1
+    num_shots      = 1_000_000
+    batches = 20
     weak_decoder   = 'uf'
     strong_decoder = 'uf'
     decoder_option = 'weak'
@@ -914,6 +911,7 @@ if __name__ == "__main__":
 
     get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, norm_order=2, rel_error_tol=0.05)
 
+    # merge_dcc_results_sliding_window(decoder_name=strong_decoder, decoder_option=decoder_option, num_shots_max=num_shots)
 
 
     # txt_to_load = sys.path[-1] + f'/saved_data/single_sliding_window_{strong_decoder}_max_shots_{num_shots}.txt'

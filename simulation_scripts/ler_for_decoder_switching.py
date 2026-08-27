@@ -392,7 +392,7 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
                                         strong_decoder_option=strong_decoder,
                                         weak_decoder_option=weak_decoder)    
     
-    new_shots,cluster_norms,switch_times,logical_errors = test.decode_with_sliding_window_and_decoder_switching(cluster_norm_cutoff=cutoff, rel_error_tol=0.05)
+    new_shots,cluster_norms,switch_times,logical_errors = test.decode_with_sliding_window_and_decoder_switching(cluster_norm_cutoff=cutoff, rel_error_tol=0.01)
 
 
     num_windows =len(test.weak_decoder) #total # of windows -- needed for getting switch rates
@@ -895,7 +895,7 @@ def plot_decoder_switching_results_switch_rate(target_switch_rate, weak_decoder,
 
 
 if __name__ == "__main__":
-    num_shots = 100_000_000
+    num_shots = 10_000_000
     shots_per_job = 500_000
     target_switch_rate = 1e-2
     weak_decoder = 'uf'

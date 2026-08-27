@@ -4,7 +4,7 @@
 #SBATCH --error=logs_%A_%a.err
 #SBATCH --array=0-119 # should be len(ps) * len(code_names) * (num_shots // shots_per_job) - 1 , 6*20*1-1
 #SBATCH --cpus-per-task=1
-#SBATCH --parition=common,scavenger
+#SBATCH --partition=common,scavenger
 #SBATCH --mem=3G
 #SBATCH --time=8:00:00
 

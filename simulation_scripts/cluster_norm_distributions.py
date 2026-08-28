@@ -161,7 +161,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
         ax[0].hist(
             log_data,
             bins=20,
-            label=rf"p={round(p*10**3,2)} $\times 10^{{-3}}$",
+            label=rf"p={round(p*10**3,2)} $\times 10^{{-3}}$" if weak_decoder=='bplsd' else rf"p={round(p*10**4,2)} $\times 10^{{-4}}$",
             color=colors[cnt],
             weights=np.ones_like(log_data) / len(log_data),
             alpha=0.7,
@@ -213,7 +213,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
     ax[1].set_xscale("log")
     ax[1].set_yscale("log")
 
-    ax[1].set_xlabel(r"$g_{\rm th}$")
+    ax[1].set_xlabel(r"$q_{\rm th}$")
     ax[1].set_ylabel(r"$p$")
     cbar = plt.colorbar(pcm, ax=ax[1])
     cbar.set_label(r"$p_{\rm switch}$")
@@ -316,8 +316,8 @@ if __name__ == "__main__":
     # code_name = "[[126,8,10]]"
     # code_name = "[[144,12,12]]"
     code_name = "[[162,8,14]]"
-    num_shots = 500_000
+    num_shots = 100_000
     shots_per_job = 20_000
 
-    switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
+    switch_rate_vs_p(code_name = code_name, weak_decoder='bplsd',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
     # get_cutoffs_for_input_switch_rate(target_switch_rate=0.01,weak_decoder='uf',num_shots=num_shots,plot=True)

@@ -2,6 +2,8 @@ import math
 import sys
 import os
 from pathlib import Path
+
+from pyparsing import line
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
 
 import gzip
@@ -23,7 +25,7 @@ import pickle
 to determine the target cutoff.
 '''
 
-def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=10_000, shots_per_job=5_000,norm_order=2):
+def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=500_000, shots_per_job=5_000,norm_order=2, get_data=False):
 
     basis      = 'Z' #basis determining the memory experiment for the BB codes
     
@@ -66,47 +68,87 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
         print("Sim done.")
 
         return code_name,p,new_shots,result,logical_errors
+    if get_data:
+        tasks = []
+        import multiprocessing as mp
+        n_jobs = mp.cpu_count()    
+        chunk_size = max(shots_per_job, num_shots // (100 * n_jobs)) 
 
-    tasks = []
-    import multiprocessing as mp
-    n_jobs = mp.cpu_count()    
-    chunk_size = max(shots_per_job, num_shots // (100 * n_jobs)) 
+        for p in ps:
 
-    for p in ps:
+            tasks.extend( (code_name,p,chunk_size)
+                        for _ in range(num_shots // chunk_size) )       
 
-        tasks.extend( (code_name,p,chunk_size)
-                       for _ in range(num_shots // chunk_size) )       
-
-    results = Parallel(n_jobs=-1,verbose=10,)(delayed(process_one_round_value)(code_name,p,shots,norm_order) for code_name, p,shots in tasks)      
+        results = Parallel(n_jobs=-1,verbose=10,)(delayed(process_one_round_value)(code_name,p,shots,norm_order) for code_name, p,shots in tasks)      
 
 
-    total_errors  = {}
-    total_shots   = {}
-    cluster_norms = {}
-    error_per_case = {}
+        total_errors  = {}
+        total_shots   = {}
+        cluster_norms = {}
+        error_per_case = {}
 
-    for code_name,p,shot,result,temp in results:
-        total_errors[(code_name, p)] = 0
-        total_shots[(code_name,  p)] = 0    
-        error_per_case[(code_name,p)] = []
+        for code_name,p,shot,result,temp in results:
+            total_errors[(code_name, p)] = 0
+            total_shots[(code_name,  p)] = 0    
+            error_per_case[(code_name,p)] = []
 
-        if (code_name,p) not in cluster_norms:
-                cluster_norms[(code_name,p)] = []
+            if (code_name,p) not in cluster_norms:
+                    cluster_norms[(code_name,p)] = []
 
-        cluster_norms[(code_name,p)].append(result["cluster_norms"])        
+            cluster_norms[(code_name,p)].append(result["cluster_norms"])        
+            
+
+        for key in cluster_norms:
+            cluster_norms[key] = np.concatenate(cluster_norms[key], axis=0)
+
+        for code_name,p,shot,result,temp in results:
+
+            total_errors[(code_name,p)] += result["logical_errors"]
+            total_shots[(code_name,p)]  += shot
+            error_per_case[(code_name,p)] = np.concatenate((error_per_case[(code_name,p)],temp),axis=0)
+
+
+            
+        dict_to_save = {'code_name': code_name,
+                        'ps': ps,
+                        'decoder': weak_decoder,
+                        'norm_order': norm_order,
+                        'cluster_norms': cluster_norms,
+                        'switch_rates': switch_rates,
+                        'cutoffs': cutoffs,
+                        'all_cluster_norms_per_p': all_data
+
+        }
+
         
+        
+        txt_to_save = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+        file_path = Path(txt_to_save)
+        file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    for key in cluster_norms:
-        cluster_norms[key] = np.concatenate(cluster_norms[key], axis=0)
 
-    for code_name,p,shot,result,temp in results:
+        with open(txt_to_save, "wb") as file:
+            pickle.dump(dict_to_save, file)
+    else:
+        if weak_decoder == 'bplsd':
+            file_name = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+        elif weak_decoder=='uf':
+            file_name = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
 
-        total_errors[(code_name,p)] += result["logical_errors"]
-        total_shots[(code_name,p)]  += shot
-        error_per_case[(code_name,p)] = np.concatenate((error_per_case[(code_name,p)],temp),axis=0)
+        if Path(file_name).name.endswith('.pkl.gz'):
+            with gzip.open(file_name, "rb") as file:
+                data = pickle.load(file)
+        else:
+            with open(file_name, "rb") as file:
+                data = pickle.load(file)
+
+        cluster_norms = data['cluster_norms']
+        switch_rates  = data['switch_rates']
+        cutoffs       = data['cutoffs']
+        # all_cluster_norms_per_p = data['all_cluster_norms_per_p']
             
     
-    fig, ax = plt.subplots(2,1)
+    fig, ax = plt.subplots(2,1, figsize=(10,8))
 
     colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple","tab:brown","tab:pink"]
     cnt=0
@@ -119,7 +161,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
         ax[0].hist(
             log_data,
             bins=20,
-            label=f"{code_name}, p={p}",
+            label=rf"p={round(p*10**3,2)} $\times 10^{{-3}}$",
             color=colors[cnt],
             weights=np.ones_like(log_data) / len(log_data),
             alpha=0.7,
@@ -131,8 +173,8 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     
     ax[0].set_xlabel(r'$\log_{10}(\mathrm{cluster\ norm})$')
     ax[0].set_ylabel("Norm. counts")
-    ax[0].set_title(f"$N=${num_shots}, $r={num_rounds}$")
-    ax[0].legend(fontsize=13)
+    ax[0].set_title(f"$N=${num_shots}, $r={num_rounds}$, {code_name} with {weak_decoder}")
+    ax[0].legend(fontsize=13, loc='upper right')
     
     
 
@@ -179,27 +221,6 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     plt.tight_layout()
     plt.show()            
 
-    dict_to_save = {'code_name': code_name,
-                    'ps': ps,
-                    'decoder': weak_decoder,
-                    'norm_order': norm_order,
-                    'cluster_norms': cluster_norms,
-                    'switch_rates': switch_rates,
-                    'cutoffs': cutoffs,
-                    'all_cluster_norms_per_p': all_data
-
-    }
-
-     
-    
-    txt_to_save = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
-    file_path = Path(txt_to_save)
-    file_path.parent.mkdir(parents=True, exist_ok=True)
-
-
-    with open(txt_to_save, "wb") as file:
-        pickle.dump(dict_to_save, file)
-
     #to load do:
     # with open(txt_to_load, "rb") as file:
     #     data = pickle.load(file)
@@ -207,17 +228,14 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     return 
 
 
-def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False):
+def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='bplsd',num_shots=100_000,plot=False):
 
     code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]
-
-    weak_decoder = 'bplsd'
-    num_shots = 100_000
 
     cutoffs_to_set = {}
 
     if plot:
-        fig,ax = plt.subplots(1,5,figsize=(20,5))
+        fig,ax = plt.subplots(1,5,figsize=(20,5), layout='constrained')
 
     data_per_code = []
     cnt=0
@@ -241,7 +259,8 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False):
 
         switch_rates   = data['switch_rates']
         cutoffs = data['cutoffs']
-
+        legend_handles = []
+        legend_labels = []
 
         for k in range(len(ps)):
 
@@ -251,8 +270,10 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False):
             cutoffs_to_set[key] = cutoffs[locs]      #Collect the cutoff value
 
             if plot:
-
-                ax[cnt].semilogx(cutoffs, switch_rates[k], marker='.',label=f' p={round(ps[k],5)}')
+                if weak_decoder == 'uf':
+                    line, = ax[cnt].semilogx(cutoffs, switch_rates[k], marker='.',label=rf' p={round(ps[k]*10**4,2)} $\times 10^{{-4}}$')
+                elif weak_decoder == 'bplsd':
+                    line, = ax[cnt].semilogx(cutoffs, switch_rates[k], marker='.',label=rf' p={round(ps[k]*10**3,2)} $\times 10^{{-3}}$')
                 ax[cnt].axhline(target_switch_rate)
 
                 # ax[cnt].set_xlabel("cutoff")
@@ -261,9 +282,19 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False):
                 ax[cnt].grid()
                 ax[cnt].set_yscale('log')
                 # ax[cnt].set_xscale('log')
-                ax[cnt].legend(fontsize=10)
+                # ax[cnt].legend(fontsize=10)
                 ax[cnt].set_title(code_name)
+                legend_handles.append(line)
+                legend_labels.append(rf"$p={round(ps[k]*10**3,2)} \times 10^{{-3}}$")
         cnt+=1
+        fig.legend(
+            legend_handles,
+            legend_labels,
+            loc="upper center",
+            # bbox_to_anchor=(0.5, 0.90),
+            ncol=len(ps),
+            fontsize=11,
+            )
         fig.supxlabel("cutoff")
         fig.supylabel("switch rate")
         fig.suptitle(rf"{weak_decoder} with $p_s$ = {target_switch_rate}")
@@ -280,13 +311,13 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False):
 
 if __name__ == "__main__":
 
-    code_name = "[[72,12,6]]" 
+    # code_name = "[[72,12,6]]" 
     # code_name = "[[90,8,10]]" 
     # code_name = "[[126,8,10]]"
     # code_name = "[[144,12,12]]"
-    # code_name = "[[162,8,14]]"
+    code_name = "[[162,8,14]]"
     num_shots = 500_000
     shots_per_job = 20_000
 
-    # switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
-    get_cutoffs_for_input_switch_rate(target_switch_rate=0.1,plot=True)
+    # switch_rate_vs_p(code_name = code_name, weak_decoder='bplsd',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
+    get_cutoffs_for_input_switch_rate(target_switch_rate=0.01,weak_decoder='uf',num_shots=num_shots,plot=True)

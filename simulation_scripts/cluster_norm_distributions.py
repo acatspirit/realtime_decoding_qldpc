@@ -319,5 +319,5 @@ if __name__ == "__main__":
     num_shots = 500_000
     shots_per_job = 20_000
 
-    # switch_rate_vs_p(code_name = code_name, weak_decoder='bplsd',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
-    get_cutoffs_for_input_switch_rate(target_switch_rate=0.01,weak_decoder='uf',num_shots=num_shots,plot=True)
+    switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
+    # get_cutoffs_for_input_switch_rate(target_switch_rate=0.01,weak_decoder='uf',num_shots=num_shots,plot=True)

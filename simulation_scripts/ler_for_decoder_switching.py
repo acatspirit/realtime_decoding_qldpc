@@ -682,7 +682,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 
     if include_strong:
         if strong_decoder == 'relay_bp':
-            strong_results_file = script_dir.parent / "saved_data" / "single_sliding_window_relay_bp_max_shots_20000.txt"
+            strong_results_file = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_relay_bp_strong_max_shots_1000000.txt"
         elif strong_decoder == 'tesseract':
             strong_results_file = script_dir.parent / "data" / "raw" / "single_sliding_window_tesseract_max_shots_100000.txt"
 
@@ -896,11 +896,11 @@ def plot_decoder_switching_results_switch_rate(target_switch_rate, weak_decoder,
 
 
 if __name__ == "__main__":
-    num_shots = 10_000_000
+    num_shots = 1_000_000
     shots_per_job = 500_000
     target_switch_rate = 1e-3
     weak_decoder = 'uf'
-    strong_decoder = 'tesseract' # change back to tesseract
+    strong_decoder = 'relay_bp' # change back to tesseract
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
@@ -914,13 +914,13 @@ if __name__ == "__main__":
     # )
 
     # # run this to plot the results from decoder switching
-    # plot_decoder_switching_results(
-    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-    #     weak_decoder=weak_decoder,
-    #     strong_decoder=strong_decoder,
-    #     num_shots_max=num_shots,     # Update to your actual num_shots
-    #     include_strong=False,
-    #     include_weak=True,
-    #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
-    # )
+    plot_decoder_switching_results(
+        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+        weak_decoder=weak_decoder,
+        strong_decoder=strong_decoder,
+        num_shots_max=num_shots,     # Update to your actual num_shots
+        include_strong=True,
+        include_weak=True,
+        p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
+    )
     

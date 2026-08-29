@@ -902,7 +902,7 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     return dict_to_save
 
 if __name__ == "__main__":
-    num_shots      = 100_000_000
+    num_shots      = 10_000_000
     batches = 20
     weak_decoder   = 'bplsd'
     strong_decoder = 'relay_bp'

@@ -903,15 +903,15 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
 
 if __name__ == "__main__":
     num_shots      = 10_000_000
-    batches = 20
+    batches        = 20
     weak_decoder   = 'bplsd'
     strong_decoder = 'relay_bp'
     decoder_option = 'strong'
     # cutoff=0.8
 
-    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, norm_order=2, rel_error_tol=0.01)
+    # get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, norm_order=2, rel_error_tol=0.01)
 
-    # merge_dcc_results_sliding_window(decoder_name=strong_decoder, decoder_option=decoder_option, num_shots_max=num_shots)
+    merge_dcc_results_sliding_window(decoder_name=strong_decoder, decoder_option=decoder_option, num_shots_max=num_shots)
 
 
     # txt_to_load = sys.path[-1] + f'/saved_data/single_sliding_window_{strong_decoder}_max_shots_{num_shots}.txt'

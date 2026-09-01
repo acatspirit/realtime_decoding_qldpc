@@ -682,7 +682,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 
     if include_strong:
         if strong_decoder == 'relay_bp':
-            strong_results_file = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_relay_bp_strong_max_shots_1000000.txt"
+            strong_results_file = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_relay_bp_strong_max_shots_10000000.txt"
         elif strong_decoder == 'tesseract':
             strong_results_file = script_dir.parent / "data" / "raw" / "single_sliding_window_tesseract_max_shots_100000.txt"
 
@@ -754,7 +754,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
     ax.set_title(f"target $p_s =$ {target_switch_rate}")
     ax.set_xlabel(rf"physical error rate")
     ax.set_ylabel("LER per SEC")
-    ax.set_ylim(bottom=1e-8)
+    ax.set_ylim(bottom=1e-9)
     
     plt.tight_layout()
     plt.show()
@@ -895,12 +895,101 @@ def plot_decoder_switching_results_switch_rate(target_switch_rate, weak_decoder,
     plt.show()
 
 
+def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical=0.001, p_ind= None):
+    """
+    Plots the gains from decoder switching as a function of the target switch rate.
+    """
+    script_dir = Path(__file__).resolve().parent
+    results_dir = script_dir.parent / "data" / "decoder_switching_results"
+
+
+
+    if weak_decoder == 'uf':
+        #data/sliding_window_results/sliding_window_uf_weak_max_shots_1000000.txt
+        weak_results_file = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_uf_weak_max_shots_1000000.txt"
+    elif weak_decoder == 'bplsd':
+        weak_results_file = script_dir.parent / "saved_data" / "single_sliding_window_bplsd_max_shots_30000.txt"
+
+    if weak_results_file and weak_results_file.exists():
+                with open(weak_results_file, 'r') as file:
+                    weak_data_dict = eval(file.read())
+    else:
+        print(f"Weak decoder results file not found: {weak_results_file}")
+        weak_data_dict = None
+
+    if p_ind is not None:
+        p_physical = weak_data_dict["ps"][p_ind] if weak_data_dict else p_physical
+
+    code_names = sorted(list(weak_data_dict["codes"]), key=sort_by_d_then_k)
+    switch_rates_per_code = {code_name: [] for code_name in code_names}
+    for target_switch_rate in [1e-2, 5e-3, 1e-3]:
+        num_shots_max = 10000000 if strong_decoder == 'tesseract' else 1000000
+
+        results_file = script_dir.parent / "data" / "decoder_switching_results" / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}.txt'
+                
+        if not results_file.exists():
+            print(f"Results file not found: {results_file}")
+            return
+        
+        with open(results_file, 'r') as file:
+            # eval handles tuple keys correctly for the dictionary
+            data_dict = eval(file.read())
+
+        eps_to_save = data_dict["epsilons"]
+        errs_in_eps_to_save = data_dict["std_epsilons"]
+        eps_weak_to_save = weak_data_dict["epsilons"] if weak_data_dict else None
+        errs_in_eps_weak_to_save = weak_data_dict["std_epsilons"] if weak_data_dict else None
+        switch_rates = data_dict["switch_rates"]
+        switch_yerr = data_dict["switch_rate_err"]
+
+        for code_name in code_names:
+            switch_rate = switch_rates[(code_name, p_physical)]
+            eps_switching = eps_to_save[code_name][p_physical]
+            errs_in_eps_switching = errs_in_eps_to_save[code_name][p_physical]
+            eps_weak = eps_weak_to_save[code_name][p_physical]
+            errs_in_eps_weak = errs_in_eps_weak_to_save[code_name][p_physical]
+            switching_gain = eps_weak / eps_switching if eps_switching > 0 else np.nan
+            switching_gain_err = switching_gain * np.sqrt((errs_in_eps_switching / eps_switching)**2 + (errs_in_eps_weak / eps_weak)**2) if eps_switching > 0 else np.nan
+
+            switch_rates_per_code[code_name].append((switch_rate, switching_gain, switching_gain_err))
+
+    fig, ax = plt.subplots(1, 1, figsize=(10, 7)) 
+    
+    colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
+
+    for cnt, code_name in enumerate(code_names):
+        target_switch_rates = [item[0] for item in switch_rates_per_code[code_name]]
+        switching_gains = [item[1] for item in switch_rates_per_code[code_name]]
+        switching_gain_errs = [item[2] for item in switch_rates_per_code[code_name]]
+
+        ax.errorbar(
+            target_switch_rates, 
+            switching_gains, 
+            yerr=switching_gain_errs, 
+            label=f"{code_name}", 
+            color=colors[cnt % len(colors)], 
+            marker='o', 
+            markersize=15,
+            markeredgewidth=2,
+            markeredgecolor='k',
+            linestyle='--'
+        )
+
+    ax.set_xscale('log')
+    ax.set_yscale('log')
+    ax.set_xlabel("$p_s$")
+    ax.set_ylabel(rf"$\epsilon_{{weak}} / \epsilon_{{switching}}$")
+    ax.set_title(rf"$p={round(p_physical, 6)*10**4} \times 10^{{-4}}$")
+    ax.legend()
+    plt.show()
+
+
 if __name__ == "__main__":
     num_shots = 1_000_000
     shots_per_job = 500_000
     target_switch_rate = 1e-3
     weak_decoder = 'uf'
-    strong_decoder = 'relay_bp' # change back to tesseract
+    strong_decoder = 'tesseract' # change back to tesseract
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
@@ -914,13 +1003,19 @@ if __name__ == "__main__":
     # )
 
     # # run this to plot the results from decoder switching
-    plot_decoder_switching_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    # plot_decoder_switching_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots,     # Update to your actual num_shots
+    #     include_strong=True,
+    #     include_weak=True,
+    #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
+    # )
+
+    # hardware indicator plot
+    plot_switching_gains_vs_switch_rate(
         weak_decoder=weak_decoder,
         strong_decoder=strong_decoder,
-        num_shots_max=num_shots,     # Update to your actual num_shots
-        include_strong=True,
-        include_weak=True,
-        p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
-    )
-    
+        p_ind = 1 # goes up to 5
+     )

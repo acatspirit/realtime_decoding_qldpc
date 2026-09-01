@@ -754,7 +754,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
     ax.set_title(f"target $p_s =$ {target_switch_rate}")
     ax.set_xlabel(rf"physical error rate")
     ax.set_ylabel("LER per SEC")
-    ax.set_ylim(bottom=1e-9)
+    ax.set_ylim(bottom=1e-8)
     
     plt.tight_layout()
     plt.show()
@@ -986,13 +986,13 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 if __name__ == "__main__":
     num_shots = 1_000_000
-    shots_per_job = 500_000
-    target_switch_rate = 1e-3
+    shots_per_job = 50_000
+    target_switch_rate = 5e-1
     weak_decoder = 'uf'
-    strong_decoder = 'tesseract' # change back to tesseract
+    strong_decoder = 'relay_bp' # change back to tesseract
 
     # to run on the cluster / get data on cluster
-    # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
+    get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
     # merge_dcc_results(
@@ -1014,8 +1014,8 @@ if __name__ == "__main__":
     # )
 
     # hardware indicator plot
-    plot_switching_gains_vs_switch_rate(
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        p_ind = 1 # goes up to 5
-     )
+    # plot_switching_gains_vs_switch_rate(
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     p_ind = 1 # goes up to 5
+    #  )

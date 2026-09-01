@@ -985,11 +985,11 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 
 if __name__ == "__main__":
-    num_shots = 1_000_000
-    shots_per_job = 50_000
+    num_shots = 100_000_000
+    shots_per_job = 5_000_000
     target_switch_rate = 5e-1
     weak_decoder = 'uf'
-    strong_decoder = 'relay_bp' # change back to tesseract
+    strong_decoder = 'tesseract' # change back to tesseract
 
     # to run on the cluster / get data on cluster
     get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)

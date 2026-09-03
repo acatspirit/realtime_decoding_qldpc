@@ -954,6 +954,7 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
             switch_rates_per_code[code_name].append((switch_rate, switching_gain, switching_gain_err))
 
     fig, ax = plt.subplots(1, 1, figsize=(10, 7)) 
+    # plt.rcParams['font.size'] = 20.0
     
     colors = ["tab:blue", "tab:orange", "tab:green", "tab:red", "tab:purple"]
 
@@ -972,15 +973,18 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
             markersize=15,
             markeredgewidth=2,
             markeredgecolor='k',
-            linestyle='--'
+            linestyle='-.',
+            linewidth=3
         )
 
     ax.set_xscale('log')
     ax.set_yscale('log')
-    ax.set_xlabel("$p_s$")
-    ax.set_ylabel(rf"$\epsilon_{{weak}} / \epsilon_{{switching}}$")
-    ax.set_title(rf"$p={round(p_physical, 6)*10**4} \times 10^{{-4}}$")
+    ax.set_xlabel("$p_s$", fontsize=30)
+    ax.set_ylabel(rf"$\epsilon_{{weak}} / \epsilon_{{switching}}$", fontsize=30)
+    ax.set_title(rf"$p={round(p_physical, 6)*10**4} \times 10^{{-4}}$", fontsize=30)
+    ax.tick_params('both', labelsize=30)
     ax.legend()
+    plt.tight_layout()
     plt.show()
 
 
@@ -989,10 +993,10 @@ if __name__ == "__main__":
     shots_per_job = 500_000
     target_switch_rate = 5e-2
     weak_decoder = 'uf'
-    strong_decoder = 'relay_bp' # change back to tesseract
+    strong_decoder = 'tesseract' # change back to tesseract
 
     # to run on the cluster / get data on cluster
-    get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
+    # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder)
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
     # merge_dcc_results(
@@ -1014,8 +1018,8 @@ if __name__ == "__main__":
     # )
 
     # hardware indicator plot
-    # plot_switching_gains_vs_switch_rate(
-    #     weak_decoder=weak_decoder,
-    #     strong_decoder=strong_decoder,
-    #     p_ind = 1 # goes up to 5
-    #  )
+    plot_switching_gains_vs_switch_rate(
+        weak_decoder=weak_decoder,
+        strong_decoder=strong_decoder,
+        p_ind = 1 # goes up to 5
+     )

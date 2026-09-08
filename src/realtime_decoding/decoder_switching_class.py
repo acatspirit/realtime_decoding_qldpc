@@ -288,7 +288,7 @@ class decoder_switching_class:
         # print("entered last decoding window w/ weak...")
         k          = -1
 
-        decoder         = self.weak_decoder[k]
+        decoder         = self.weak_decoder[k] # with erasures, modify to be for the kth window for ith shot TODO
 
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region (num_faults_in_F=num_faults_in_W for last iteration)
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  

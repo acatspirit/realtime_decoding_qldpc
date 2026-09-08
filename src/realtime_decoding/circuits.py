@@ -2,6 +2,7 @@ from quits.qldpc_code import BbCode
 from quits import ErrorModel
 import stim
 import deltakit_stim
+import numpy as np
 
 def fix_bb_circuit_for_sliding_window(original_circuit, num_rounds):
     """
@@ -479,3 +480,38 @@ def drop_leakage_dets(circuit: deltakit_stim.Circuit, det_types: dict):
             final_DEM.append(inst)
 
     return final_DEM
+
+
+def add_erasures(circuit:stim.Circuit, p, gate_erasures=True, idling_erasures=False):
+    """ Add erasures to the input circuit according to the mechanism indicated
+    """
+
+    final_circuit = stim.Circuit()
+    targets = [stim.GateTarget(k) for k in range(circuit.num_qubits)]  #These are all the qubits in the circuit
+    
+    max_det= circuit.num_detectors-1 #max detector in original circuit
+
+    time_slice=0
+    cnt=max_det+1
+
+    # iterate through the circuit 
+    for inst in circuit.flattened():
+        # add gate erasures
+        if inst.name == "CX" or inst.name == "CNOT" and gate_erasures:
+            final_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())
+
+            # determine whether to add an erasure: 
+            if p < np.random.rand():
+                final_circuit.append(name="DEPOLARIZE1", targets=inst.targets_copy(),arg=0.75)
+        # here is where to add idling noise if we want later, between rounds because we are lazy 
+        elif inst.name == "R" or inst.name == "MR" and idling_erasures:
+            final_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())
+            
+            # determine whether to add an erasure: 
+            if p < np.random.rand():
+                final_circuit.append(name="DEPOLARIZE1", targets=inst.targets_copy(),arg=0.75)
+        else:
+            final_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())
+            
+    return final_circuit
+

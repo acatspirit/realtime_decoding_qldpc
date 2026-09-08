@@ -66,3 +66,11 @@ def get_window_dems(window_check_set, window_observable_set, window_priors_set):
         window_dems_set.append(dem)
 
     return window_dems_set
+
+
+def get_erased_mechanisms_from_DEM():
+    """ Given a DEM, get the error mechanisms where erasures occurred
+    """ 
+    # get all the DEM entries over some prob p that are the erasures, set all others to 0. This is the erasures vec
+
+    return

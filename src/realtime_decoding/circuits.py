@@ -487,12 +487,12 @@ def add_erasures(circuit:stim.Circuit, p, gate_erasures=True, idling_erasures=Fa
     """
 
     final_circuit = stim.Circuit()
-    targets = [stim.GateTarget(k) for k in range(circuit.num_qubits)]  #These are all the qubits in the circuit
+    # targets = [stim.GateTarget(k) for k in range(circuit.num_qubits)]  #These are all the qubits in the circuit
     
-    max_det= circuit.num_detectors-1 #max detector in original circuit
+    # max_det= circuit.num_detectors-1 #max detector in original circuit
 
-    time_slice=0
-    cnt=max_det+1
+    # time_slice=0
+    # cnt=max_det+1
 
     # iterate through the circuit 
     for inst in circuit.flattened():

@@ -152,19 +152,25 @@ class decoder_switching_class:
 
         ---decoder_params are optional. default parameters can be found in decoders_utils.py---
         '''
+        self.code_name = code_name
+        self.num_rounds = num_rounds
+        self.p_pauli = p
+        self.p_erasure = p_erasure
+        self.p_leak = p_leak
+        self.basis = basis
 
         if noise_model == "standard":
-            circuit,bb = create_bb_codes_circuit(code_name, p, num_rounds, basis)
+            circuit,bb = create_bb_codes_circuit(code_name, self.p_pauli, self.num_rounds, self.basis)
         elif noise_model == "ionic":
-            circuit, bb = create_bb_codes_circuit_ionic_model(code_name, p, num_rounds, basis)
+            circuit, bb = create_bb_codes_circuit_ionic_model(code_name, self.p_pauli, self.num_rounds, self.basis)
         else:
             NotImplementedError("No other noise models have been implemented")
 
 
         #Add leakage errors here (In either case we use dem that has only regular dets -- no leakage-aware decoding implement for now):
 
-        if p_leak>0: #Sample from circuit that has leakage 
-            n, _, _ = map(int, code_name.strip("[]").split(","))
+        if self.p_leak>0: #Sample from circuit that has leakage 
+            n, _, _ = map(int, self.code_name.strip("[]").split(","))
 
             circuit_w_leakage, det_types = add_independent_leakage_errors_per_round(circuit,n,p_leak=p_leak)
             sampler    = circuit_w_leakage.compile_detector_sampler()
@@ -176,8 +182,8 @@ class decoder_switching_class:
             
             detection_events = detection_events_init[:,det_types['regular_dets']] #restrict det events only to regular detectors (exclude dets used for leakage tracking)
             self.circuit = circuit 
-        elif p_erasure > 0: # sample from a circuit that has erasures
-            n, _, _ = map(int, code_name.strip("[]").split(","))
+        elif self.p_erasure > 0: # sample from a circuit that has erasures
+            n, _, _ = map(int, self.code_name.strip("[]").split(","))
 
             # per shot generate the circuits beforehand
             circuit_w_erasure = add_erasures(circuit, p_erasure)
@@ -214,11 +220,13 @@ class decoder_switching_class:
         self.F = F
         self.weak_decoder_option = weak_decoder_option
         self.strong_decoder_option = strong_decoder_option
+        self.weak_decoder_params = weak_decoder_params
+        self.strong_decoder_params = strong_decoder_params
 
         # update the total number of windows for decoding, the size of the last window
-        if 2 + num_rounds - W >= 0:
-            num_cor_rounds = (2 + num_rounds - W) // F  # num_cor_rounds=num of windows before the last window
-            if (2 + num_rounds - W) % F != 0:  # we can slide one more window if the remaining rounds>W
+        if 2 + self.num_rounds - self.W >= 0:
+            num_cor_rounds = (2 + self.num_rounds - self.W) // self.F  # num_cor_rounds=num of windows before the last window
+            if (2 + self.num_rounds - self.W) % self.F != 0:  # we can slide one more window if the remaining rounds>W
                 num_cor_rounds += 1
         else:
             num_cor_rounds = 0
@@ -239,7 +247,7 @@ class decoder_switching_class:
                                            for decoder, dem in zip(self.strong_decoder, self.window_dems)]            
 
         elif strong_decoder_option=='relay_bp':
-            self.strong_decoder         = configure_relay_bp_per_sliding_window(self.window_check_set, self.window_priors_set,strong_decoder_params)
+            self.strong_decoder         = configure_relay_bp_per_sliding_window(self.window_check_set, self.window_priors_set,self.strong_decoder_params)
             self.strong_decode_function = [relaybp_wrapper(decoder)
                                          for decoder in self.strong_decoder] 
 
@@ -250,15 +258,15 @@ class decoder_switching_class:
 
         if weak_decoder_option=='bplsd':
 
-            self.weak_decoder         = configure_bplsd_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,weak_decoder_params)
+            self.weak_decoder         = configure_bplsd_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,self.weak_decoder_params)
             self.weak_decode_function = [getattr(decoder,"decode",None)
                                          for decoder in self.weak_decoder] 
         elif weak_decoder_option == 'uf':
             if p_erasure == 0:
-                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erasures=None, decoder_params=weak_decoder_params)
+                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erasures=None, decoder_params=self.weak_decoder_params)
                 self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
             else:
-                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erased_errors_set=self.erased_errors_set, decoder_params=weak_decoder_params)
+                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erased_errors_set=self.erased_errors_set, decoder_params=self.weak_decoder_params)
                 self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
         else:
             raise NotImplementedError("No other weak decoder besides bplsd and uf are implemented for now.")
@@ -269,6 +277,20 @@ class decoder_switching_class:
     def reset_for_erasures(self):
         """ Call __init__ again for each shot to deal with erasures
         """
+        self.__init__(
+            code_name=self.code_name,
+            num_rounds=self.num_rounds,
+            p = self.p_pauli,
+            basis=self.basis,
+            num_shots=self.num_shots,
+            W=self.W,
+            F=self.F,
+            strong_decoder_option=self.strong_decoder_option,
+            weak_decoder_option=self.weak_decoder_option,
+            weak_decoder_params=self.weak_decoder_params,
+            strong_decoder_params=self.strong_decoder_params,
+            p_erasure=self.p_erasure
+        )
         return
 
     def _prepare_windows(self):

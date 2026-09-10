@@ -86,3 +86,12 @@ def get_erased_mechanisms_from_DEM(dem:stim.DetectorErrorModel, p_cutoff = 0.03)
             i+= 1
 
     return erased_errors
+
+
+def get_erasure_set(window_check_set, window_observable_set, window_prior_set):
+    window_dems_set = get_window_dems(window_check_set, window_observable_set, window_prior_set)
+    erased_errors_set = []
+    for dem in window_dems_set:
+        erased_errors = get_erased_mechanisms_from_DEM(dem)
+        erased_errors_set.append(erased_errors)
+    return erased_errors_set

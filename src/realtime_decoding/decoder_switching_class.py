@@ -13,8 +13,9 @@ import numpy as np
 from src.realtime_decoding.helper_cluster_tools import * # figure out the improt
 
 # fix the imports
-from src.realtime_decoding.circuits import create_bb_codes_circuit, create_bb_codes_circuit_ionic_model, add_independent_leakage_errors_per_round
+from src.realtime_decoding.circuits import create_bb_codes_circuit, create_bb_codes_circuit_ionic_model, add_independent_leakage_errors_per_round, add_erasures
 from src.realtime_decoding.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params
+from src.realtime_decoding.utils import get_erasure_set
 from typing import Optional
 import relay_bp
 
@@ -50,7 +51,7 @@ class uf_wrapper:
         self.cluster_sizes = None
         self.cluster_dict = None
         self.commit_region = None
-        # self.committed_clusters = None
+
         
     def __call__(self, syndrome):
         """
@@ -174,24 +175,31 @@ class decoder_switching_class:
             self.leakage_detection_events = detection_events_init[:,det_types['leakage_dets']] #store other det events, in case we want to postselect on the no-leakage events
             
             detection_events = detection_events_init[:,det_types['regular_dets']] #restrict det events only to regular detectors (exclude dets used for leakage tracking)
-
+            self.circuit = circuit 
         elif p_erasure > 0: # sample from a circuit that has erasures
             n, _, _ = map(int, code_name.strip("[]").split(","))
 
             # per shot generate the circuits beforehand
+            circuit_w_erasure = add_erasures(circuit, p_erasure)
+            sampler = circuit_w_erasure.compile_detector_sampler()
+
+            detection_events_init,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
+            detection_events = np.array(detection_events, dtype=np.uint8) # update the erasures from the DEM
+            self.circuit = circuit_w_erasure 
+
         else: #Sample from regular circuit 
 
             sampler    = circuit.compile_detector_sampler()
             detection_events,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
             detection_events = np.array(detection_events,dtype=np.uint8)
+            self.circuit = circuit 
 
 
         self.detection_events = detection_events
         self.obs_flips        = obs_flips
 
-        self.circuit = circuit 
         self.bb      = bb 
-        self.num_shots = num_shots
+        self.num_shots = num_shots # for erasures, do we need to keep track of which shot we are on 
         
         if basis=='Z' or basis=='z':
             h = bb.hz 
@@ -219,6 +227,8 @@ class decoder_switching_class:
 
         self.num_cor_rounds                                                                           = num_cor_rounds
         self.window_check_set, self.window_observable_set, self.window_priors_set, self.window_update = self._prepare_windows()
+        if p_erasure > 0:
+            self.erased_errors_set = get_erasure_set(self.window_check_set, self.window_observable_set, self.window_update)
 
         #------ Collect strong/weak decoders only once per window -----------
         if strong_decoder_option=='tesseract':
@@ -244,12 +254,15 @@ class decoder_switching_class:
             self.weak_decode_function = [getattr(decoder,"decode",None)
                                          for decoder in self.weak_decoder] 
         elif weak_decoder_option == 'uf':
-            self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erasures=None, decoder_params=weak_decoder_params)
-            self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
+            if p_erasure == 0:
+                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erasures=None, decoder_params=weak_decoder_params)
+                self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
+            else:
+                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erased_errors_set=self.erased_errors_set, decoder_params=weak_decoder_params)
+                self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
         else:
             raise NotImplementedError("No other weak decoder besides bplsd and uf are implemented for now.")
         
-
         
         return 
 

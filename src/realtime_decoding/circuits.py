@@ -510,5 +510,5 @@ def add_erasures(circuit:stim.Circuit, p, gate_erasures=True, idling_erasures=Fa
             
     return final_circuit
 
-def write_circuit_to
+
 

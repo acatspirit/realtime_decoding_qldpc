@@ -4,7 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..
 
 
 
-from src.realtime_decoding.utils import get_window_dems
+from src.realtime_decoding.utils import get_window_dems, get_erased_mechanisms_from_DEM
 from ldpc.bplsd_decoder import BpLsdDecoder
 from typing import Optional
 from tesseract_decoder import tesseract
@@ -161,7 +161,7 @@ def configure_bplsd_decoder_per_sliding_window(window_check_set,window_priors_se
 
     return bplsd_decoders
 
-def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set, erasures=None,decoder_params: Optional[dict] = None):
+def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set, erased_errors_set=None,decoder_params: Optional[dict] = None):
     '''
     Configure UF for all windows.
 
@@ -176,10 +176,12 @@ def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set,
     '''
 
     uf_decoders = []
-    if erasures is None:
+    
+    if erased_errors_set is None:
         erasure_array = [np.zeros(window_check_set[k].shape[1], dtype=np.uint8) for k in range(len(window_check_set))]
     else:
-        erasure_array = [erasures] * len(window_check_set) # to be changed
+        erasure_array = erased_errors_set
+
     for k in range(len(window_check_set)):
         # decoder = uf.UFDecoder(window_check_set[k], error_channel=window_priors_set[k]) # i think we don't need priors since unweighted
         decoder = uf.UFDecoder(csr_matrix(window_check_set[k]))

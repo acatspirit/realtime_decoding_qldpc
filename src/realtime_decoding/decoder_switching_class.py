@@ -189,7 +189,7 @@ class decoder_switching_class:
             circuit_w_erasure = add_erasures(circuit, p_erasure)
             sampler = circuit_w_erasure.compile_detector_sampler()
 
-            detection_events_init,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
+            detection_events_init,obs_flips = sampler.sample(shots=1,separate_observables=True) # set only one shot each time
             detection_events = np.array(detection_events, dtype=np.uint8) # update the erasures from the DEM
             self.circuit = circuit_w_erasure 
 
@@ -601,7 +601,7 @@ class decoder_switching_class:
             shots_to_check = 20              #how often to check the precision in LER
     
     
-            for shot_index in range(self.num_shots):
+            for _ in range(self.num_shots):
                 self.reset_for_erasures() # reset the params so that we increment for a new set of shots
     
                 accumulated_correction = np.zeros(self.window_observable_set[0].shape[0], dtype=np.uint8) # change this so that it's a double index, also with shots
@@ -613,13 +613,13 @@ class decoder_switching_class:
                 for current_window_index in range(num_cor_rounds): #all windows besides last
     
                     
-                    syn_update_weak,accumulated_correction_weak,cluster_norm = self.decode_main_window_w_weak_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction, norm_order=norm_order)
+                    syn_update_weak,accumulated_correction_weak,cluster_norm = self.decode_main_window_w_weak_decoder(W,F, num_checks, current_window_index, 0, syn_update, accumulated_correction, norm_order=norm_order)
                     cluster_norm_per_window.append(cluster_norm)
     
                     if cluster_norm>cluster_norm_cutoff:
                         
                         
-                        syn_update_strong, accumulated_correction_strong, convergence_check = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, shot_index, syn_update, accumulated_correction)
+                        syn_update_strong, accumulated_correction_strong, convergence_check = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, 0, syn_update, accumulated_correction)
     
                         if convergence_check>0:  #did not converge
                             
@@ -635,22 +635,22 @@ class decoder_switching_class:
                         accumulated_correction = accumulated_correction_weak
                 
                 #decode the last window
-                accumulated_correction_weak,cluster_norm = self.decode_last_window_w_weak_decoder(F, num_checks, shot_index, syn_update, accumulated_correction, num_cor_rounds,norm_order=norm_order)
+                accumulated_correction_weak,cluster_norm = self.decode_last_window_w_weak_decoder(F, num_checks, 0, syn_update, accumulated_correction, num_cor_rounds,norm_order=norm_order)
                 cluster_norm_per_window.append(cluster_norm)
     
                 if cluster_norm>cluster_norm_cutoff:
                     switch_times+=1
-                    accumulated_correction = self.decode_last_window_w_strong_decoder(F, num_checks, shot_index, syn_update, num_cor_rounds, accumulated_correction)
+                    accumulated_correction = self.decode_last_window_w_strong_decoder(F, num_checks, 0, syn_update, num_cor_rounds, accumulated_correction)
                     
                 else: #keep accumulated correction from weak decoder
                     accumulated_correction = accumulated_correction_weak
     
     
-                logical_pred[shot_index, :] = accumulated_correction
+                logical_pred[0, :] = accumulated_correction
                 cluster_norms_per_shot.append(cluster_norm_per_window)
                 switch_times_per_shot.append(switch_times)
     
-                failures_cnt += np.mean(self.obs_flips[shot_index,:] ^ logical_pred[shot_index,:])
+                failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred[0,:])
     
                 if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
                     N = shot_index + 1

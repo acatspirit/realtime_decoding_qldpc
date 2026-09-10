@@ -601,7 +601,7 @@ class decoder_switching_class:
             shots_to_check = 20              #how often to check the precision in LER
     
     
-            for _ in range(self.num_shots):
+            for shot_index in range(self.num_shots):
                 self.reset_for_erasures() # reset the params so that we increment for a new set of shots
     
                 accumulated_correction = np.zeros(self.window_observable_set[0].shape[0], dtype=np.uint8) # change this so that it's a double index, also with shots

@@ -485,14 +485,9 @@ def drop_leakage_dets(circuit: deltakit_stim.Circuit, det_types: dict):
 def add_erasures(circuit:stim.Circuit, p, gate_erasures=True, idling_erasures=False):
     """ Add erasures to the input circuit according to the mechanism indicated
     """
+    # TODO: update the pauli P based on the erasure conversion rate
 
     final_circuit = stim.Circuit()
-    # targets = [stim.GateTarget(k) for k in range(circuit.num_qubits)]  #These are all the qubits in the circuit
-    
-    # max_det= circuit.num_detectors-1 #max detector in original circuit
-
-    # time_slice=0
-    # cnt=max_det+1
 
     # iterate through the circuit 
     for inst in circuit.flattened():
@@ -502,7 +497,7 @@ def add_erasures(circuit:stim.Circuit, p, gate_erasures=True, idling_erasures=Fa
 
             # determine whether to add an erasure: 
             if p < np.random.rand():
-                final_circuit.append(name="DEPOLARIZE1", targets=inst.targets_copy(),arg=0.75)
+                final_circuit.append(name="DEPOLARIZE1", targets=inst.targets_copy(),arg=0.75) # Max mixed state
         # here is where to add idling noise if we want later, between rounds because we are lazy 
         elif inst.name == "R" or inst.name == "MR" and idling_erasures:
             final_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())
@@ -514,4 +509,6 @@ def add_erasures(circuit:stim.Circuit, p, gate_erasures=True, idling_erasures=Fa
             final_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())
             
     return final_circuit
+
+def write_circuit_to
 

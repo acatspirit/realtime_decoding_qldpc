@@ -235,7 +235,7 @@ class decoder_switching_class:
 
         self.num_cor_rounds                                                                           = num_cor_rounds
         self.window_check_set, self.window_observable_set, self.window_priors_set, self.window_update = self._prepare_windows()
-        if p_erasure > 0:
+        if self.p_erasure > 0:
             self.erased_errors_set = get_erasure_set(self.window_check_set, self.window_observable_set, self.window_update)
 
         #------ Collect strong/weak decoders only once per window -----------
@@ -262,7 +262,7 @@ class decoder_switching_class:
             self.weak_decode_function = [getattr(decoder,"decode",None)
                                          for decoder in self.weak_decoder] 
         elif weak_decoder_option == 'uf':
-            if p_erasure == 0:
+            if self.p_erasure == 0:
                 self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erasures=None, decoder_params=self.weak_decoder_params)
                 self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
             else:
@@ -602,6 +602,7 @@ class decoder_switching_class:
     
     
             for shot_index in range(self.num_shots):
+                self.reset_for_erasures() # reset the params so that we increment for a new set of shots
     
                 accumulated_correction = np.zeros(self.window_observable_set[0].shape[0], dtype=np.uint8) # change this so that it's a double index, also with shots
                 syn_update = np.zeros(num_checks, dtype=np.uint8)            

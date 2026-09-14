@@ -496,14 +496,14 @@ def add_erasures(circuit:stim.Circuit, p, gate_erasures=True, idling_erasures=Fa
             final_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())
 
             # determine whether to add an erasure: 
-            if p < np.random.rand():
+            if p > np.random.rand():
                 final_circuit.append(name="DEPOLARIZE1", targets=inst.targets_copy(),arg=0.75) # Max mixed state
         # here is where to add idling noise if we want later, between rounds because we are lazy 
         elif inst.name == "R" or inst.name == "MR" and idling_erasures:
             final_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())
             
             # determine whether to add an erasure: 
-            if p < np.random.rand():
+            if p > np.random.rand():
                 final_circuit.append(name="DEPOLARIZE1", targets=inst.targets_copy(),arg=0.75)
         else:
             final_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())

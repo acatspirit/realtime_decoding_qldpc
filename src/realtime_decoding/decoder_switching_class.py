@@ -68,7 +68,6 @@ class uf_wrapper:
             The predicted correction vector extracted from the decoder instance.
         """
         binary_syndrome = np.ascontiguousarray(syndrome, dtype=np.uint8) # play well with C
-
         found_cluster_sizes, cluster_map = self.decoder.ldpc_decode(binary_syndrome, self.erasures) # sizes of cluster, list with index = fault id and value = cluster id
 
         self.cluster_sizes = found_cluster_sizes
@@ -77,9 +76,6 @@ class uf_wrapper:
         correction = self.decoder.correction
         
         return correction
-    
-    # def set_commit_region(self, commit_region):
-    #     self.commit_region = commit_region
 
 class tesseract_wrapper:
     '''
@@ -131,7 +127,7 @@ class decoder_switching_class:
                  strong_decoder_params: Optional[dict] = None,
                  weak_decoder_params: Optional[dict] = None,
                  p_leak = 0,
-                 p_erasure = 0,
+                 erasure_conversion_rate = 0.7941, # using Ba+ right now, Ca+ is higher (0.9509)
                  noise_model = "ionic"):
         
         '''
@@ -149,13 +145,17 @@ class decoder_switching_class:
         weak_decoder_params: dictionary with weak decoder parameters 
         p_leak: leakage error rate per qubit, for each round (default set to 0)
         noise_model: "ionic" or "standard"
+        erasure_conversion_rate: the ratio of erasures to total error rate
 
         ---decoder_params are optional. default parameters can be found in decoders_utils.py---
         '''
         self.code_name = code_name
         self.num_rounds = num_rounds
-        self.p_pauli = p
-        self.p_erasure = p_erasure
+        self.erasure_conversion_rate = erasure_conversion_rate
+        self.p = p
+        self.p_pauli = (1-self.erasure_conversion_rate) * self.p
+        self.p_erasure = self.erasure_conversion_rate * self.p # if erasure conversion rate set to 0, this will go to 0 too 
+        # print(self.p_erasure, self.p_pauli)
         self.p_leak = p_leak
         self.basis = basis
 
@@ -186,21 +186,20 @@ class decoder_switching_class:
             n, _, _ = map(int, self.code_name.strip("[]").split(","))
 
             # per shot generate the circuits beforehand
-            circuit_w_erasure = add_erasures(circuit, p_erasure)
+            circuit_w_erasure = add_erasures(circuit, self.p_erasure)
             sampler = circuit_w_erasure.compile_detector_sampler()
 
-            detection_events_init,obs_flips = sampler.sample(shots=1,separate_observables=True) # set only one shot each time
+            detection_events,obs_flips = sampler.sample(shots=1,separate_observables=True) # set only one shot each time
             detection_events = np.array(detection_events, dtype=np.uint8) # update the erasures from the DEM
             self.circuit = circuit_w_erasure 
+
 
         else: #Sample from regular circuit 
 
             sampler    = circuit.compile_detector_sampler()
             detection_events,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
             detection_events = np.array(detection_events,dtype=np.uint8)
-            self.circuit = circuit 
-
-
+            self.circuit = circuit
         self.detection_events = detection_events
         self.obs_flips        = obs_flips
 
@@ -236,7 +235,8 @@ class decoder_switching_class:
         self.num_cor_rounds                                                                           = num_cor_rounds
         self.window_check_set, self.window_observable_set, self.window_priors_set, self.window_update = self._prepare_windows()
         if self.p_erasure > 0:
-            self.erased_errors_set = get_erasure_set(self.window_check_set, self.window_observable_set, self.window_update)
+            self.erased_errors_set = get_erasure_set(self.window_check_set, self.window_observable_set, self.window_priors_set) # get the erasure set for each window, to pass into the uf_wrapper for decoding
+            # print(f"the erased errors set first entry is {len(self.erased_errors_set[0].nonzero()[0])}/{len(self.erased_errors_set[0])}, and the length is {len(self.erased_errors_set)}")
 
         #------ Collect strong/weak decoders only once per window -----------
         if strong_decoder_option=='tesseract':
@@ -280,7 +280,7 @@ class decoder_switching_class:
         self.__init__(
             code_name=self.code_name,
             num_rounds=self.num_rounds,
-            p = self.p_pauli,
+            p = self.p,
             basis=self.basis,
             num_shots=self.num_shots,
             W=self.W,
@@ -289,7 +289,7 @@ class decoder_switching_class:
             weak_decoder_option=self.weak_decoder_option,
             weak_decoder_params=self.weak_decoder_params,
             strong_decoder_params=self.strong_decoder_params,
-            p_erasure=self.p_erasure
+            erasure_conversion_rate=self.erasure_conversion_rate,
         )
         return
 
@@ -303,7 +303,6 @@ class decoder_switching_class:
         window_priors_set: list of priors per window
         window_update: list of updates per window (?)
         '''
-        # TODO: make array for erasures if necessary
 
         window_check_set, window_observable_set, window_priors_set, window_update = spacetime(self.circuit, self.h, self.W, self.F, self.num_cor_rounds)
 
@@ -333,7 +332,7 @@ class decoder_switching_class:
         # print("entered last decoding window w/ weak...")
         k          = -1
 
-        decoder         = self.weak_decoder[k] # with erasures, modify to be for the kth window for ith shot TODO
+        decoder         = self.weak_decoder[k] 
 
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region (num_faults_in_F=num_faults_in_W for last iteration)
         num_faults_in_W = np.shape(self.window_check_set[k])[1]  

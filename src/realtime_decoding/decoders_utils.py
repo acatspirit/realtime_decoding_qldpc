@@ -183,7 +183,6 @@ def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set,
         erasure_array = erased_errors_set
 
     for k in range(len(window_check_set)):
-        # decoder = uf.UFDecoder(window_check_set[k], error_channel=window_priors_set[k]) # i think we don't need priors since unweighted
         decoder = uf.UFDecoder(csr_matrix(window_check_set[k]))
         uf_decoders.append(decoder)
 

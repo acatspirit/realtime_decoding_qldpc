@@ -34,7 +34,6 @@ def chk_obs_priors_to_dem(chk,obs,priors):
 
         for l in obs_flipped:
             targets.append(stim.target_logical_observable_id(l))
-
         DEM.append("error",error_prob,targets)
 
     return DEM
@@ -61,7 +60,6 @@ def get_window_dems(window_check_set, window_observable_set, window_priors_set):
         chk = window_check_set[k]
         obs = window_observable_set[k].copy()
         priors = window_priors_set[k]
-
         dem = chk_obs_priors_to_dem(chk,obs,priors)
         window_dems_set.append(dem)
 

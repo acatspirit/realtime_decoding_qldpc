@@ -2,7 +2,7 @@
 #SBATCH --job-name=qec_sim
 #SBATCH --output=logs_%A_%a.out
 #SBATCH --error=logs_%A_%a.err
-#SBATCH --array=0-599 # should be len(ps) * len(code_names) * (num_shots // shots_per_job) - 1 , 6*20*5-1
+#SBATCH --array=0-149 # should be len(ps) * len(code_names) * (num_shots // shots_per_job) - 1 , 6*20*5-1
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=common,scavenger
 #SBATCH --mem=10G

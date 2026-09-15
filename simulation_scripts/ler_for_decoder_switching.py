@@ -355,7 +355,7 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
     basis      = 'Z'
     code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]    
     # ps         = [2e-3,3e-3,4e-3,5e-3] #I RUN THESE RATES ONLY FOR BPLSD
-    ps = np.logspace(-4,-3.5,6)[:3]
+    ps = np.logspace(-4,-3.5,6)[2]
     # ps = np.logspace(-2,-1,3) # for testing
     num_rounds = 25
     
@@ -392,7 +392,8 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
                                         F=F,
                                         strong_decoder_option=strong_decoder,
                                         weak_decoder_option=weak_decoder,
-                                        erasure_conversion_rate=0.7941 if erasures else 0.0)
+                                        erasure_conversion_rate=0.7941 if erasures else 0.0,
+                                        )
 
     if erasures:
         new_shots,cluster_norms,switch_times,logical_errors = test.decode_with_sliding_window_and_decoder_switching_and_erasure(cluster_norm_cutoff=cutoff, rel_error_tol=0.01)
@@ -1017,34 +1018,34 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 
 if __name__ == "__main__":
-    num_shots = 10_000
-    shots_per_job = 5_000
-    target_switch_rate = 5e-3
+    num_shots = 10_000_000
+    shots_per_job = 100_000
+    target_switch_rate = 0.01 # ion-aware
     weak_decoder = 'uf'
     strong_decoder = 'tesseract' # change back to tesseract
     erasures=True
 
     # to run on the cluster / get data on cluster
-    # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
+    get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
-    merge_dcc_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots     # Update to your actual num_shots
-    )
+    # merge_dcc_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots     # Update to your actual num_shots
+    # )
 
     # # run this to plot the results from decoder switching
-    plot_decoder_switching_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots,     # Update to your actual num_shots
-        include_strong=True,
-        include_weak=True,
-        p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
-    )
+    # plot_decoder_switching_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots,     # Update to your actual num_shots
+    #     include_strong=False,
+    #     include_weak=False,
+    #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
+    # )
 
     # hardware indicator plot
     # plot_switching_gains_vs_switch_rate(

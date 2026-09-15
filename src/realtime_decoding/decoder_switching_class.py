@@ -129,6 +129,7 @@ class decoder_switching_class:
                  p_leak = 0,
                  erasure_conversion_rate = 0.7941, # using Ba+ right now, Ca+ is higher (0.9509)
                  noise_model = "ionic",
+                 decode_with_erasures = True,
                  idling_erasures=False):
         
         '''
@@ -161,6 +162,7 @@ class decoder_switching_class:
         self.p_leak = p_leak
         self.basis = basis
         self.idling_erasures = idling_erasures
+        self.decode_with_erasures = decode_with_erasures
 
         if noise_model == "standard":
             circuit,bb = create_bb_codes_circuit(code_name, self.p_pauli, self.num_rounds, self.basis)
@@ -265,8 +267,8 @@ class decoder_switching_class:
             self.weak_decode_function = [getattr(decoder,"decode",None)
                                          for decoder in self.weak_decoder] 
         elif weak_decoder_option == 'uf':
-            if self.p_erasure == 0:
-                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erasures=None, decoder_params=self.weak_decoder_params)
+            if not self.decode_with_erasures:
+                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erased_errors_set=None, decoder_params=self.weak_decoder_params)
                 self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
             else:
                 self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erased_errors_set=self.erased_errors_set, decoder_params=self.weak_decoder_params)
@@ -293,6 +295,8 @@ class decoder_switching_class:
             weak_decoder_params=self.weak_decoder_params,
             strong_decoder_params=self.strong_decoder_params,
             erasure_conversion_rate=self.erasure_conversion_rate,
+            idling_erasures=self.idling_erasures,
+            decode_with_erasures=self.decode_with_erasures
         )
         return
 
@@ -475,7 +479,7 @@ class decoder_switching_class:
     def decode_with_sliding_window_and_decoder_switching(self, cluster_norm_cutoff: float, norm_order=2, rel_error_tol = 0.2):
         '''
         Decode w/ sliding window and decoder switching from weak to strong decoder, if we exceed the specified cluster_norm_cutoff for any window, 
-        for a given shot. TODO: add a check for erasure prob > 0 in self. If it is then we want to pass in erasure aware to the weak/strong window decode function
+        for a given shot. 
 
         Input:
             cluster_norm_cuoff: max cluster size accepted to accept weak decoder's correction
@@ -573,8 +577,8 @@ class decoder_switching_class:
     def decode_with_sliding_window_and_decoder_switching_and_erasure(self, cluster_norm_cutoff: float, norm_order=2, rel_error_tol = 0.2):
             '''
             Decode w/ sliding window and decoder switching from weak to strong decoder, if we exceed the specified cluster_norm_cutoff for any window, 
-            for a given shot. TODO: add a check for erasure prob > 0 in self. If it is then we want to pass in erasure aware to the weak/strong window decode function
-    
+            for a given shot. 
+
             Input:
                 cluster_norm_cuoff: max cluster size accepted to accept weak decoder's correction
                 norm_order: integer defining the cluster norm order for the weak decoder
@@ -774,6 +778,113 @@ class decoder_switching_class:
             return self.num_shots,np.mean(self.obs_flips ^ logical_pred,axis=1)
 
         return 
+    def decode_with_sliding_window_and_erasure(self, decoder_option: str, norm_order: int, rel_error_tol = 0.2):
+            '''
+            Decode w/ sliding window and no decoder switching. Choose weak or strong decoder option.
+    
+            Input:
+                decoder_option: 'weak' or 'strong' and uses the weak or strong set upon initialization
+                norm_order: integer defining the cluster norm order, in case we use the weak decoder
+                reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = \sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
+    
+            Outputs:
+                N: new number of shots which can be different than self.num_shots, if we reached the rel_error accuracy faster than the total number of shots specified.
+                   N<=self.num_shots. If relative accuracy was not reached, output self.num_shots.
+                cluster_norms_per_shot: if weak decoder was chosen, output a list of cluster norms lists per shot (inner list is cluster norms per window)
+                logical_errors_per_shot: returned both for weak/strong decoder and gives a 0/1 array of whether or not we made a logical error per shot
+            '''
+    
+            num_checks   = self.h.shape[0]
+            num_logicals = self.window_observable_set[0].shape[0]
+            logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
+    
+            W = self.W 
+            F = self.F
+            num_cor_rounds = self.num_cor_rounds
+            
+            failures_cnt   = 0               #count decoded logical failures
+            epsilon        = rel_error_tol   #default is 20% relative error -- should be chosen based on how we simulate this externally (e.g., if we break into tasks of shots via multiprocessing we don't need a very small epsilon)
+            shots_to_check = 20              #how often to check the precision in LER
+    
+            if decoder_option=='weak':
+    
+                cluster_norms_per_shot = []
+    
+                for shot_index in range(self.num_shots):
+                    self.reset_for_erasures()
+    
+                    accumulated_correction = np.zeros(num_logicals, dtype=np.uint8)
+                    syn_update = np.zeros(num_checks, dtype=np.uint8)            
+    
+                    cluster_norm_per_window  = []
+                    for current_window_index in range(self.num_cor_rounds): #all windows besides last
+    
+                        syn_update,accumulated_correction,cluster_norm = self.decode_main_window_w_weak_decoder(W,F,num_checks, current_window_index, 0, syn_update, accumulated_correction, norm_order=norm_order)
+                        cluster_norm_per_window.append(cluster_norm)
+    
+                    #decode the last window
+                    accumulated_correction,cluster_norm = self.decode_last_window_w_weak_decoder(F, num_checks, 0, syn_update, accumulated_correction, num_cor_rounds, norm_order=norm_order)
+                    cluster_norm_per_window.append(cluster_norm)
+    
+    
+                    logical_pred[0, :] = accumulated_correction
+                    cluster_norms_per_shot.append(cluster_norm_per_window)
+    
+                    failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred[0,:])
+    
+                    if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
+                        N = shot_index + 1
+                        p = failures_cnt / N
+                        sigma = np.sqrt(p * (1 - p) / N)
+                        rel_err = sigma / p
+    
+                        if rel_err<epsilon:
+    
+                            print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
+    
+                            return N, cluster_norms_per_shot, np.mean(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1) 
+    
+                
+                return self.num_shots,cluster_norms_per_shot, np.mean(self.obs_flips ^ logical_pred,axis=1)
+    
+            elif decoder_option=='strong':
+    
+                
+                for shot_index in range(self.num_shots):
+                    self.reset_for_erasures()
+    
+                    accumulated_correction = np.zeros(num_logicals, dtype=np.uint8)
+                    syn_update = np.zeros(num_checks, dtype=np.uint8)            
+                    
+                    for current_window_index in range(self.num_cor_rounds): #all windows besides last
+    
+                        syn_update,accumulated_correction,convergence_check = self.decode_main_window_w_strong_decoder(W,F,num_checks,current_window_index, 0, syn_update, accumulated_correction)
+                        
+                    #decode the last window
+                    accumulated_correction = self.decode_last_window_w_strong_decoder(F, num_checks, 0, syn_update, num_cor_rounds, accumulated_correction)
+                    
+                    logical_pred[0, :] = accumulated_correction
+    
+                    failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred[0,:])
+    
+                    
+                    if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
+    
+                        N = shot_index + 1
+                        p = failures_cnt / N
+                        sigma = np.sqrt(p * (1 - p) / N)
+                        rel_err = sigma / p
+    
+                        if rel_err<epsilon:
+    
+                            print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
+    
+                            return N, np.mean(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1) #output updated shots
+    
+    
+                return self.num_shots,np.mean(self.obs_flips ^ logical_pred,axis=1)
+    
+            return 
 
     def decode_full_syndrome_history(self,decoder: str):
         '''

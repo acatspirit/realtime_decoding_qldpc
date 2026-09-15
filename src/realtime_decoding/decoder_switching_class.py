@@ -128,7 +128,8 @@ class decoder_switching_class:
                  weak_decoder_params: Optional[dict] = None,
                  p_leak = 0,
                  erasure_conversion_rate = 0.7941, # using Ba+ right now, Ca+ is higher (0.9509)
-                 noise_model = "ionic"):
+                 noise_model = "ionic",
+                 idling_erasures=False):
         
         '''
         Inputs:
@@ -146,23 +147,25 @@ class decoder_switching_class:
         p_leak: leakage error rate per qubit, for each round (default set to 0)
         noise_model: "ionic" or "standard"
         erasure_conversion_rate: the ratio of erasures to total error rate
+        idling_erasures : whether to add erasures to idling gates (default False)
 
         ---decoder_params are optional. default parameters can be found in decoders_utils.py---
         '''
         self.code_name = code_name
         self.num_rounds = num_rounds
         self.erasure_conversion_rate = erasure_conversion_rate
-        self.p = p
-        self.p_pauli = (1-self.erasure_conversion_rate) * self.p
+        self.p = p # everything but 2-q - this is our input
+        self.p_pauli = (1-self.erasure_conversion_rate) * self.p 
         self.p_erasure = self.erasure_conversion_rate * self.p # if erasure conversion rate set to 0, this will go to 0 too 
         # print(self.p_erasure, self.p_pauli)
         self.p_leak = p_leak
         self.basis = basis
+        self.idling_erasures = idling_erasures
 
         if noise_model == "standard":
             circuit,bb = create_bb_codes_circuit(code_name, self.p_pauli, self.num_rounds, self.basis)
         elif noise_model == "ionic":
-            circuit, bb = create_bb_codes_circuit_ionic_model(code_name, self.p_pauli, self.num_rounds, self.basis)
+            circuit, bb = create_bb_codes_circuit_ionic_model(code_name, self.p_pauli, self.num_rounds, self.basis, p_pauli = self.p_pauli if self.erasure_conversion_rate > 0 else None, idling_erasures=self.idling_erasures)
         else:
             NotImplementedError("No other noise models have been implemented")
 

@@ -133,7 +133,7 @@ def create_bb_codes_circuit(code_name: str, p: float, num_rounds: int, basis: st
 
 
 
-def create_bb_codes_circuit_ionic_model(code_name: str, p: float, num_rounds: int, basis: str):
+def create_bb_codes_circuit_ionic_model(code_name: str, p: float, num_rounds: int, basis: str, p_pauli=None, idling_erasures=False):
     
     '''Maybe we should compare codes that have the same # of logical qubits??
     This is because we call logical failure even if one out of k qubits has a logical error.
@@ -165,60 +165,22 @@ def create_bb_codes_circuit_ionic_model(code_name: str, p: float, num_rounds: in
                  "[[784,24,24]]": {'l':28, 'm':14, 'A_x_pows': [26], 'A_y_pows': [6,8], 'B_x_pows': [9,20], 'B_y_pows':[7]} 
                 }
 
-
-    # d_dict = { 6:{'l':6, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},    #this is [[72,12,6]]
-    #             10: {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]}, #this is [[90,8,10]]
-    #              12:{'l':12, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},  #this is [[144,12,12]]
-                
-    #              14:{'l':3, 'm':27, 'A_x_pows': [0], 'A_y_pows': [10,14], 'B_x_pows': [1,2], 'B_y_pows':[12]},  #this is [[162,8,14]]
-    #             16:{'l':6, 'm':15, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [4,5], 'B_y_pows':[6]},  #this is [[180,8,16]]
-                
-    #             18:{'l':12, 'm':12, 'A_x_pows': [3], 'A_y_pows': [2,7], 'B_x_pows': [1,2], 'B_y_pows':[3]},  #this is [[288,12,18]]
-    #             24:{'l':28, 'm':14, 'A_x_pows': [26], 'A_y_pows': [6,8], 'B_x_pows': [9,20], 'B_y_pows':[7]}} #this is [[784,24,24]]
-    
-
-
-    # https://arxiv.org/pdf/2408.10001 some codes taken from this paper (k=8 codes taken from there)
-    # https://github.com/qiskit-community/qcode-discovery (codes taken from here too)
-    # Codes also taken from Bravyi et al. 2024 (arXiv:2308.07915): [[72,12,6]], [[90,8,10]], [[144,12,12]], [[288,12,18]], [[360,12,<=24]]
-
-    # The code is defined by a pair of polynomials
-    # A and B that depends on two variables x and y such that
-    # x^l = 1
-    # y^m = 1
-    # A = x^{a_1} + y^{a_2} + y^{a_3} 
-    # B = y^{b_1} + x^{b_2} + x^{b_3}    
-
-    # https://arxiv.org/pdf/2407.15988
-    # https://github.com/nbi-hyq/uf_decoder/blob/main/py_wrapper/example_bb_codes.py
-    # l_dims = [{x: 6, y: 6}, {x: 15, y: 3}, {x: 9, y: 6}, {x: 12, y: 6}, {x: 12, y: 12}]
-    # l_terms_a = [x**3+y+y**2, x**9+y+y**2, x**3+y+y**2, x**3+y+y**2, x**3+y**2+y**7]
-    # l_terms_b = [y**3+x+x**2, 1+x**2+x**7, y**3+x+x**2, y**3+x+x**2, y**3+x+x**2]
-    # n_list = [72, 90, 108, 144, 288]
-    # k_list = [12, 8, 8, 12, 12]
-
-    # [[784,24,24]]
-    #ell,m = 28,14
-    #a1,a2,a3=26,6,8
-    #b1,b2,b3=7,9,20    
-
-    # [[144,12,12]]
-    # ell,m = 12,6
-    # a1,a2,a3 = 3,1,2
-    # b1,b2,b3 = 3,1,2    
-
-    # https://github.com/sbravyi/BivariateBicycleCodes/blob/main/decoder_setup.py    
-
-    # code_params = d_dict[d]
     code_params = bb_codes_dict[code_name]
-
     #tailored to ions
-    error_model = ErrorModel(
-        idle_error=p/100,
-        sqgate_error=p/10,
-        tqgate_error=p,
-        spam_error=p/10,
-        )
+    if p_pauli:
+        error_model = ErrorModel(
+            idle_error=p_pauli/100 if idling_erasures else p/100, 
+            sqgate_error=p/10, 
+            tqgate_error=p_pauli, 
+            spam_error=p/10, 
+            )
+    else:
+        error_model = ErrorModel(
+            idle_error=p/100, # p
+            sqgate_error=p/10, # p
+            tqgate_error=p, # p_pauli 
+            spam_error=p/10, # p 
+            )
 
     bb = BbCode(
         l=code_params['l'],
@@ -485,7 +447,6 @@ def drop_leakage_dets(circuit: deltakit_stim.Circuit, det_types: dict):
 def add_erasures(circuit:stim.Circuit, p, gate_erasures=True, idling_erasures=False):
     """ Add erasures to the input circuit according to the mechanism indicated
     """
-    # TODO: update the pauli P based on the erasure conversion rate
 
     final_circuit = stim.Circuit()
 

@@ -1020,7 +1020,7 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 if __name__ == "__main__":
     num_shots = 1_000_000
     shots_per_job = 10_000
-    target_switch_rate = 0.01 # ion-aware
+    target_switch_rate = 0.001 # superconducting now, not ion-aware
     weak_decoder = 'uf'
     strong_decoder = 'tesseract' # change back to tesseract
     erasures=True

@@ -653,7 +653,7 @@ def get_ler_for_sliding_window_dcc(
     code_name, p, target_shots = tasks[task_id]
 
     print(f"--- RUNNING ARRAY TASK {task_id} ---")
-    print(f"Code: {code_name}, p: {p}, shots: {shots}, Decoder: {decoder_name}")
+    print(f"Code: {code_name}, p: {p}, shots: {target_shots}, Decoder: {decoder_name}")
 
     n, k, d = map(int, code_name.strip("[]").split(","))
             

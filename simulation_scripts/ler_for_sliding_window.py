@@ -729,8 +729,7 @@ def get_ler_for_sliding_window_dcc(
                 new_shots, _, c_logical_errors = test.decode_with_sliding_window_and_erasure(
                     decoder_option=decoder_option, 
                     norm_order=norm_order, 
-                    rel_error_tol=rel_error_tol,
-                    erasures=True
+                    rel_error_tol=rel_error_tol
                 )
             else:
                 new_shots, _, c_logical_errors = test.decode_with_sliding_window(
@@ -743,8 +742,7 @@ def get_ler_for_sliding_window_dcc(
                 new_shots, c_logical_errors = test.decode_with_sliding_window_and_erasure(
                     decoder_option=decoder_option, 
                     norm_order=norm_order, 
-                    rel_error_tol=rel_error_tol,
-                    erasures=True
+                    rel_error_tol=rel_error_tol
                 )
             else:
                 new_shots, c_logical_errors = test.decode_with_sliding_window(

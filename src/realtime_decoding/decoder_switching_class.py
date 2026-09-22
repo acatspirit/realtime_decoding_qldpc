@@ -205,6 +205,7 @@ class decoder_switching_class:
             detection_events,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
             detection_events = np.array(detection_events,dtype=np.uint8)
             self.circuit = circuit
+
         self.detection_events = detection_events
         self.obs_flips        = obs_flips
 

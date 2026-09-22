@@ -70,8 +70,7 @@ def get_erased_mechanisms_from_DEM(dem:stim.DetectorErrorModel, p_cutoff = 0.03)
     """ Given a DEM, get the error mechanisms where erasures occurred. This is set by a cutoff, since erasures
         produce an error mechanism with p=0.5. General rule - cutoff should be p_max error?
     """ 
-    # get all the DEM entries over some prob p that are the erasures, set all others to 0. This is the erasures vec
-    # Q - does the num_detectors set the shape of the H_DEM or do the actual error mechanisms? - the actual error mechanisms 
+
     erased_errors = np.zeros(shape=(dem.num_errors,)).flatten()
     i = 0
 

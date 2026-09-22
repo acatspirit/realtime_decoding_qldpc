@@ -743,14 +743,22 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 
     if include_weak: # right now we just want to plot the weak / switching comparison
         if weak_decoder == 'uf':
+            if erasures:
+                weak_results_file_erasures = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_uf_weak_max_shots_10000_erasures_1.txt"
+            
             #data/sliding_window_results/sliding_window_uf_weak_max_shots_1000000.txt
             weak_results_file = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_uf_weak_max_shots_1000000.txt"
         elif weak_decoder == 'bplsd':
             weak_results_file = script_dir.parent / "saved_data" / "single_sliding_window_bplsd_max_shots_30000.txt"
 
         if weak_results_file and weak_results_file.exists():
-                    with open(weak_results_file, 'r') as file:
-                        weak_data_dict = eval(file.read())
+            with open(weak_results_file, 'r') as file:
+                weak_data_dict = eval(file.read())
+
+            if erasures and weak_results_file_erasures.exists():
+                with open(weak_results_file_erasures, 'r') as file:
+                    weak_data_dict_erasures = eval(file.read())
+                
         else:
             print(f"Weak decoder results file not found: {weak_results_file}")
             weak_data_dict = None
@@ -805,9 +813,19 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
                 
                 weak_line, weak_caps, weak_bars = ax.errorbar(
                     w_ps, w_eps_vals, yerr=w_eps_errs,
-                    color=colors[cnt % len(colors)], marker='s', markeredgecolor='k',linestyle='None'
+                    color=colors[cnt % len(colors)], marker='^', markeredgecolor='k',linestyle='None'
                 )
                 weak_line.set_alpha(0.5)  # Set transparency for weak decoder line 
+                if erasures and weak_data_dict_erasures and code_name in weak_data_dict_erasures.get("epsilons", {}):
+                    w_ps_erasures = sorted([p for p in weak_data_dict_erasures["epsilons"][code_name].keys() if p_range[0] <= p <= p_range[1]])
+                    w_eps_vals_erasures = [weak_data_dict_erasures["epsilons"][code_name][p] for p in w_ps_erasures if p_range[0] <= p <= p_range[1]]
+                    w_eps_errs_erasures = [weak_data_dict_erasures["std_epsilons"][code_name].get(p, 0) for p in w_ps_erasures if p_range[0] <= p <= p_range[1]]
+                    
+                    weak_line_erasures, weak_caps_erasures, weak_bars_erasures = ax.errorbar(
+                        w_ps_erasures, w_eps_vals_erasures, yerr=w_eps_errs_erasures,
+                        color=colors[cnt % len(colors)],  marker='d', markeredgecolor='k',linestyle='None'
+                    )
+                    weak_line_erasures.set_alpha(0.5)  # Set transparency for weak decoder line with erasures
 
         if include_strong:
             # 3. Plot the Strong Decoder Baseline (Dotted Line, Triangle Marker)
@@ -818,7 +836,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 
                 strong_line, strong_caps, strong_bars = ax.errorbar(
                     s_ps, s_eps_vals, yerr=s_eps_errs, 
-                    color=colors[cnt % len(colors)], marker='^', markeredgecolor='k', linestyle='None'
+                    color=colors[cnt % len(colors)], marker='s', markeredgecolor='k', linestyle='None'
                 )
                 strong_line.set_alpha(0.5)  # Set transparency for strong decoder line
 
@@ -1076,12 +1094,12 @@ if __name__ == "__main__":
     # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
-    merge_dcc_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots     # Update to your actual num_shots
-    )
+    # merge_dcc_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots     # Update to your actual num_shots
+    # )
 
     # run this to plot the results from decoder switching
     plot_decoder_switching_results(
@@ -1090,7 +1108,7 @@ if __name__ == "__main__":
         strong_decoder=strong_decoder,
         num_shots_max=num_shots,     # Update to your actual num_shots
         include_strong=False,
-        include_weak=False,
+        include_weak=True,
         p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
     )
 

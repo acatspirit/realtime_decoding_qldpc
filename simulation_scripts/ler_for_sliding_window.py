@@ -821,21 +821,24 @@ def download_from_dcc(remote_path, local_dir, username="am1155", host="dcc-login
         print(f"❌ Error occurred during download. Return code: {e.returncode}")
         print("Check if the remote path is correct and that you are connected to the Duke VPN.")
 
-def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max, dcc_data_dir="/hpc/group/brownlab/am1155/realtime_decoding_qldpc/simulation_scripts/data/sliding_window_data"):
+def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max, erasures=True, dcc_data_dir="/hpc/group/brownlab/am1155/realtime_decoding_qldpc/simulation_scripts/data/sliding_window_data"):
     """
     After running on the DCC, converts data that belongs to one task into a full statistics dictionary.
     """
 
     # Setup paths using pathlib
     script_dir = Path(__file__).resolve().parent
-    input_dir = script_dir / "sliding_window_data_temp" / f"raw_batches_{decoder_name}_{decoder_option}"
+    if erasures:
+        input_dir = script_dir / "sliding_window_data_temp" / f"raw_batches_{decoder_name}_{decoder_option}_erasures"
+    else:
+        input_dir = script_dir / "sliding_window_data_temp" / f"raw_batches_{decoder_name}_{decoder_option}"
     
     out_dir = script_dir.parent / "data" / "sliding_window_results"
     out_dir.mkdir(parents=True, exist_ok=True)
-    txt_to_save = out_dir / f'sliding_window_{decoder_name}_{decoder_option}_max_shots_{num_shots_max}.txt'
+    txt_to_save = out_dir / f'sliding_window_{decoder_name}_{decoder_option}_max_shots_{num_shots_max}_erasures_{int(erasures)}.txt'
 
     download_from_dcc(
-            remote_path=dcc_data_dir + f"/raw_batches_{decoder_name}_{decoder_option}/*.json",
+            remote_path=dcc_data_dir + f"/raw_batches_{decoder_name}_{decoder_option}_erasures/*.json" if erasures else f"/raw_batches_{decoder_name}_{decoder_option}/*.json",
             local_dir=input_dir
         )
     
@@ -960,6 +963,7 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
         "codes": code_names,
         "ps": ps,
         "r": num_rounds,
+        "erasure_conversion_rate": 0.7941 if erasures else 0,
         "total_errors": total_errors,
         "shots": total_shots,
         "pL@r": ler_results,
@@ -986,14 +990,14 @@ if __name__ == "__main__":
     num_shots      = 10_000
     batches        = 20
     weak_decoder   = 'uf'
-    strong_decoder = 'relay_bp'
-    decoder_option = 'weak'
+    strong_decoder = 'tesseract'
+    decoder_option = 'strong'
     p_list = np.logspace(-4,-3.5,6)
     # cutoff=0.8
 
-    get_ler_for_sliding_window_dcc(decoder_name=weak_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasures=True,norm_order=2, rel_error_tol=0.01)
+    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasures=True,norm_order=2, rel_error_tol=0.01)
 
-    # merge_dcc_results_sliding_window(decoder_name=strong_decoder, decoder_option=decoder_option, num_shots_max=num_shots)
+    # merge_dcc_results_sliding_window(decoder_name=weak_decoder, decoder_option=decoder_option, num_shots_max=num_shots)
 
 
     # txt_to_load = sys.path[-1] + f'/saved_data/single_sliding_window_{strong_decoder}_max_shots_{num_shots}.txt'

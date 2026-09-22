@@ -453,22 +453,22 @@ def get_ler_for_decoder_switching_dcc(
 
         num_windows =len(test.weak_decoder) #total # of windows -- needed for getting switch rates
         shots_run += new_shots
-        logical_errors += np.sum(c_logical_errors)
-        switch_times += np.sum(c_switch_times)
+        logical_errors += int(np.sum(c_logical_errors))
+        switch_times += int(np.sum(c_switch_times))
 
         dict_to_save = {
-                    "task_id": task_id,
+                    "task_id": int(task_id),
                     "basis": basis,
                     "weak_decoder": weak_decoder,
                     "strong_decoder": strong_decoder,
                     "target_switch_rate": target_switch_rate,
                     "code_name": code_name,
-                    "p": p,
-                    "r": num_rounds,
-                    "shots_run": shots_run,
-                    "logical_errors": logical_errors,
-                    "switch_times": switch_times,
-                    "num_windows": num_windows
+                    "p": float(p),
+                    "r": int(num_rounds),
+                    "shots_run": int(shots_run),
+                    "logical_errors": int(logical_errors),
+                    "switch_times": int(switch_times),
+                    "num_windows": int(num_windows)
                 }              
 
         if erasures:

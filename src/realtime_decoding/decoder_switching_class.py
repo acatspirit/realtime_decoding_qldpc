@@ -593,7 +593,8 @@ class decoder_switching_class:
             '''
     
             num_checks   = self.h.shape[0]
-            logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
+            # logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
+            logical_pred_single_shot = np.zeros(self.logical.shape[0], dtype=np.uint8) # for erasure decoding, we only decode one shot at a time
     
             cluster_norms_per_shot = []
             switch_times_per_shot  = []
@@ -652,13 +653,13 @@ class decoder_switching_class:
                     accumulated_correction = accumulated_correction_weak
     
     
-                logical_pred[0, :] = accumulated_correction
+                logical_pred_single_shot[:] = accumulated_correction
                 cluster_norms_per_shot.append(cluster_norm_per_window)
                 switch_times_per_shot.append(switch_times)
     
-                failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred[0,:])
+                failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot[:])
     
-                if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
+                if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0: # fix this area
                     N = shot_index + 1
                     p = failures_cnt / N
                     sigma = np.sqrt(p * (1 - p) / N)
@@ -668,10 +669,10 @@ class decoder_switching_class:
     
                         print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
     
-                        return N, cluster_norms_per_shot, switch_times_per_shot, np.mean(self.obs_flips[:N,:] ^ logical_pred[:N,:],axis=1)             
+                        return N, cluster_norms_per_shot, switch_times_per_shot, np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot,axis=1)             
     
             
-            return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.mean(self.obs_flips ^ logical_pred,axis=1)
+            return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot,axis=1)
 
     def decode_with_sliding_window(self, decoder_option: str, norm_order: int, rel_error_tol = 0.2):
         '''

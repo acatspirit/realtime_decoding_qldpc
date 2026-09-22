@@ -441,7 +441,7 @@ def get_ler_for_decoder_switching_dcc(
                                             strong_decoder_option=strong_decoder,
                                             weak_decoder_option=weak_decoder,
                                             erasure_conversion_rate=0.7941 if erasures else 0.0,
-                                            decode_with_erasure=erasures
+                                            decode_with_erasures=erasures
                                             )
 
         if erasures:

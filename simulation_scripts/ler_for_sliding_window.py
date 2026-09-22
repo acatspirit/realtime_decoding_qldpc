@@ -718,7 +718,7 @@ def get_ler_for_sliding_window_dcc(
             F=F,
             strong_decoder_option=strong_dec,
             weak_decoder_option=weak_dec,
-            decode_with_erasure=erasures,
+            decode_with_erasures=erasures,
             erasure_conversion_rate=0.7941 if erasures else 0
 
         )    

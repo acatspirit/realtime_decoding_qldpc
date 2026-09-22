@@ -717,13 +717,15 @@ def get_ler_for_sliding_window_dcc(
             W=W,
             F=F,
             strong_decoder_option=strong_dec,
-            weak_decoder_option=weak_dec
+            weak_decoder_option=weak_dec,
+            decode_with_erasure=erasures
+            
         )    
         
         # Run the sliding window function and unpack based on option
         if decoder_option == 'weak':
             if erasures:
-                new_shots, _, c_logical_errors = test.decode_with_sliding_window(
+                new_shots, _, c_logical_errors = test.decode_with_sliding_window_and_erasure(
                     decoder_option=decoder_option, 
                     norm_order=norm_order, 
                     rel_error_tol=rel_error_tol,
@@ -737,7 +739,7 @@ def get_ler_for_sliding_window_dcc(
                 )
         else:
             if erasures:
-                new_shots, c_logical_errors = test.decode_with_sliding_window(
+                new_shots, c_logical_errors = test.decode_with_sliding_window_and_erasure(
                     decoder_option=decoder_option, 
                     norm_order=norm_order, 
                     rel_error_tol=rel_error_tol,

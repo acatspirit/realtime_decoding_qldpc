@@ -756,19 +756,19 @@ def get_ler_for_sliding_window_dcc(
         # Get total block failures (logical_errors > 0 ensures any observable flip counts as a block failure)
         num_windows = len(test.weak_decoder) # if weak decoder ?
         shots_run += new_shots
-        logical_errors += np.sum(c_logical_errors > 0)
+        logical_errors += int(np.sum(c_logical_errors > 0))
 
         dict_to_save = {
-            "task_id": task_id,
+            "task_id": int(task_id),
             "basis": basis,
             "decoder_name": decoder_name,
             "decoder_option": decoder_option,
             "code_name": code_name,
-            "p": p,
-            "r": num_rounds,
-            "shots_run": shots_run,
-            "logical_errors": logical_errors,
-            "num_windows": num_windows
+            "p": float(p),
+            "r": int(num_rounds),
+            "shots_run": int(shots_run),
+            "logical_errors": int(logical_errors),
+            "num_windows": int(num_windows)
         }
 
         if erasures:

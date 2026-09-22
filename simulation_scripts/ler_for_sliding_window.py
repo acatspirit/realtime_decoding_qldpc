@@ -707,7 +707,7 @@ def get_ler_for_sliding_window_dcc(
             print(f"Task {task_id} has already achieved the desired relative error tolerance. Skipping further runs.")
             return
     while shots_run < target_shots:
-        current_batch_size = min(chunk_size, target_shots - shots_run)
+        current_batch_size = int(min(chunk_size, target_shots - shots_run))
         test = decoder_switching_class(
             code_name=code_name,
             num_rounds=num_rounds,

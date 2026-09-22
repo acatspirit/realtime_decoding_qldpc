@@ -990,7 +990,7 @@ if __name__ == "__main__":
     p_list = np.logspace(-4,-3.5,6)
     # cutoff=0.8
 
-    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasures=True,norm_order=2, rel_error_tol=0.01)
+    get_ler_for_sliding_window_dcc(decoder_name=weak_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasures=True,norm_order=2, rel_error_tol=0.01)
 
     # merge_dcc_results_sliding_window(decoder_name=strong_decoder, decoder_option=decoder_option, num_shots_max=num_shots)
 

@@ -884,7 +884,7 @@ class decoder_switching_class:
                             return N, np.mean(self.obs_flips[0,:] ^ logical_pred,axis=1) #output updated shots
     
     
-                return self.num_shots,np.mean(self.obs_flips[0,:] ^ logical_pred,axis=1)
+                return self.num_shots,np.mean(self.obs_flips ^ logical_pred,axis=1)
     
             return 
 

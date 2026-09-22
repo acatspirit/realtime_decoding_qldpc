@@ -616,7 +616,17 @@ def get_ler_per_SEC_eps_extracted_from_one_round_switching(num_shots=10_000,weak
 
     return 
 
-def get_ler_for_sliding_window_dcc(decoder_name, num_shots=100_000, shots_per_job=10_000, norm_order=2, rel_error_tol=0.01):
+def get_ler_for_sliding_window_dcc(
+        decoder_name, 
+        num_shots=100_000, 
+        shots_per_job=10_000, 
+        norm_order=2, 
+        rel_error_tol=0.01,
+        erasures=True,
+        basis='Z',
+        code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
+        ps = np.logspace(-4,-3.5,6)[2:3],
+        num_rounds = 25):
     '''
     Inputs:
     decoder_name: the name of the decoder to use (e.g., 'uf', 'bplsd', 'relay_bp', 'tesseract')
@@ -625,13 +635,9 @@ def get_ler_for_sliding_window_dcc(decoder_name, num_shots=100_000, shots_per_jo
     shots_per_job: how many shots to consider per job of joblib
     '''
     print(f"starting LER calculation")
+    chunk_size = 0.1*shots_per_job
     # Handle local testing fallback natively
     task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
-
-    basis      = 'Z'
-    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]    
-    ps = np.logspace(-4, -3.5, 6)
-    num_rounds = 25
     
     tasks = []
 
@@ -644,7 +650,7 @@ def get_ler_for_sliding_window_dcc(decoder_name, num_shots=100_000, shots_per_jo
         print(f"Task ID {task_id} is out of bounds for {len(tasks)} tasks. Exiting cleanly.")
         return
 
-    code_name, p, shots = tasks[task_id]
+    code_name, p, target_shots = tasks[task_id]
 
     print(f"--- RUNNING ARRAY TASK {task_id} ---")
     print(f"Code: {code_name}, p: {p}, shots: {shots}, Decoder: {decoder_name}")
@@ -662,56 +668,129 @@ def get_ler_for_sliding_window_dcc(decoder_name, num_shots=100_000, shots_per_jo
     weak_dec = decoder_name if decoder_option == 'weak' else 'uf' # uf is a dummy placeholder if strong is chosen
     strong_dec = decoder_name if decoder_option == 'strong' else 'relay_bp'
 
-    test = decoder_switching_class(
-        code_name=code_name,
-        num_rounds=num_rounds,
-        p=p,
-        basis=basis,
-        num_shots=shots,
-        W=W,
-        F=F,
-        strong_decoder_option=strong_dec,
-        weak_decoder_option=weak_dec
-    )    
-    
-    # Run the sliding window function and unpack based on option
-    if decoder_option == 'weak':
-        new_shots, cluster_norms, logical_errors = test.decode_with_sliding_window(
-            decoder_option=decoder_option, 
-            norm_order=norm_order, 
-            rel_error_tol=rel_error_tol
-        )
-    else:
-        new_shots, logical_errors = test.decode_with_sliding_window(
-            decoder_option=decoder_option, 
-            norm_order=norm_order, 
-            rel_error_tol=rel_error_tol
-        )
-
     # Setup directories
     script_dir = Path(__file__).resolve().parent
-    output_dir = script_dir / "data" / "sliding_window_data" / f"raw_batches_{decoder_name}_{decoder_option}"
+    if erasures:
+        output_dir = script_dir / "data" / "sliding_window_data" / f"raw_batches_{decoder_name}_{decoder_option}_erasures"
+    else:
+        output_dir = script_dir / "data" / "sliding_window_data" / f"raw_batches_{decoder_name}_{decoder_option}"
     output_dir.mkdir(parents=True, exist_ok=True)
     
     file_name = output_dir / f"task_{task_id}_{code_name}_p{p:.6f}.json"
+
+    # check if the file already exists to add to
     
-    # Get total block failures (logical_errors > 0 ensures any observable flip counts as a block failure)
-    block_errors = int(np.sum(logical_errors > 0))
+    shots_run = 0
+    logical_errors = 0
+    num_windows = 0
 
-    dict_to_save = {
-        "task_id": task_id,
-        "basis": basis,
-        "decoder_name": decoder_name,
-        "decoder_option": decoder_option,
-        "code_name": code_name,
-        "p": p,
-        "r": num_rounds,
-        "shots_run": new_shots,
-        "logical_errors": block_errors
-    }
+    if file_name.exists():
+        try:
+            with open(file_name, 'r') as f:
+                existing_data = json.load(f)
+            shots_run = existing_data.get("shots_run", 0)
+            logical_errors = existing_data.get("logical_errors", 0)
+            num_windows = existing_data.get("num_windows", 0)
+            print(f"Found existing progress: {shots_run}/{target_shots} shots already finished.")
+        except Exception as e:
+            print(f"⚠️ Could not load existing file {file_name}. Starting fresh. Error: {e}")
 
-    with open(file_name, 'w') as file:
-        json.dump(dict_to_save, file)
+    if shots_run >= target_shots:
+        print(f"Task {task_id} has already completed {target_shots} shots.")
+        return
+
+    if logical_errors > 0:
+        p_estimate = logical_errors / shots_run
+        sigma_estimate = np.sqrt(p_estimate * (1 - p_estimate) / shots_run)
+        rel_error_estimate = sigma_estimate / p_estimate if p_estimate > 0 else float('inf')
+        if rel_error_estimate < rel_error_tol:
+            print(f"Task {task_id} has already achieved the desired relative error tolerance. Skipping further runs.")
+            return
+    while shots_run < target_shots:
+        current_batch_size = min(chunk_size, target_shots - shots_run)
+        test = decoder_switching_class(
+            code_name=code_name,
+            num_rounds=num_rounds,
+            p=p,
+            basis=basis,
+            num_shots=current_batch_size,
+            W=W,
+            F=F,
+            strong_decoder_option=strong_dec,
+            weak_decoder_option=weak_dec
+        )    
+        
+        # Run the sliding window function and unpack based on option
+        if decoder_option == 'weak':
+            if erasures:
+                new_shots, _, c_logical_errors = test.decode_with_sliding_window(
+                    decoder_option=decoder_option, 
+                    norm_order=norm_order, 
+                    rel_error_tol=rel_error_tol,
+                    erasures=True
+                )
+            else:
+                new_shots, _, c_logical_errors = test.decode_with_sliding_window(
+                    decoder_option=decoder_option, 
+                    norm_order=norm_order, 
+                    rel_error_tol=rel_error_tol
+                )
+        else:
+            if erasures:
+                new_shots, c_logical_errors = test.decode_with_sliding_window(
+                    decoder_option=decoder_option, 
+                    norm_order=norm_order, 
+                    rel_error_tol=rel_error_tol,
+                    erasures=True
+                )
+            else:
+                new_shots, c_logical_errors = test.decode_with_sliding_window(
+                    decoder_option=decoder_option, 
+                    norm_order=norm_order, 
+                    rel_error_tol=rel_error_tol
+                )
+
+    
+        # Get total block failures (logical_errors > 0 ensures any observable flip counts as a block failure)
+        num_windows = len(test.weak_decoder) # if weak decoder ?
+        shots_run += new_shots
+        logical_errors += np.sum(c_logical_errors > 0)
+
+        dict_to_save = {
+            "task_id": task_id,
+            "basis": basis,
+            "decoder_name": decoder_name,
+            "decoder_option": decoder_option,
+            "code_name": code_name,
+            "p": p,
+            "r": num_rounds,
+            "shots_run": shots_run,
+            "logical_errors": logical_errors,
+            "num_windows": num_windows
+        }
+
+        if erasures:
+            dict_to_save["erasure_conversion_rate"] = test.erasure_conversion_rate
+
+        tmp_file = file_name.with_suffix('.json.tmp')
+        with open(tmp_file, 'w') as file:
+            json.dump(dict_to_save, file)
+
+        tmp_file.replace(file_name)  # Atomic move to avoid partial writes
+        print(f"Task {task_id} progress: {shots_run}/{target_shots} shots completed. Saved to {file_name}")
+
+        if logical_errors > 0:
+            p_estimate = logical_errors / shots_run
+            sigma_estimate = np.sqrt(p_estimate * (1 - p_estimate) / shots_run)
+            rel_error_estimate = sigma_estimate / p_estimate if p_estimate > 0 else float('inf')
+            if rel_error_estimate < rel_error_tol:
+                print(f"Task {task_id} has achieved the desired relative error tolerance. Stopping further runs.")
+                break
+
+        if new_shots < current_batch_size:
+            print(f"Task {task_id} stopped early after {shots_run} shots due to relative error tolerance.")
+            break
+
         
     print(f"Task {task_id} finished successfully. Saved to {file_name}")
     return

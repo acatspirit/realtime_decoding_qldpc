@@ -463,9 +463,9 @@ def get_ler_for_decoder_switching_dcc(
                     "code_name": code_name,
                     "p": p,
                     "r": num_rounds,
-                    "shots_run": new_shots,
-                    "logical_errors": int(np.sum(logical_errors)),
-                    "switch_times": int(np.sum(switch_times)),
+                    "shots_run": shots_run,
+                    "logical_errors": logical_errors,
+                    "switch_times": switch_times,
                     "num_windows": num_windows
                 }              
 
@@ -486,7 +486,7 @@ def get_ler_for_decoder_switching_dcc(
             if rel_error_estimate < rel_error_tol:
                 print(f"Task {task_id} has achieved the desired relative error tolerance. Stopping further runs.")
                 break
-            
+
         if new_shots < current_batch_size:
             print(f"Task {task_id} stopped early after {shots_run} shots due to relative error tolerance.")
             break

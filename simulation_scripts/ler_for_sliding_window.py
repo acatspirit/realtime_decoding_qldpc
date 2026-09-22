@@ -708,6 +708,7 @@ def get_ler_for_sliding_window_dcc(
             return
     while shots_run < target_shots:
         current_batch_size = int(min(chunk_size, target_shots - shots_run))
+        print(f"Task {task_id} running batch of {current_batch_size} shots. Total shots so far: {shots_run}/{target_shots}")
         test = decoder_switching_class(
             code_name=code_name,
             num_rounds=num_rounds,

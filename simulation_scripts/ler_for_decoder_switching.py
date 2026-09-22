@@ -336,7 +336,19 @@ def get_ler_for_decoder_switching(num_shots,shots_per_job,target_switch_rate=5e-
     return 
 
 
-def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_000, shots_per_job=10_000, weak_decoder='uf', strong_decoder='tesseract', erasures=True):
+def get_ler_for_decoder_switching_dcc(
+        target_switch_rate=2.5e-1, 
+        num_shots=100_000, 
+        shots_per_job=10_000, 
+        weak_decoder='uf', 
+        strong_decoder='tesseract', 
+        erasures=True,
+        basis='Z',
+        code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
+        ps = np.logspace(-4,-3.5,6)[2:3],
+        num_rounds = 25,
+        rel_error_tol = 0.01
+        ):
     '''
     Inputs:
     num_shots: max # of shots per (p,code)
@@ -351,13 +363,7 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
 
     # colors = ["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
     task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID"),0)
-
-    basis      = 'Z'
-    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]    
-    # ps         = [2e-3,3e-3,4e-3,5e-3] #I RUN THESE RATES ONLY FOR BPLSD
-    ps = np.logspace(-4,-3.5,6)[2:3]
-    # ps = np.logspace(-2,-1,3) # for testing
-    num_rounds = 25
+    chunk_size = 0.1*shots_per_job
     
     tasks = []
 
@@ -370,11 +376,11 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
         print(f"Task ID {task_id} is out of bounds for {len(tasks)} tasks. Exiting cleanly.")
         return
 
-    code_name, p, shots = tasks[task_id]
+    code_name, p, target_shots = tasks[task_id]
     cutoff = cutoffs_to_set[(code_name, p)]
 
     print(f"--- RUNNING ARRAY TASK {task_id} ---")
-    print(f"Code: {code_name}, p: {p}, shots: {shots}")
+    print(f"Code: {code_name}, p: {p}, shots: {target_shots}")
 
     n, k, d = map(int, code_name.strip("[]").split(","))
             
@@ -382,26 +388,6 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
     nbuffer = d            #Buffer region
     F       = d//2         #Commit region
     W       = nbuffer + F  #Entire window
-
-    test  = decoder_switching_class(code_name=code_name,
-                                        num_rounds=num_rounds,
-                                        p=p,
-                                        basis=basis,
-                                        num_shots=shots,
-                                        W=W,
-                                        F=F,
-                                        strong_decoder_option=strong_decoder,
-                                        weak_decoder_option=weak_decoder,
-                                        erasure_conversion_rate=0.7941 if erasures else 0.0,
-                                        )
-
-    if erasures:
-        new_shots,cluster_norms,switch_times,logical_errors = test.decode_with_sliding_window_and_decoder_switching_and_erasure(cluster_norm_cutoff=cutoff, rel_error_tol=0.01)
-    else:
-        new_shots,cluster_norms,switch_times,logical_errors = test.decode_with_sliding_window_and_decoder_switching(cluster_norm_cutoff=cutoff, rel_error_tol=0.01)
-
-
-    num_windows =len(test.weak_decoder) #total # of windows -- needed for getting switch rates
 
     script_dir = Path(__file__).resolve().parent
     if erasures:
@@ -411,40 +397,99 @@ def get_ler_for_decoder_switching_dcc(target_switch_rate=2.5e-1, num_shots=100_0
     output_dir.mkdir(parents=True, exist_ok=True)
     
     file_name = output_dir / f"task_{task_id}_{code_name}_p{p:.6f}.json"
-    if erasures:
-        dict_to_save = {
-            "task_id": task_id,
-            "basis": basis,
-            "erasure_conversion_rate": test.erasure_conversion_rate,
-            "weak_decoder": weak_decoder,
-            "strong_decoder": strong_decoder,
-            "target_switch_rate": target_switch_rate,
-            "code_name": code_name,
-            "p": p,
-            "r": num_rounds,
-            "shots_run": new_shots,
-            "logical_errors": int(np.sum(logical_errors)),
-            "switch_times": int(np.sum(switch_times)),
-            "num_windows": num_windows
-        }   
-    else:
-        dict_to_save = {
-            "task_id": task_id,
-            "basis": basis,
-            "weak_decoder": weak_decoder,
-            "strong_decoder": strong_decoder,
-            "target_switch_rate": target_switch_rate,
-            "code_name": code_name,
-            "p": p,
-            "r": num_rounds,
-            "shots_run": new_shots,
-            "logical_errors": int(np.sum(logical_errors)),
-            "switch_times": int(np.sum(switch_times)),
-            "num_windows": num_windows
-        }                    
 
-    with open(file_name, 'w') as file:
-        json.dump(dict_to_save, file)
+    # check if the file already exists to add to
+
+    shots_run = 0
+    logical_errors = 0
+    switch_times = 0
+    num_windows = 0
+
+    if file_name.exists():
+        try:
+            with open(file_name, 'r') as f:
+                existing_data = json.load(f)
+            shots_run = existing_data.get("shots_run", 0)
+            logical_errors = existing_data.get("logical_errors", 0)
+            switch_times = existing_data.get("switch_times", 0)
+            num_windows = existing_data.get("num_windows", 0)
+            print(f"Found existing progress: {shots_run}/{target_shots} shots already finished.")
+        except Exception as e:
+            print(f"⚠️ Could not load existing file {file_name}. Starting fresh. Error: {e}")
+
+    if shots_run >= target_shots:
+        print(f"Task {task_id} has already completed {target_shots} shots.")
+        return
+
+    if logical_errors > 0:
+        p_estimate = logical_errors / shots_run
+        sigma_estimate = np.sqrt(p_estimate * (1 - p_estimate) / shots_run)
+        rel_error_estimate = sigma_estimate / p_estimate if p_estimate > 0 else float('inf')
+        if rel_error_estimate < rel_error_tol:
+            print(f"Task {task_id} has already achieved the desired relative error tolerance. Skipping further runs.")
+            return
+
+    while shots_run < target_shots:
+        current_batch_size = min(chunk_size, target_shots - shots_run)
+        test  = decoder_switching_class(code_name=code_name,
+                                            num_rounds=num_rounds,
+                                            p=p,
+                                            basis=basis,
+                                            num_shots=current_batch_size,
+                                            W=W,
+                                            F=F,
+                                            strong_decoder_option=strong_decoder,
+                                            weak_decoder_option=weak_decoder,
+                                            erasure_conversion_rate=0.7941 if erasures else 0.0,
+                                            )
+
+        if erasures:
+            new_shots,_,c_switch_times,c_logical_errors = test.decode_with_sliding_window_and_decoder_switching_and_erasure(cluster_norm_cutoff=cutoff, rel_error_tol=rel_error_tol)
+        else:
+            new_shots,_,c_switch_times,c_logical_errors = test.decode_with_sliding_window_and_decoder_switching(cluster_norm_cutoff=cutoff, rel_error_tol=rel_error_tol)
+
+
+        num_windows =len(test.weak_decoder) #total # of windows -- needed for getting switch rates
+        shots_run += new_shots
+        logical_errors += np.sum(c_logical_errors)
+        switch_times += np.sum(c_switch_times)
+
+        dict_to_save = {
+                    "task_id": task_id,
+                    "basis": basis,
+                    "weak_decoder": weak_decoder,
+                    "strong_decoder": strong_decoder,
+                    "target_switch_rate": target_switch_rate,
+                    "code_name": code_name,
+                    "p": p,
+                    "r": num_rounds,
+                    "shots_run": new_shots,
+                    "logical_errors": int(np.sum(logical_errors)),
+                    "switch_times": int(np.sum(switch_times)),
+                    "num_windows": num_windows
+                }              
+
+        if erasures:
+            dict_to_save["erasure_conversion_rate"] = test.erasure_conversion_rate
+                   
+        tmp_file = file_name.with_suffix('.json.tmp')
+        with open(tmp_file, 'w') as file:
+            json.dump(dict_to_save, file)
+
+        tmp_file.replace(file_name)  # Atomic move to avoid partial writes
+        print(f"Task {task_id} progress: {shots_run}/{target_shots} shots completed. Saved to {file_name}")
+
+        if logical_errors > 0:
+            p_estimate = logical_errors / shots_run
+            sigma_estimate = np.sqrt(p_estimate * (1 - p_estimate) / shots_run)
+            rel_error_estimate = sigma_estimate / p_estimate if p_estimate > 0 else float('inf')
+            if rel_error_estimate < rel_error_tol:
+                print(f"Task {task_id} has achieved the desired relative error tolerance. Stopping further runs.")
+                break
+            
+        if new_shots < current_batch_size:
+            print(f"Task {task_id} stopped early after {shots_run} shots due to relative error tolerance.")
+            break
         
     print(f"Task {task_id} finished successfully. Saved to {file_name}")
     return
@@ -1026,26 +1071,26 @@ if __name__ == "__main__":
     erasures=True
 
     # to run on the cluster / get data on cluster
-    get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
+    # get_ler_for_decoder_switching_dcc(num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
-    # merge_dcc_results(
-    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-    #     weak_decoder=weak_decoder,
-    #     strong_decoder=strong_decoder,
-    #     num_shots_max=num_shots     # Update to your actual num_shots
-    # )
+    merge_dcc_results(
+        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+        weak_decoder=weak_decoder,
+        strong_decoder=strong_decoder,
+        num_shots_max=num_shots     # Update to your actual num_shots
+    )
 
-    # # run this to plot the results from decoder switching
-    # plot_decoder_switching_results(
-    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-    #     weak_decoder=weak_decoder,
-    #     strong_decoder=strong_decoder,
-    #     num_shots_max=num_shots,     # Update to your actual num_shots
-    #     include_strong=False,
-    #     include_weak=False,
-    #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
-    # )
+    # run this to plot the results from decoder switching
+    plot_decoder_switching_results(
+        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+        weak_decoder=weak_decoder,
+        strong_decoder=strong_decoder,
+        num_shots_max=num_shots,     # Update to your actual num_shots
+        include_strong=False,
+        include_weak=False,
+        p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
+    )
 
     # hardware indicator plot
     # plot_switching_gains_vs_switch_rate(

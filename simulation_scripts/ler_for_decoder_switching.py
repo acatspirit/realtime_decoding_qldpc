@@ -768,11 +768,18 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
         if strong_decoder == 'relay_bp':
             strong_results_file = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_relay_bp_strong_max_shots_10000000.txt"
         elif strong_decoder == 'tesseract':
+            if erasures:
+                strong_results_file_erasures = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_tesseract_strong_max_shots_10000_erasures_1.txt"
             strong_results_file = script_dir.parent / "data" / "raw" / "single_sliding_window_tesseract_max_shots_100000.txt"
 
         if strong_results_file and strong_results_file.exists():
             with open(strong_results_file, 'r') as file:
                 strong_data_dict = eval(file.read())
+
+            if erasures and strong_results_file_erasures.exists():
+                print("found the strong results file with erasures")
+                with open(strong_results_file_erasures, 'r') as file:
+                    strong_data_dict_erasures = eval(file.read())
         else:
             print(f"Strong decoder results file not found: {strong_results_file}")
             strong_data_dict = None
@@ -813,7 +820,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
                 
                 weak_line, weak_caps, weak_bars = ax.errorbar(
                     w_ps, w_eps_vals, yerr=w_eps_errs,
-                    color=colors[cnt % len(colors)], marker='^', markeredgecolor='k',linestyle='None'
+                    color=colors[cnt % len(colors)], marker='^', markeredgecolor='k',linestyle='None', label=f"{code_name} ({weak_decoder})"
                 )
                 weak_line.set_alpha(0.5)  # Set transparency for weak decoder line 
                 if erasures and weak_data_dict_erasures and code_name in weak_data_dict_erasures.get("epsilons", {}):
@@ -823,7 +830,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
                     
                     weak_line_erasures, weak_caps_erasures, weak_bars_erasures = ax.errorbar(
                         w_ps_erasures, w_eps_vals_erasures, yerr=w_eps_errs_erasures,
-                        color=colors[cnt % len(colors)],  marker='d', markeredgecolor='k',linestyle='None'
+                        color=colors[cnt % len(colors)],  marker='d', markeredgecolor='k',linestyle='None', label=f"{code_name} ({weak_decoder} with erasures)"
                     )
                     weak_line_erasures.set_alpha(0.5)  # Set transparency for weak decoder line with erasures
 
@@ -836,9 +843,20 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 
                 strong_line, strong_caps, strong_bars = ax.errorbar(
                     s_ps, s_eps_vals, yerr=s_eps_errs, 
-                    color=colors[cnt % len(colors)], marker='s', markeredgecolor='k', linestyle='None'
+                    color=colors[cnt % len(colors)], marker='s', markeredgecolor='k', linestyle='None', label=f"{code_name} ({strong_decoder})"
                 )
                 strong_line.set_alpha(0.5)  # Set transparency for strong decoder line
+
+                if erasures and strong_data_dict_erasures and code_name in strong_data_dict_erasures.get("epsilons", {}):
+                    s_ps_erasures = sorted([p for p in strong_data_dict_erasures["epsilons"][code_name].keys() if p_range[0] <= p <= p_range[1]])
+                    s_eps_vals_erasures = [strong_data_dict_erasures["epsilons"][code_name][p] for p in s_ps_erasures if p_range[0] <= p <= p_range[1]]
+                    s_eps_errs_erasures = [strong_data_dict_erasures["std_epsilons"][code_name].get(p, 0) for p in s_ps_erasures if p_range[0] <= p <= p_range[1]]
+
+                    strong_line_erasures, strong_caps_erasures, strong_bars_erasures = ax.errorbar(
+                        s_ps_erasures, s_eps_vals_erasures, yerr=s_eps_errs_erasures,
+                        color=colors[cnt % len(colors)], marker='v', markeredgecolor='k', linestyle='None', label=f"{code_name} ({strong_decoder} with erasures)"
+                    )
+                    strong_line_erasures.set_alpha(0.5)  # Set transparency for strong decoder line with erasures
 
         cnt += 1
     ax.ticklabel_format(style='sci', axis='x', scilimits=(0, 0), useMathText=True) 
@@ -1107,8 +1125,9 @@ if __name__ == "__main__":
         weak_decoder=weak_decoder,
         strong_decoder=strong_decoder,
         num_shots_max=num_shots,     # Update to your actual num_shots
-        include_strong=False,
+        include_strong=True,
         include_weak=True,
+        erasures=True,
         p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
     )
 

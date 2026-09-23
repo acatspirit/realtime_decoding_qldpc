@@ -993,11 +993,12 @@ if __name__ == "__main__":
     strong_decoder = 'tesseract'
     decoder_option = 'strong'
     p_list = np.logspace(-4,-3.5,6)
+    decoder_name = weak_decoder if decoder_option == 'weak' else strong_decoder
     # cutoff=0.8
 
-    get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasures=True,norm_order=2, rel_error_tol=0.01)
+    # get_ler_for_sliding_window_dcc(decoder_name=strong_decoder, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasures=True,norm_order=2, rel_error_tol=0.01)
 
-    # merge_dcc_results_sliding_window(decoder_name=weak_decoder, decoder_option=decoder_option, num_shots_max=num_shots)
+    merge_dcc_results_sliding_window(decoder_name=decoder_name, decoder_option=decoder_option, num_shots_max=num_shots)
 
 
     # txt_to_load = sys.path[-1] + f'/saved_data/single_sliding_window_{strong_decoder}_max_shots_{num_shots}.txt'

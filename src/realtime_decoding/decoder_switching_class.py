@@ -673,7 +673,7 @@ class decoder_switching_class:
                         return N, cluster_norms_per_shot, switch_times_per_shot, np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot,axis=1)             
     
             
-            return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot,axis=1)
+            return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.mean(self.obs_flips ^ logical_pred_single_shot,axis=1)
 
     def decode_with_sliding_window(self, decoder_option: str, norm_order: int, rel_error_tol = 0.2):
         '''

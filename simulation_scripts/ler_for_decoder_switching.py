@@ -744,7 +744,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
     if include_weak: # right now we just want to plot the weak / switching comparison
         if weak_decoder == 'uf':
             if erasures:
-                weak_results_file_erasures = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_uf_weak_max_shots_10000_erasures_1.txt"
+                weak_results_file_erasures = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_uf_weak_max_shots_100000_erasures_1.txt"
             
             #data/sliding_window_results/sliding_window_uf_weak_max_shots_1000000.txt
             weak_results_file = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_uf_weak_max_shots_1000000.txt"
@@ -866,7 +866,7 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
     ax.set_title(f"target $p_s =$ {target_switch_rate}")
     ax.set_xlabel(rf"physical error rate")
     ax.set_ylabel("LER per SEC")
-    ax.set_ylim(bottom=1e-8)
+    ax.set_ylim(bottom=1e-10)
     
     plt.tight_layout()
     plt.show()
@@ -1102,8 +1102,9 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 if __name__ == "__main__":
     num_shots = 1_000_000
-    shots_per_job = 10_000
-    target_switch_rate = 0.001 # superconducting now, not ion-aware
+    batches = 100
+    shots_per_job = num_shots // batches
+    target_switch_rate = 0.01 #  ion-aware
     weak_decoder = 'uf'
     strong_decoder = 'tesseract' # change back to tesseract
     erasures=True

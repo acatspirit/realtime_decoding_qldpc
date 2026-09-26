@@ -5,7 +5,7 @@
 #SBATCH --array=0-499 # should be len(ps) * (num_shots // shots_per_job) * len(code_names) - 1 , 1*100*5-1
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=common,scavenger
-#SBATCH --mem=2G
+#SBATCH --mem=1G
 #SBATCH --time=24:00:00
 
 # Navigate to your project directory (CHANGE THIS TO YOUR PROJECT DIRECTORY)

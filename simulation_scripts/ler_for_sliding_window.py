@@ -987,11 +987,11 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     return dict_to_save
 
 if __name__ == "__main__":
-    num_shots      = 100_000
+    num_shots      = 1_000_000
     batches        = 20
     weak_decoder   = 'uf'
-    strong_decoder = 'tesseract'
-    decoder_option = 'weak'
+    strong_decoder = 'relay_bp'
+    decoder_option = 'strong'
     p_list = np.logspace(-4,-3.5,6)
     decoder_name = weak_decoder if decoder_option == 'weak' else strong_decoder
     # cutoff=0.8

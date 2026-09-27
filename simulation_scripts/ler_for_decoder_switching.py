@@ -345,7 +345,7 @@ def get_ler_for_decoder_switching_dcc(
         erasures=True,
         basis='Z',
         code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
-        ps = np.logspace(-4,-3.5,6)[2:3],
+        ps = np.logspace(-4,-3.5,6)[5:],
         num_rounds = 25,
         rel_error_tol = 0.01
         ):
@@ -766,6 +766,8 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 
     if include_strong:
         if strong_decoder == 'relay_bp':
+            # if erasures:
+            #     strong_results_file_erasures = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_relay_bp_strong_max_shots_10000000_erasures_1.txt"
             strong_results_file = script_dir.parent / "data" / "sliding_window_results" / "sliding_window_relay_bp_strong_max_shots_10000000.txt"
         elif strong_decoder == 'tesseract':
             if erasures:
@@ -1101,7 +1103,7 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 
 if __name__ == "__main__":
-    num_shots = 1_000_000
+    num_shots = 10_000_000
     batches = 100
     shots_per_job = num_shots // batches
     target_switch_rate = 0.01 #  ion-aware
@@ -1110,7 +1112,7 @@ if __name__ == "__main__":
     erasures=True
 
     # to run on the cluster / get data on cluster
-    get_ler_for_decoder_switching_dcc(ps = np.logspace(-4, -3.5, 6)[5:], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
+    get_ler_for_decoder_switching_dcc(ps = np.logspace(-4, -3.5, 6)[6:], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
     # merge_dcc_results(
@@ -1126,7 +1128,7 @@ if __name__ == "__main__":
     #     weak_decoder=weak_decoder,
     #     strong_decoder=strong_decoder,
     #     num_shots_max=num_shots,     # Update to your actual num_shots
-    #     include_strong=True,
+    #     include_strong=False,
     #     include_weak=True,
     #     erasures=True,
     #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot

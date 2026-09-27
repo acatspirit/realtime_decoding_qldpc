@@ -988,7 +988,7 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
 
 if __name__ == "__main__":
     num_shots      = 1_000_000
-    batches        = 20
+    batches        = 100
     weak_decoder   = 'uf'
     strong_decoder = 'relay_bp'
     decoder_option = 'strong'

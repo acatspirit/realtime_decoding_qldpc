@@ -50,7 +50,7 @@ def process_one_round_value(code_name,p,num_shots,norm_order, num_rounds=25, bas
 
 def get_cluster_norm_distributions_and_switch_probs( basis      = 'Z',
                                                     code_names = ["[[72,12,6]]", "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
-                                                    strong_decoder = 'realy_bp',
+                                                    strong_decoder = 'relay_bp',
                                                     weak_decoder='bplsd',
                                                     decoder_option = 'weak',
                                                     num_shots=10_000,

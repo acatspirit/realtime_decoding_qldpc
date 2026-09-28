@@ -32,12 +32,12 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
     decoder_option = 'weak'
     strong_decoder = 'relay_bp' #doesnt matter
     num_rounds = 25
-    rel_error_tol = 0.1 #10%
+    rel_error_tol = 0.01 #10%
 
     if weak_decoder == 'bplsd':
         ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] # p_switch
     elif weak_decoder=='uf':
-        ps = np.logspace(-4,-3.5,6)
+        ps = np.logspace(-3,-2.5,3)# adjusted from -4 to -3.5 for erasures
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
         
@@ -58,6 +58,8 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
                                             W=W,
                                             F=F,
                                             strong_decoder_option=strong_decoder,
+                                            erasure_conversion_rate=0, # change this later to test
+                                            decode_with_erasures=False,
                                             weak_decoder_option=weak_decoder)    
         
         new_shots,cluster_norms,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order,
@@ -114,26 +116,26 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
                         'decoder': weak_decoder,
                         'norm_order': norm_order,
                         'cluster_norms': cluster_norms,
-                        'switch_rates': switch_rates,
-                        'cutoffs': cutoffs,
-                        'all_cluster_norms_per_p': all_data
+                        # 'switch_rates': switch_rates,
+                        # 'cutoffs': cutoffs,
+                        # 'all_cluster_norms_per_p': all_data
 
         }
 
         
         
-        txt_to_save = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+        txt_to_save = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.pkl.gz'
         file_path = Path(txt_to_save)
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
 
-        with open(txt_to_save, "wb") as file:
+        with gzip.open(txt_to_save, "wb") as file:
             pickle.dump(dict_to_save, file)
     else:
         if weak_decoder == 'bplsd':
             file_name = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
         elif weak_decoder=='uf':
-            file_name = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+            file_name = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_erasure_0.txt'
 
         if Path(file_name).name.endswith('.pkl.gz'):
             with gzip.open(file_name, "rb") as file:
@@ -143,8 +145,8 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
                 data = pickle.load(file)
 
         cluster_norms = data['cluster_norms']
-        switch_rates  = data['switch_rates']
-        cutoffs       = data['cutoffs']
+        # switch_rates  = data['switch_rates']
+        # cutoffs       = data['cutoffs']
         # all_cluster_norms_per_p = data['all_cluster_norms_per_p']
             
     
@@ -244,7 +246,7 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='bplsd',nu
         if weak_decoder == 'bplsd':
             txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
         elif weak_decoder=='uf':
-            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.pkl.gz'
+            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_erasure_0.pkl.gz'
 
         if Path(txt_to_load).name.endswith('.pkl.gz'):
             with gzip.open(txt_to_load, "rb") as file:
@@ -312,12 +314,12 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='bplsd',nu
 if __name__ == "__main__":
 
     # code_name = "[[72,12,6]]" 
-    # code_name = "[[90,8,10]]" 
+    code_name = "[[90,8,10]]" 
     # code_name = "[[126,8,10]]"
     # code_name = "[[144,12,12]]"
-    code_name = "[[162,8,14]]"
-    num_shots = 100_000
-    shots_per_job = 20_000
+    # code_name = "[[162,8,14]]"
+    num_shots = 500_000
+    shots_per_job = 100_000
 
-    switch_rate_vs_p(code_name = code_name, weak_decoder='bplsd',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
+    switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job, get_data=True,norm_order=2)
     # get_cutoffs_for_input_switch_rate(target_switch_rate=0.01,weak_decoder='uf',num_shots=num_shots,plot=True)

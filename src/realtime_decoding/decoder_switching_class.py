@@ -200,7 +200,6 @@ class decoder_switching_class:
 
 
         else: #Sample from regular circuit 
-
             sampler    = circuit.compile_detector_sampler()
             detection_events,obs_flips = sampler.sample(shots=num_shots,separate_observables=True)
             detection_events = np.array(detection_events,dtype=np.uint8)
@@ -385,8 +384,6 @@ class decoder_switching_class:
             cluster_norm: the calculated cluster norm for this window, calculated and normalized only over faults in commit region F
             
         '''
-        # TODO: add shot index here
-        # change these variables to also index by the shot index if using erasures
         k               = current_window_index
         decoder         = self.weak_decoder[k]
         num_faults_in_F = self.window_observable_set[k].shape[1] #number of faults in commit region F

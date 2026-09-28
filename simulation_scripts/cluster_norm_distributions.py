@@ -315,11 +315,11 @@ if __name__ == "__main__":
 
     # code_name = "[[72,12,6]]" 
     # code_name = "[[90,8,10]]" 
-    code_name = "[[126,8,10]]"
-    # code_name = "[[144,12,12]]"
+    # code_name = "[[126,8,10]]"
+    code_name = "[[144,12,12]]"
     # code_name = "[[162,8,14]]"
     num_shots = 500_000
-    shots_per_job = 100_000
+    shots_per_job = 50_000
 
     switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job, get_data=True,norm_order=2)
     # get_cutoffs_for_input_switch_rate(target_switch_rate=0.01,weak_decoder='uf',num_shots=num_shots,plot=True)

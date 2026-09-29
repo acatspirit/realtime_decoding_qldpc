@@ -33,12 +33,13 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
     strong_decoder = 'relay_bp' #doesnt matter
     num_rounds = 25
     rel_error_tol = 0.01 #10%
-    min_order = 3
+    min_order = 4
 
     if weak_decoder == 'bplsd':
         ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] # p_switch
     elif weak_decoder=='uf':
-        ps = np.logspace(-min_order,-(min_order-0.5),3)# adjusted from -4 to -3.5 for erasures
+        # ps = np.logspace(-min_order,-(min_order-0.5),3)# adjusted from -4 to -3.5 for erasures
+        ps = [10**(-3.5), 5e-4,7e-4]
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
         
@@ -318,9 +319,11 @@ if __name__ == "__main__":
     # code_name = "[[90,8,10]]" 
     # code_name = "[[126,8,10]]"
     # code_name = "[[144,12,12]]"
-    code_name = "[[162,8,14]]"
-    num_shots = 500_000
-    shots_per_job = 50_000
-    for code_name in ["[[144,12,12]]","[[162,8,14]]"]:
+    # code_name = "[[162,8,14]]"
+
+    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"]
+    num_shots = 100_000
+    shots_per_job = 10_000
+    for code_name in code_names:
         switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job, get_data=True,norm_order=2)
     # get_cutoffs_for_input_switch_rate(target_switch_rate=0.01,weak_decoder='uf',num_shots=num_shots,plot=True)

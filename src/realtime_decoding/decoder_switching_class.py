@@ -482,7 +482,7 @@ class decoder_switching_class:
         Input:
             cluster_norm_cuoff: max cluster size accepted to accept weak decoder's correction
             norm_order: integer defining the cluster norm order for the weak decoder
-            reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = \sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
+            reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
 
         Outputs:
             N: new number of shots which can be different than self.num_shots, if we reached the rel_error accuracy faster than the total number of shots specified.
@@ -580,7 +580,7 @@ class decoder_switching_class:
             Input:
                 cluster_norm_cuoff: max cluster size accepted to accept weak decoder's correction
                 norm_order: integer defining the cluster norm order for the weak decoder
-                reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = \sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
+                reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
     
             Outputs:
                 N: new number of shots which can be different than self.num_shots, if we reached the rel_error accuracy faster than the total number of shots specified.
@@ -591,8 +591,8 @@ class decoder_switching_class:
             '''
     
             num_checks   = self.h.shape[0]
-            # logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
-            logical_pred_single_shot = np.zeros(self.logical.shape[0], dtype=np.uint8) # for erasure decoding, we only decode one shot at a time
+            logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
+            # logical_pred_single_shot = np.zeros(self.logical.shape[0], dtype=np.uint8) # for erasure decoding, we only decode one shot at a time
     
             cluster_norms_per_shot = []
             switch_times_per_shot  = []
@@ -605,7 +605,8 @@ class decoder_switching_class:
             epsilon        = rel_error_tol   #default is 20% relative error -- should be chosen based on how we simulate this externally (e.g., if we break into tasks of shots via multiprocessing we don't need a very small epsilon)
             shots_to_check = 20              #how often to check the precision in LER
     
-    
+            obs_flips_tot = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
+
             for shot_index in range(self.num_shots):
                 self.reset_for_erasures() # reset the params so that we increment for a new set of shots
     
@@ -651,11 +652,14 @@ class decoder_switching_class:
                     accumulated_correction = accumulated_correction_weak
     
     
-                logical_pred_single_shot[:] = accumulated_correction
+                logical_pred[shot_index,:] = accumulated_correction
                 cluster_norms_per_shot.append(cluster_norm_per_window)
                 switch_times_per_shot.append(switch_times)
     
-                failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot[:])
+                # failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot[:])
+                obs_flips_tot[shot_index,:] = self.obs_flips
+                failures_cnt += np.mean(self.obs_flips ^ logical_pred[shot_index,:]) 
+                # print(f"failures this shot: {failures_cnt}, shape of obs: {self.obs_flips.shape}, shape of log {logical_pred.shape}")
     
                 if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0: # fix this area
                     N = shot_index + 1
@@ -667,10 +671,11 @@ class decoder_switching_class:
     
                         print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
     
-                        return N, cluster_norms_per_shot, switch_times_per_shot, np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot,axis=1)             
+                        return N, cluster_norms_per_shot, switch_times_per_shot, np.mean(obs_flips_tot[:N,:] ^ logical_pred[:N,:], axis=1)
+                        # return N, cluster_norms_per_shot, switch_times_per_shot, np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot,axis=1)             
     
             
-            return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.mean(self.obs_flips ^ logical_pred_single_shot,axis=1)
+            return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.mean(obs_flips_tot ^ logical_pred,axis=1)
 
     def decode_with_sliding_window(self, decoder_option: str, norm_order: int, rel_error_tol = 0.2):
         '''
@@ -679,7 +684,7 @@ class decoder_switching_class:
         Input:
             decoder_option: 'weak' or 'strong' and uses the weak or strong set upon initialization
             norm_order: integer defining the cluster norm order, in case we use the weak decoder
-            reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = \sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
+            reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
 
         Outputs:
             N: new number of shots which can be different than self.num_shots, if we reached the rel_error accuracy faster than the total number of shots specified.
@@ -784,7 +789,7 @@ class decoder_switching_class:
             Input:
                 decoder_option: 'weak' or 'strong' and uses the weak or strong set upon initialization
                 norm_order: integer defining the cluster norm order, in case we use the weak decoder
-                reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = \sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
+                reL_error_tol: relative error tolerance sigma_{p_L}/p_L where sigma_{p_L} = sqrt{p_L*(1-p_L)/N}. If we reach the rel_error_tol, then we can exit early the computation.
     
             Outputs:
                 N: new number of shots which can be different than self.num_shots, if we reached the rel_error accuracy faster than the total number of shots specified.

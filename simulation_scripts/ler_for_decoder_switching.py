@@ -6,6 +6,7 @@ import subprocess
 import shutil
 import sys
 import os
+import math
 import gzip
 from pathlib import Path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
@@ -31,7 +32,7 @@ sys.path.insert(0, str(script_dir.parent))
 Adjust for UF
 '''
 
-def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='bplsd',num_shots=100_000,plot=False, p_list = np.logspace(-3,-2.5,3), norm_order=2):
+def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_shots=100_000,plot=False, p_list = np.logspace(-3,-2.5,3), norm_order=2):
 
     code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]
     min_order = math.ceil(-np.log10(p_list[0]))
@@ -381,7 +382,7 @@ def get_ler_for_decoder_switching_dcc(
 
     # colors = ["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
     task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID"),0)
-    chunk_size = 0.1*shots_per_job
+    chunk_size = shots_per_job/10
     
     tasks = []
 
@@ -1130,7 +1131,7 @@ if __name__ == "__main__":
     erasures=True
 
     # to run on the cluster / get data on cluster
-    # get_ler_for_decoder_switching_dcc(ps = np.logspace(-4, -3.5, 6)[5:], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
+    get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
     # merge_dcc_results(
@@ -1141,16 +1142,16 @@ if __name__ == "__main__":
     # )
 
     # run this to plot the results from decoder switching
-    plot_decoder_switching_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots,     # Update to your actual num_shots
-        include_strong=False,
-        include_weak=True,
-        erasures=True,
-        p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
-    )
+    # plot_decoder_switching_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots,     # Update to your actual num_shots
+    #     include_strong=False,
+    #     include_weak=True,
+    #     erasures=True,
+    #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
+    # )
 
     # hardware indicator plot
     # plot_switching_gains_vs_switch_rate(

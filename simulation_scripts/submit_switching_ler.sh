@@ -2,11 +2,11 @@
 #SBATCH --job-name=qec_sim
 #SBATCH --output=logs_%A_%a.out
 #SBATCH --error=logs_%A_%a.err
-#SBATCH --array=0-499 # should be len(ps) * (num_shots // shots_per_job) * len(code_names) - 1 , 1*100*5-1
+#SBATCH --array=0-1499 # should be len(ps) * (num_shots // shots_per_job) * len(code_names) - 1 , 3*100*5-1
 #SBATCH --cpus-per-task=1
 #SBATCH --partition=common,scavenger
 #SBATCH --mem=2G
-#SBATCH --time=24:00:00
+#SBATCH --time=18:00:00
 
 # Navigate to your project directory (CHANGE THIS TO YOUR PROJECT DIRECTORY)
 cd /hpc/group/brownlab/am1155/realtime_decoding_qldpc

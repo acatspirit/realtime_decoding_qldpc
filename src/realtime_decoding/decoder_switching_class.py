@@ -800,7 +800,7 @@ class decoder_switching_class:
     
             num_checks   = self.h.shape[0]
             num_logicals = self.window_observable_set[0].shape[0]
-            logical_pred = np.zeros(self.logical.shape[0], dtype=np.uint8)
+            logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
     
             W = self.W 
             F = self.F
@@ -809,6 +809,8 @@ class decoder_switching_class:
             failures_cnt   = 0               #count decoded logical failures
             epsilon        = rel_error_tol   #default is 20% relative error -- should be chosen based on how we simulate this externally (e.g., if we break into tasks of shots via multiprocessing we don't need a very small epsilon)
             shots_to_check = 20              #how often to check the precision in LER
+
+            obs_flips_tot = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
     
             if decoder_option=='weak':
     
@@ -831,10 +833,11 @@ class decoder_switching_class:
                     cluster_norm_per_window.append(cluster_norm)
     
     
-                    logical_pred[:] = accumulated_correction
+                    logical_pred[shot_index,:] = accumulated_correction
                     cluster_norms_per_shot.append(cluster_norm_per_window)
-    
-                    failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred)
+
+                    obs_flips_tot[shot_index,:] = self.obs_flips
+                    failures_cnt += np.mean(self.obs_flips ^ logical_pred[shot_index:])
     
                     if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
                         N = shot_index + 1
@@ -846,10 +849,10 @@ class decoder_switching_class:
     
                             print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
     
-                            return N, cluster_norms_per_shot, np.mean(self.obs_flips[0,:] ^ logical_pred,axis=1) 
+                            return N, cluster_norms_per_shot, np.mean(obs_flips_tot[:N,:] ^ logical_pred[:N,:],axis=1) 
     
                 
-                return self.num_shots,cluster_norms_per_shot, np.mean(self.obs_flips ^ logical_pred,axis=1)
+                return self.num_shots,cluster_norms_per_shot, np.mean(obs_flips_tot ^ logical_pred,axis=1)
     
             elif decoder_option=='strong':
     
@@ -867,9 +870,9 @@ class decoder_switching_class:
                     #decode the last window
                     accumulated_correction = self.decode_last_window_w_strong_decoder(F, num_checks, 0, syn_update, num_cor_rounds, accumulated_correction)
                     
-                    logical_pred[:] = accumulated_correction
-    
-                    failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred)
+                    logical_pred[shot_index,:] = accumulated_correction
+                    obs_flips_tot[shot_index,:] = self.obs_flips
+                    failures_cnt += np.mean(self.obs_flips ^ logical_pred[shot_index,:])
     
                     
                     if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0:
@@ -883,10 +886,10 @@ class decoder_switching_class:
     
                             print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
     
-                            return N, np.mean(self.obs_flips[0,:] ^ logical_pred,axis=1) #output updated shots
+                            return N, np.mean(obs_flips_tot[:N,:] ^ logical_pred[:N,:],axis=1) #output updated shots
     
     
-                return self.num_shots,np.mean(self.obs_flips ^ logical_pred,axis=1)
+                return self.num_shots,np.mean(obs_flips_tot ^ logical_pred,axis=1)
     
             return 
 

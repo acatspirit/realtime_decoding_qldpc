@@ -31,11 +31,14 @@ sys.path.insert(0, str(script_dir.parent))
 Adjust for UF
 '''
 
-def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False, weak_decoder='uf', num_shots=500_000, p_min = 3, num_ps=3, folder_name = sys.path[-1] + f'/data/cluster_norm_statistics/'):
+def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False, weak_decoder='uf', num_shots=500_000, p_min = 3, num_ps=3, folder_name = sys.path[-1] + f'/data/cluster_norm_statistics/', file_name = None):
 
 
     code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"] 
     cutoffs_to_set = {}
+    if file_name == None:
+        file_name = f'cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(10**-p_min,p_min+1)}_to_{np.round(10**-(p_min-0.5), p_min+1)}.pkl.gz'
+
 
     if plot:
         fig,ax = plt.subplots(1,5,figsize=(20,5))
@@ -44,7 +47,7 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False, weak_decode
     cnt=0
     for code_name in code_names:
     
-        txt_to_load = folder_name + f'cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(10**-p_min,p_min+1)}_to_{np.round(10**-(p_min-0.5), p_min+1)}.pkl.gz'
+        txt_to_load = folder_name + file_name
 
         if Path(txt_to_load).name.endswith('.pkl.gz'):
             with gzip.open(txt_to_load, "rb") as file:

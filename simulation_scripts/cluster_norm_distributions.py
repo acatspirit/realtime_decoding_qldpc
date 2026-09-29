@@ -25,7 +25,7 @@ import pickle
 to determine the target cutoff.
 '''
 
-def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=500_000, shots_per_job=5_000,norm_order=2, get_data=False):
+def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=500_000, shots_per_job=5_000,norm_order=2, get_data=False, plot_data=False):
 
     basis      = 'Z' #basis determining the memory experiment for the BB codes
     
@@ -70,6 +70,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
         print("Sim done.")
 
         return code_name,p,new_shots,result,logical_errors
+
     if get_data:
         tasks = []
         import multiprocessing as mp
@@ -109,6 +110,23 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
             total_shots[(code_name,p)]  += shot
             error_per_case[(code_name,p)] = np.concatenate((error_per_case[(code_name,p)],temp),axis=0)
 
+        # Choose a common cutoff grid spanning all p values
+        all_data = np.concatenate(  [cluster_norms[(code_name, p)].flatten() for p in ps] )
+
+        gmin = np.min(all_data[all_data > 0])
+        gmax = np.max(all_data)
+
+        cutoffs = np.logspace(np.log10(gmin), np.log10(gmax), 150)
+
+        switch_rates = np.zeros((len(ps), len(cutoffs)))
+
+        for i, p in enumerate(ps):
+            data = cluster_norms[(code_name, p)].flatten()
+
+            for j, g_th in enumerate(cutoffs):
+                switch_rates[i, j] = np.mean(data > g_th)
+
+        switch_rates = np.ma.masked_equal(switch_rates, 0)
 
             
         dict_to_save = {'code_name': code_name,
@@ -116,9 +134,9 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
                         'decoder': weak_decoder,
                         'norm_order': norm_order,
                         'cluster_norms': cluster_norms,
-                        # 'switch_rates': switch_rates,
-                        # 'cutoffs': cutoffs,
-                        # 'all_cluster_norms_per_p': all_data
+                        'switch_rates': switch_rates,
+                        'cutoffs': cutoffs,
+                        'all_cluster_norms_per_p': all_data
 
         }
 
@@ -135,7 +153,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
         if weak_decoder == 'bplsd':
             file_name = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
         elif weak_decoder=='uf':
-            file_name = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{ps[0]}_to_{ps[-1]}.txt'
+            file_name = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{ps[0]}_to_{ps[-1]}.pkl.gz'
 
         if Path(file_name).name.endswith('.pkl.gz'):
             with gzip.open(file_name, "rb") as file:
@@ -145,83 +163,65 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
                 data = pickle.load(file)
 
         cluster_norms = data['cluster_norms']
-        # switch_rates  = data['switch_rates']
-        # cutoffs       = data['cutoffs']
-        # all_cluster_norms_per_p = data['all_cluster_norms_per_p']
+        switch_rates  = data['switch_rates']
+        cutoffs       = data['cutoffs']
+        all_cluster_norms_per_p = data['all_cluster_norms_per_p']
             
-    
-    fig, ax = plt.subplots(2,1, figsize=(10,8))
+    if plot_data:
+        fig, ax = plt.subplots(2,1, figsize=(10,8))
 
-    colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple","tab:brown","tab:pink"]
-    cnt=0
+        colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple","tab:brown","tab:pink"]
+        cnt=0
 
-    for p in ps:
+        for p in ps:
+
+            data     = cluster_norms[(code_name,p)].flatten()
+            log_data = np.log10(data[data>0])
+
+            ax[0].hist(
+                log_data,
+                bins=20,
+                label=rf"p={round(p*10**3,2)} $\times 10^{{-3}}$" if weak_decoder=='bplsd' else rf"p={round(p*10**3,2)} $\times 10^{{-3}}$",
+                color=colors[cnt],
+                weights=np.ones_like(log_data) / len(log_data),
+                alpha=0.7,
+            )     
+
+            ax[0].axvline(np.median(log_data), linestyle='--', color=colors[cnt]) #label='median',
+            cnt+=1
+            
         
-        data     = cluster_norms[(code_name,p)].flatten()
-        log_data = np.log10(data[data>0])
-
-        ax[0].hist(
-            log_data,
-            bins=20,
-            label=rf"p={round(p*10**3,2)} $\times 10^{{-3}}$" if weak_decoder=='bplsd' else rf"p={round(p*10**4,2)} $\times 10^{{-4}}$",
-            color=colors[cnt],
-            weights=np.ones_like(log_data) / len(log_data),
-            alpha=0.7,
-        )     
-
-        ax[0].axvline(np.median(log_data), linestyle='--', color=colors[cnt]) #label='median',
-        cnt+=1
+        ax[0].set_xlabel(r'$\log_{10}(\mathrm{cluster\ norm})$')
+        ax[0].set_ylabel("Norm. counts")
+        ax[0].set_title(f"$N=${num_shots}, $r={num_rounds}$, {code_name} with {weak_decoder}")
+        ax[0].legend(fontsize=13, loc='upper right')
         
-    
-    ax[0].set_xlabel(r'$\log_{10}(\mathrm{cluster\ norm})$')
-    ax[0].set_ylabel("Norm. counts")
-    ax[0].set_title(f"$N=${num_shots}, $r={num_rounds}$, {code_name} with {weak_decoder}")
-    ax[0].legend(fontsize=13, loc='upper right')
-    
-    
+        
+
+        cmap = plt.cm.viridis.copy()
+        cmap.set_bad(color="white")   # masked values -> white
 
 
-    # Choose a common cutoff grid spanning all p values
-    all_data = np.concatenate(  [cluster_norms[(code_name, p)].flatten() for p in ps] )
+        from matplotlib.colors import LogNorm
+        pcm = ax[1].pcolormesh(
+            cutoffs,
+            ps,
+            switch_rates,
+            shading="auto",
+            cmap="viridis",
+            norm=LogNorm(vmin=switch_rates.min(), vmax=switch_rates.max())
+        )
 
-    gmin = np.min(all_data[all_data > 0])
-    gmax = np.max(all_data)
+        ax[1].set_xscale("log")
+        ax[1].set_yscale("log")
 
-    cutoffs = np.logspace(np.log10(gmin), np.log10(gmax), 150)
+        ax[1].set_xlabel(r"$q_{\rm th}$")
+        ax[1].set_ylabel(r"$p$")
+        cbar = plt.colorbar(pcm, ax=ax[1])
+        cbar.set_label(r"$p_{\rm switch}$")
 
-    switch_rates = np.zeros((len(ps), len(cutoffs)))
-
-    for i, p in enumerate(ps):
-        data = cluster_norms[(code_name, p)].flatten()
-
-        for j, g_th in enumerate(cutoffs):
-            switch_rates[i, j] = np.mean(data > g_th)
-
-    switch_rates = np.ma.masked_equal(switch_rates, 0)
-    cmap = plt.cm.viridis.copy()
-    cmap.set_bad(color="white")   # masked values -> white
-
-
-    from matplotlib.colors import LogNorm
-    pcm = ax[1].pcolormesh(
-        cutoffs,
-        ps,
-        switch_rates,
-        shading="auto",
-        cmap="viridis",
-        norm=LogNorm(vmin=switch_rates.min(), vmax=switch_rates.max())
-    )
-
-    ax[1].set_xscale("log")
-    ax[1].set_yscale("log")
-
-    ax[1].set_xlabel(r"$q_{\rm th}$")
-    ax[1].set_ylabel(r"$p$")
-    cbar = plt.colorbar(pcm, ax=ax[1])
-    cbar.set_label(r"$p_{\rm switch}$")
-
-    plt.tight_layout()
-    plt.show()            
+        plt.tight_layout()
+        plt.show()            
 
     #to load do:
     # with open(txt_to_load, "rb") as file:
@@ -316,10 +316,10 @@ if __name__ == "__main__":
     # code_name = "[[72,12,6]]" 
     # code_name = "[[90,8,10]]" 
     # code_name = "[[126,8,10]]"
-    code_name = "[[144,12,12]]"
-    # code_name = "[[162,8,14]]"
+    # code_name = "[[144,12,12]]"
+    code_name = "[[162,8,14]]"
     num_shots = 500_000
     shots_per_job = 50_000
-
-    switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job, get_data=True,norm_order=2)
+    for code_name in ["[[144,12,12]]","[[162,8,14]]"]:
+        switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job, get_data=True,norm_order=2)
     # get_cutoffs_for_input_switch_rate(target_switch_rate=0.01,weak_decoder='uf',num_shots=num_shots,plot=True)

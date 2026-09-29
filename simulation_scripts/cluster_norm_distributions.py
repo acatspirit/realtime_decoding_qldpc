@@ -33,11 +33,12 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
     strong_decoder = 'relay_bp' #doesnt matter
     num_rounds = 25
     rel_error_tol = 0.01 #10%
+    min_order = 3
 
     if weak_decoder == 'bplsd':
         ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] # p_switch
     elif weak_decoder=='uf':
-        ps = np.logspace(-3,-2.5,3)# adjusted from -4 to -3.5 for erasures
+        ps = np.logspace(-min_order,-(min_order-0.5),3)# adjusted from -4 to -3.5 for erasures
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
         
@@ -121,10 +122,10 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
         switch_rates = np.zeros((len(ps), len(cutoffs)))
 
         for i, p in enumerate(ps):
-            data = cluster_norms[(code_name, p)].flatten()
+            norm_array = cluster_norms[(code_name, p)].flatten()
 
             for j, g_th in enumerate(cutoffs):
-                switch_rates[i, j] = np.mean(data > g_th)
+                switch_rates[i, j] = np.mean(norm_array > g_th)
 
         switch_rates = np.ma.masked_equal(switch_rates, 0)
 
@@ -137,12 +138,12 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
                         'switch_rates': switch_rates,
                         'cutoffs': cutoffs,
                         'all_cluster_norms_per_p': all_data
-
+ 
         }
 
         
         
-        txt_to_save = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{ps[0]}_to_{ps[-1]}.pkl.gz'
+        txt_to_save = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(ps[0], min_order+1)}_to_{np.round(ps[-1], min_order+1)}.pkl.gz'
         file_path = Path(txt_to_save)
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -153,7 +154,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
         if weak_decoder == 'bplsd':
             file_name = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
         elif weak_decoder=='uf':
-            file_name = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{ps[0]}_to_{ps[-1]}.pkl.gz'
+            file_name = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(ps[0], min_order+1)}_to_{np.round(ps[-1], min_order+1)}.pkl.gz'
 
         if Path(file_name).name.endswith('.pkl.gz'):
             with gzip.open(file_name, "rb") as file:
@@ -181,7 +182,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
             ax[0].hist(
                 log_data,
                 bins=20,
-                label=rf"p={round(p*10**3,2)} $\times 10^{{-3}}$" if weak_decoder=='bplsd' else rf"p={round(p*10**3,2)} $\times 10^{{-3}}$",
+                label=rf"p={round(p*10**min_order,2)} $\times 10^{{-{min_order}}}$" if weak_decoder=='bplsd' else rf"p={round(p*10**min_order,2)} $\times 10^{{-{min_order}}}$",
                 color=colors[cnt],
                 weights=np.ones_like(log_data) / len(log_data),
                 alpha=0.7,

@@ -92,6 +92,9 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_s
                 legend_handles.append(line)
                 legend_labels.append(rf"$p={round(ps[k]*10**3,2)} \times 10^{{-3}}$")
         cnt+=1
+        
+
+    if plot:
         fig.legend(
             legend_handles,
             legend_labels,
@@ -103,8 +106,6 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_s
         fig.supxlabel("cutoff")
         fig.supylabel("switch rate")
         fig.suptitle(rf"{weak_decoder} with $p_s$ = {target_switch_rate}")
-
-    if plot:
         print(cutoffs_to_set)
         plt.tight_layout()
         plt.show()

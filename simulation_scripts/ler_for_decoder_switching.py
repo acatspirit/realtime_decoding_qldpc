@@ -1128,7 +1128,7 @@ if __name__ == "__main__":
     shots_per_job = num_shots // batches
     target_switch_rate = 0.01 #  ion-aware
     weak_decoder = 'uf'
-    strong_decoder = 'relay_bp' # change back to tesseract
+    strong_decoder = 'tesseract' # change back to tesseract
     erasures=True
 
     # to run on the cluster / get data on cluster

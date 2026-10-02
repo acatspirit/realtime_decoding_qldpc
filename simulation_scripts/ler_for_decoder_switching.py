@@ -1151,7 +1151,7 @@ if __name__ == "__main__":
     #     include_strong=False,
     #     include_weak=True,
     #     erasures=True,
-    #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
+    #     p_range=(10**(-4), 10**(-2.5))  # Optional: specify a range of p values to plot
     # )
 
     # hardware indicator plot

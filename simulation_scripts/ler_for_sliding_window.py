@@ -625,7 +625,7 @@ def get_ler_for_sliding_window_dcc(
         erasures=True,
         basis='Z',
         code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
-        ps = np.logspace(-4,-3.5,6)[2:3],
+        ps = [10**(-3.5), 5e-4, 7e-4],
         num_rounds = 25):
     '''
     Inputs:
@@ -991,8 +991,8 @@ if __name__ == "__main__":
     batches        = 100
     weak_decoder   = 'uf'
     strong_decoder = 'relay_bp'
-    decoder_option = 'strong'
-    p_list = np.logspace(-4,-3.5,6)
+    decoder_option = 'weak'
+    p_list = [10**(-3.5), 5e-4, 7e-4]
     decoder_name = weak_decoder if decoder_option == 'weak' else strong_decoder
     # cutoff=0.8
 

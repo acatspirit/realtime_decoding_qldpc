@@ -411,7 +411,9 @@ class decoder_switching_class:
 
         
         #----- Reconfigure the weak decoder --------------------------------------
-        self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, erased_errors_set=self.erased_errors_set, )
+        # self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, erased_errors_set=self.erased_errors_set, )
+        
+        erasures = self.erased_errors_set #No need to reconfigure the decoder, it has remained the same
         self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
 
         return 

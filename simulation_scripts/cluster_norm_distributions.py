@@ -1,12 +1,8 @@
-import math
 import sys
 import os
-from pathlib import Path
-
-from pyparsing import line
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
 
-import gzip
+
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
@@ -25,7 +21,7 @@ import pickle
 to determine the target cutoff.
 '''
 
-def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=500_000, shots_per_job=5_000,norm_order=2, get_data=False, plot_data=False):
+def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=10_000, shots_per_job=5_000,norm_order=2):
 
     basis      = 'Z' #basis determining the memory experiment for the BB codes
     
@@ -33,13 +29,11 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
     strong_decoder = 'relay_bp' #doesnt matter
     num_rounds = 25
     rel_error_tol = 0.01 #10%
-    min_order = 4
 
     if weak_decoder == 'bplsd':
-        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] # p_switch
+        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] #
     elif weak_decoder=='uf':
-        # ps = np.logspace(-min_order,-(min_order-0.5),3)# adjusted from -4 to -3.5 for erasures
-        ps = [10**(-3.5), 5e-4,7e-4]
+        ps = [1e-4,2e-4,3e-4,4e-4,5e-4]
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
         
@@ -60,9 +54,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
                                             W=W,
                                             F=F,
                                             strong_decoder_option=strong_decoder,
-                                            erasure_conversion_rate=0, # change this later to test
-                                            decode_with_erasures=False,
-                                            weak_decoder_option=weak_decoder)    
+                                            weak_decoder_option=weak_decoder,)    
         
         new_shots,cluster_norms,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order,
                                                                                  rel_error_tol=rel_error_tol) 
@@ -73,157 +65,135 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
 
         return code_name,p,new_shots,result,logical_errors
 
-    if get_data:
-        tasks = []
-        import multiprocessing as mp
-        n_jobs = mp.cpu_count()    
-        chunk_size = max(shots_per_job, num_shots // (100 * n_jobs)) 
+    tasks = []
+    import multiprocessing as mp
+    n_jobs = mp.cpu_count()    
+    chunk_size = max(shots_per_job, num_shots // (100 * n_jobs)) 
 
-        for p in ps:
+    for p in ps:
 
-            tasks.extend( (code_name,p,chunk_size)
-                        for _ in range(num_shots // chunk_size) )       
+        tasks.extend( (code_name,p,chunk_size)
+                       for _ in range(num_shots // chunk_size) )       
 
-        results = Parallel(n_jobs=-1,verbose=10,)(delayed(process_one_round_value)(code_name,p,shots,norm_order) for code_name, p,shots in tasks)      
+    results = Parallel(n_jobs=-1,verbose=10,)(delayed(process_one_round_value)(code_name,p,shots,norm_order) for code_name, p,shots in tasks)      
 
 
-        total_errors  = {}
-        total_shots   = {}
-        cluster_norms = {}
-        error_per_case = {}
+    total_errors  = {}
+    total_shots   = {}
+    cluster_norms = {}
+    error_per_case = {}
 
-        for code_name,p,shot,result,temp in results:
-            total_errors[(code_name, p)] = 0
-            total_shots[(code_name,  p)] = 0    
-            error_per_case[(code_name,p)] = []
+    for code_name,p,shot,result,temp in results:
+        total_errors[(code_name, p)] = 0
+        total_shots[(code_name,  p)] = 0    
+        error_per_case[(code_name,p)] = []
 
-            if (code_name,p) not in cluster_norms:
-                    cluster_norms[(code_name,p)] = []
+        if (code_name,p) not in cluster_norms:
+                cluster_norms[(code_name,p)] = []
 
-            cluster_norms[(code_name,p)].append(result["cluster_norms"])        
+        cluster_norms[(code_name,p)].append(result["cluster_norms"])        
+        
+
+    for key in cluster_norms:
+        cluster_norms[key] = np.concatenate(cluster_norms[key], axis=0)
+
+    for code_name,p,shot,result,temp in results:
+
+        total_errors[(code_name,p)] += result["logical_errors"]
+        total_shots[(code_name,p)]  += shot
+        error_per_case[(code_name,p)] = np.concatenate((error_per_case[(code_name,p)],temp),axis=0)
             
+    
+    fig, ax = plt.subplots(2,1)
 
-        for key in cluster_norms:
-            cluster_norms[key] = np.concatenate(cluster_norms[key], axis=0)
+    colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple","tab:brown","tab:pink"]
+    cnt=0
 
-        for code_name,p,shot,result,temp in results:
-
-            total_errors[(code_name,p)] += result["logical_errors"]
-            total_shots[(code_name,p)]  += shot
-            error_per_case[(code_name,p)] = np.concatenate((error_per_case[(code_name,p)],temp),axis=0)
-
-        # Choose a common cutoff grid spanning all p values
-        all_data = np.concatenate(  [cluster_norms[(code_name, p)].flatten() for p in ps] )
-
-        gmin = np.min(all_data[all_data > 0])
-        gmax = np.max(all_data)
-
-        cutoffs = np.logspace(np.log10(gmin), np.log10(gmax), 150)
-
-        switch_rates = np.zeros((len(ps), len(cutoffs)))
-
-        for i, p in enumerate(ps):
-            norm_array = cluster_norms[(code_name, p)].flatten()
-
-            for j, g_th in enumerate(cutoffs):
-                switch_rates[i, j] = np.mean(norm_array > g_th)
-
-        switch_rates = np.ma.masked_equal(switch_rates, 0)
-
-            
-        dict_to_save = {'code_name': code_name,
-                        'ps': ps,
-                        'decoder': weak_decoder,
-                        'norm_order': norm_order,
-                        'cluster_norms': cluster_norms,
-                        'switch_rates': switch_rates,
-                        'cutoffs': cutoffs,
-                        'all_cluster_norms_per_p': all_data
- 
-        }
-
+    for p in ps:
         
+        data     = cluster_norms[(code_name,p)].flatten()
+        log_data = np.log10(data[data>0])
+
+        ax[0].hist(
+            log_data,
+            bins=20,
+            label=f"{code_name}, p={p}",
+            color=colors[cnt],
+            weights=np.ones_like(log_data) / len(log_data),
+            alpha=0.7,
+        )     
+
+        ax[0].axvline(np.median(log_data), linestyle='--', color=colors[cnt]) #label='median',
+        cnt+=1
         
-        txt_to_save = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(ps[0], min_order+1)}_to_{np.round(ps[-1], min_order+1)}.pkl.gz'
-        file_path = Path(txt_to_save)
-        file_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    ax[0].set_xlabel(r'$\log_{10}(\mathrm{cluster\ norm})$')
+    ax[0].set_ylabel("Norm. counts")
+    ax[0].set_title(f"$N=${num_shots}, $r={num_rounds}$")
+    ax[0].legend(fontsize=13)
+    
+    
 
 
-        with gzip.open(txt_to_save, "wb") as file:
-            pickle.dump(dict_to_save, file)
-    else:
-        if weak_decoder == 'bplsd':
-            file_name = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
-        elif weak_decoder=='uf':
-            file_name = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(ps[0], min_order+1)}_to_{np.round(ps[-1], min_order+1)}.pkl.gz'
+    # Choose a common cutoff grid spanning all p values
+    all_data = np.concatenate(  [cluster_norms[(code_name, p)].flatten() for p in ps] )
 
-        if Path(file_name).name.endswith('.pkl.gz'):
-            with gzip.open(file_name, "rb") as file:
-                data = pickle.load(file)
-        else:
-            with open(file_name, "rb") as file:
-                data = pickle.load(file)
+    gmin = np.min(all_data[all_data > 0])
+    gmax = np.max(all_data)
 
-        cluster_norms = data['cluster_norms']
-        switch_rates  = data['switch_rates']
-        cutoffs       = data['cutoffs']
-        all_cluster_norms_per_p = data['all_cluster_norms_per_p']
-            
-    if plot_data:
-        fig, ax = plt.subplots(2,1, figsize=(10,8))
+    cutoffs = np.logspace(np.log10(gmin), np.log10(gmax), 150)
 
-        colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple","tab:brown","tab:pink"]
-        cnt=0
+    switch_rates = np.zeros((len(ps), len(cutoffs)))
 
-        for p in ps:
+    for i, p in enumerate(ps):
+        data = cluster_norms[(code_name, p)].flatten()
 
-            data     = cluster_norms[(code_name,p)].flatten()
-            log_data = np.log10(data[data>0])
+        for j, g_th in enumerate(cutoffs):
+            switch_rates[i, j] = np.mean(data > g_th)
 
-            ax[0].hist(
-                log_data,
-                bins=20,
-                label=rf"p={round(p*10**min_order,2)} $\times 10^{{-{min_order}}}$" if weak_decoder=='bplsd' else rf"p={round(p*10**min_order,2)} $\times 10^{{-{min_order}}}$",
-                color=colors[cnt],
-                weights=np.ones_like(log_data) / len(log_data),
-                alpha=0.7,
-            )     
-
-            ax[0].axvline(np.median(log_data), linestyle='--', color=colors[cnt]) #label='median',
-            cnt+=1
-            
-        
-        ax[0].set_xlabel(r'$\log_{10}(\mathrm{cluster\ norm})$')
-        ax[0].set_ylabel("Norm. counts")
-        ax[0].set_title(f"$N=${num_shots}, $r={num_rounds}$, {code_name} with {weak_decoder}")
-        ax[0].legend(fontsize=13, loc='upper right')
-        
-        
-
-        cmap = plt.cm.viridis.copy()
-        cmap.set_bad(color="white")   # masked values -> white
+    switch_rates = np.ma.masked_equal(switch_rates, 0)
+    cmap = plt.cm.viridis.copy()
+    cmap.set_bad(color="white")   # masked values -> white
 
 
-        from matplotlib.colors import LogNorm
-        pcm = ax[1].pcolormesh(
-            cutoffs,
-            ps,
-            switch_rates,
-            shading="auto",
-            cmap="viridis",
-            norm=LogNorm(vmin=switch_rates.min(), vmax=switch_rates.max())
-        )
+    from matplotlib.colors import LogNorm
+    pcm = ax[1].pcolormesh(
+        cutoffs,
+        ps,
+        switch_rates,
+        shading="auto",
+        cmap="viridis",
+        norm=LogNorm(vmin=switch_rates.min(), vmax=switch_rates.max())
+    )
 
-        ax[1].set_xscale("log")
-        ax[1].set_yscale("log")
+    ax[1].set_xscale("log")
+    ax[1].set_yscale("log")
 
-        ax[1].set_xlabel(r"$q_{\rm th}$")
-        ax[1].set_ylabel(r"$p$")
-        cbar = plt.colorbar(pcm, ax=ax[1])
-        cbar.set_label(r"$p_{\rm switch}$")
+    ax[1].set_xlabel(r"$g_{\rm th}$")
+    ax[1].set_ylabel(r"$p$")
+    cbar = plt.colorbar(pcm, ax=ax[1])
+    cbar.set_label(r"$p_{\rm switch}$")
 
-        plt.tight_layout()
-        plt.show()            
+    plt.tight_layout()
+    plt.show()            
+
+    dict_to_save = {'code_name': code_name,
+                    'ps': ps,
+                    'decoder': weak_decoder,
+                    'norm_order': norm_order,
+                    'cluster_norms': cluster_norms,
+                    'switch_rates': switch_rates,
+                    'cutoffs': cutoffs,
+                    'all_cluster_norms_per_p': all_data
+
+    }
+
+     
+
+    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+
+    with open(txt_to_save, "wb") as file:
+        pickle.dump(dict_to_save, file)
 
     #to load do:
     # with open(txt_to_load, "rb") as file:
@@ -232,99 +202,204 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=5
     return 
 
 
-def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='bplsd',num_shots=100_000,plot=False, p_list = np.logspace(-3,-2.5,3), norm_order=2):
+def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=10_000, shots_per_job=5_000,norm_order=2):
 
-    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]
-    min_order = math.ceil(-np.log10(p_list[0]))
+    basis      = 'Z' #basis determining the memory experiment for the BB codes
+    
+    decoder_option = 'weak'
+    strong_decoder = 'relay_bp' #doesnt matter
+    num_rounds = 25
+    rel_error_tol = 0.01 #10%
 
-    cutoffs_to_set = {}
+    if weak_decoder == 'bplsd':
+        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] #
+    elif weak_decoder=='uf':
+        # ps = [1e-4,2e-4,3e-4,4e-4,5e-4]
+        ps = [3e-4]
 
-    if plot:
-        fig,ax = plt.subplots(1,5,figsize=(20,5), layout='constrained')
+    def process_one_round_value(code_name,p,num_shots,norm_order):
+        
+        print("Code_name,rds,p,shots:",(code_name,num_rounds,p,num_shots))
 
-    data_per_code = []
+        n, k, d = map(int, code_name.strip("[]").split(","))
+        
+
+        nbuffer = d            #Buffer region
+        F       = d//2         #Commit region
+        W       = nbuffer + F  #Entire window
+
+        test  = decoder_switching_class(code_name=code_name,
+                                            num_rounds=num_rounds,
+                                            p=p,
+                                            basis=basis,
+                                            num_shots=num_shots,
+                                            W=W,
+                                            F=F,
+                                            strong_decoder_option=strong_decoder,
+                                            weak_decoder_option=weak_decoder,
+                                            erasure_conversion_rate=0.7941)    
+        
+        new_shots,cluster_norms,logical_errors = test.decode_with_sliding_window_and_erasure(decoder_option=decoder_option,norm_order=norm_order,
+                                                                                 rel_error_tol=rel_error_tol) 
+
+        result = {"logical_errors": np.sum(logical_errors), "cluster_norms": cluster_norms}
+
+        print("Sim done.")
+
+        return code_name,p,new_shots,result,logical_errors
+
+    tasks = []
+    import multiprocessing as mp
+    n_jobs = mp.cpu_count()    
+    chunk_size = max(shots_per_job, num_shots // (100 * n_jobs)) 
+
+    for p in ps:
+
+        tasks.extend( (code_name,p,chunk_size)
+                       for _ in range(num_shots // chunk_size) )       
+
+    results = Parallel(n_jobs=-1,verbose=10,)(delayed(process_one_round_value)(code_name,p,shots,norm_order) for code_name, p,shots in tasks)      
+
+
+    total_errors  = {}
+    total_shots   = {}
+    cluster_norms = {}
+    error_per_case = {}
+
+    for code_name,p,shot,result,temp in results:
+        total_errors[(code_name, p)] = 0
+        total_shots[(code_name,  p)] = 0    
+        error_per_case[(code_name,p)] = []
+
+        if (code_name,p) not in cluster_norms:
+                cluster_norms[(code_name,p)] = []
+
+        cluster_norms[(code_name,p)].append(result["cluster_norms"])        
+        
+
+    for key in cluster_norms:
+        cluster_norms[key] = np.concatenate(cluster_norms[key], axis=0)
+
+    for code_name,p,shot,result,temp in results:
+
+        total_errors[(code_name,p)] += result["logical_errors"]
+        total_shots[(code_name,p)]  += shot
+        error_per_case[(code_name,p)] = np.concatenate((error_per_case[(code_name,p)],temp),axis=0)
+            
+    
+    fig, ax = plt.subplots(2,1)
+
+    colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple","tab:brown","tab:pink"]
     cnt=0
-    for code_name in code_names: 
 
-        if weak_decoder == 'bplsd':
-            txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
-        elif weak_decoder=='uf':
-            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_{np.round(p_list[-1],min_order+1)}.pkl.gz'
+    for p in ps:
+        
+        data     = cluster_norms[(code_name,p)].flatten()
+        log_data = np.log10(data[data>0])
 
-        if Path(txt_to_load).name.endswith('.pkl.gz'):
-            with gzip.open(txt_to_load, "rb") as file:
-                data = pickle.load(file)
-        else:
-            with open(txt_to_load, "rb") as file:
-                data = pickle.load(file)
+        ax[0].hist(
+            log_data,
+            bins=20,
+            label=f"{code_name}, p={p}",
+            color=colors[cnt],
+            weights=np.ones_like(log_data) / len(log_data),
+            alpha=0.7,
+        )     
 
-        data_per_code.append(data)
-
-        ps = data['ps']
-
-        switch_rates   = data['switch_rates']
-        cutoffs = data['cutoffs']
-        legend_handles = []
-        legend_labels = []
-
-        for k in range(len(ps)):
-
-            key = (code_name,ps[k])
-            diff = np.abs(switch_rates[k] - target_switch_rate)
-            locs = np.argmin(diff)                   #Find location for which switch rate is closest to our target switch rate
-            cutoffs_to_set[key] = cutoffs[locs]      #Collect the cutoff value
-
-            if plot:
-                if weak_decoder == 'uf':
-                    line, = ax[cnt].semilogx(cutoffs, switch_rates[k], marker='.',label=rf' p={round(ps[k]*10**4,2)} $\times 10^{{-4}}$')
-                elif weak_decoder == 'bplsd':
-                    line, = ax[cnt].semilogx(cutoffs, switch_rates[k], marker='.',label=rf' p={round(ps[k]*10**3,2)} $\times 10^{{-3}}$')
-                ax[cnt].axhline(target_switch_rate)
-
-                # ax[cnt].set_xlabel("cutoff")
-                # if cnt==0:
-                #     ax[cnt].set_ylabel("switch rate")
-                ax[cnt].grid()
-                ax[cnt].set_yscale('log')
-                # ax[cnt].set_xscale('log')
-                # ax[cnt].legend(fontsize=10)
-                ax[cnt].set_title(code_name)
-                legend_handles.append(line)
-                legend_labels.append(rf"$p={round(ps[k]*10**3,2)} \times 10^{{-3}}$")
+        ax[0].axvline(np.median(log_data), linestyle='--', color=colors[cnt]) #label='median',
         cnt+=1
-        fig.legend(
-            legend_handles,
-            legend_labels,
-            loc="upper center",
-            # bbox_to_anchor=(0.5, 0.90),
-            ncol=len(ps),
-            fontsize=11,
-            )
-        fig.supxlabel("cutoff")
-        fig.supylabel("switch rate")
-        fig.suptitle(rf"{weak_decoder} with $p_s$ = {target_switch_rate}")
-
-    if plot:
-        print(cutoffs_to_set)
-        plt.tight_layout()
-        plt.show()
+        
+    
+    ax[0].set_xlabel(r'$\log_{10}(\mathrm{cluster\ norm})$')
+    ax[0].set_ylabel("Norm. counts")
+    ax[0].set_title(f"$N=${num_shots}, $r={num_rounds}$")
+    ax[0].legend(fontsize=13)
+    
+    
 
 
+    # Choose a common cutoff grid spanning all p values
+    all_data = np.concatenate(  [cluster_norms[(code_name, p)].flatten() for p in ps] )
 
-    return cutoffs_to_set,data_per_code
+    gmin = np.min(all_data[all_data > 0])
+    gmax = np.max(all_data)
+
+    cutoffs = np.logspace(np.log10(gmin), np.log10(gmax), 150)
+
+    switch_rates = np.zeros((len(ps), len(cutoffs)))
+
+    for i, p in enumerate(ps):
+        data = cluster_norms[(code_name, p)].flatten()
+
+        for j, g_th in enumerate(cutoffs):
+            switch_rates[i, j] = np.mean(data > g_th)
+
+    switch_rates = np.ma.masked_equal(switch_rates, 0)
+    cmap = plt.cm.viridis.copy()
+    cmap.set_bad(color="white")   # masked values -> white
 
 
-if __name__ == "__main__":
+    from matplotlib.colors import LogNorm
+    pcm = ax[1].pcolormesh(
+        cutoffs,
+        ps,
+        switch_rates,
+        shading="auto",
+        cmap="viridis",
+        norm=LogNorm(vmin=switch_rates.min(), vmax=switch_rates.max())
+    )
 
-    # code_name = "[[72,12,6]]" 
-    # code_name = "[[90,8,10]]" 
-    # code_name = "[[126,8,10]]"
-    # code_name = "[[144,12,12]]"
-    # code_name = "[[162,8,14]]"
+    ax[1].set_xscale("log")
+    ax[1].set_yscale("log")
 
-    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"]
-    num_shots = 100_000
-    shots_per_job = 10_000
-    for code_name in code_names:
-        switch_rate_vs_p(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job, get_data=True,norm_order=2)
-    get_cutoffs_for_input_switch_rate(target_switch_rate=0.01,weak_decoder='uf',num_shots=num_shots,plot=True)
+    ax[1].set_xlabel(r"$g_{\rm th}$")
+    ax[1].set_ylabel(r"$p$")
+    cbar = plt.colorbar(pcm, ax=ax[1])
+    cbar.set_label(r"$p_{\rm switch}$")
+
+    plt.tight_layout()
+    plt.show()            
+
+    dict_to_save = {'code_name': code_name,
+                    'ps': ps,
+                    'decoder': weak_decoder,
+                    'norm_order': norm_order,
+                    'cluster_norms': cluster_norms,
+                    'switch_rates': switch_rates,
+                    'cutoffs': cutoffs,
+                    'all_cluster_norms_per_p': all_data
+
+    }
+
+     
+
+    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_w_erasures.txt'
+
+    with open(txt_to_save, "wb") as file:
+        pickle.dump(dict_to_save, file)
+
+    #to load do:
+    # with open(txt_to_load, "rb") as file:
+    #     data = pickle.load(file)
+
+    return 
+
+# code_name = "[[72,12,6]]" 
+code_name = "[[90,8,10]]" 
+# code_name = "[[126,8,10]]"
+# code_name = "[[144,12,12]]"
+# code_name = "[[162,8,14]]"
+num_shots     = 10_000
+shots_per_job = 500
+
+switch_rate_vs_p_for_erasures(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
+
+
+# weak_decoder = 'uf'
+
+# txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_w_erasures.txt'
+
+# with open(txt_to_load, "rb") as file:
+#     data = pickle.load(file)
+
+# print(data['switch_rates'])

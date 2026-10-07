@@ -1128,7 +1128,7 @@ if __name__ == "__main__":
     shots_per_job = num_shots // batches
     target_switch_rate = 0.01 #  ion-aware
     weak_decoder = 'uf'
-    strong_decoder = 'tesseract' # change back to tesseract
+    strong_decoder = 'relay_bp' # change back to tesseract
     erasures=True
 
     # to run on the cluster / get data on cluster
@@ -1149,9 +1149,9 @@ if __name__ == "__main__":
         strong_decoder=strong_decoder,
         num_shots_max=num_shots,     # Update to your actual num_shots
         include_strong=False,
-        include_weak=True,
+        include_weak=False,
         erasures=True,
-        p_range=(10**(-4), 10**(-2.5))  # Optional: specify a range of p values to plot
+        p_range=(10**(-3.5), 10**(-2.5))  # Optional: specify a range of p values to plot
     )
 
     # hardware indicator plot

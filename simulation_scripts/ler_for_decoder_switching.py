@@ -49,7 +49,8 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_s
         if weak_decoder == 'bplsd':
             txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
         elif weak_decoder=='uf':
-            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_{np.round(p_list[-1],min_order+1)}.pkl.gz'
+            # txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_{np.round(p_list[-1],min_order+1)}.pkl.gz'
+            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_0.0007.pkl.gz'
 
         if Path(txt_to_load).name.endswith('.pkl.gz'):
             with gzip.open(txt_to_load, "rb") as file:
@@ -141,7 +142,23 @@ def sort_by_d_then_k(code_str):
             return (0, 0, 0) # Fallback
 
 
-def get_ler_for_decoder_switching(num_shots,shots_per_job,target_switch_rate=5e-3,weak_decoder='bplsd',strong_decoder='relay_bp'):
+def get_ler_for_decoder_switching(num_shots=100_000,
+    shots_per_job=10_000,
+    target_switch_rate=1e-2,
+    weak_decoder="uf",
+    strong_decoder="tesseract",
+    erasures=True,
+    basis="Z",
+    code_names=[
+        "[[72,12,6]]",
+        "[[90,8,10]]",
+        "[[126,8,10]]",
+        "[[144,12,12]]",
+        "[[162,8,14]]",
+    ],
+    ps=[10 ** (-3.5), 5e-4, 7e-4],
+    num_rounds=25,
+    rel_error_tol=0.01,):
     '''
     Inputs:
     num_shots: max # of shots per (p,code)
@@ -150,17 +167,16 @@ def get_ler_for_decoder_switching(num_shots,shots_per_job,target_switch_rate=5e-
     weak_decoder: 'bplsd' or 'uf'
     strong_decoder: 'relay_bp' or 'tesseract'
     '''
-
+    colors = ["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
+    
+    # basis      = 'Z'
+    # code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]    
+    # ps         = [10**(-3.5)] #I RUN THESE RATES ONLY FOR BPLSD
+    # num_rounds = 25
 
     #ADJUST THIS FOR UF
-    cutoffs_to_set,_ = get_cutoffs_for_input_switch_rate(target_switch_rate=target_switch_rate) 
+    cutoffs_to_set,_ = get_cutoffs_for_input_switch_rate(target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, p_list=ps) 
 
-    colors = ["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
-
-    basis      = 'Z'
-    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]    
-    ps         = [2e-3,3e-3,4e-3,5e-3] #I RUN THESE RATES ONLY FOR BPLSD
-    num_rounds = 25
     
 
     def process_one_round_value(code_name,p,num_shots,cutoff):
@@ -182,16 +198,29 @@ def get_ler_for_decoder_switching(num_shots,shots_per_job,target_switch_rate=5e-
                                             W=W,
                                             F=F,
                                             strong_decoder_option=strong_decoder,
-                                            weak_decoder_option=weak_decoder)    
+                                            weak_decoder_option=weak_decoder,
+                                            erasure_conversion_rate=0.7941 if erasures else 0.0,
+                                            decode_with_erasures=erasures)    
         
-        new_shots,cluster_norms,switch_times,logical_errors = test.decode_with_sliding_window_and_decoder_switching(cluster_norm_cutoff=cutoff)
-
+        if erasures:
+            new_shots, cluster_norms, switch_times, logical_errors = (
+                test.decode_with_sliding_window_and_decoder_switching_and_erasure(
+                    cluster_norm_cutoff=cutoff, rel_error_tol=rel_error_tol
+                )
+            )
+        else:
+            new_shots, cluster_norms, switch_times, logical_errors = (
+                test.decode_with_sliding_window_and_decoder_switching(
+                    cluster_norm_cutoff=cutoff, rel_error_tol=rel_error_tol
+                )
+            )
 
         num_windows =len(test.weak_decoder) #total # of windows -- needed for getting switch rates
 
         
-        result = {"logical_errors": np.sum(logical_errors),"cluster_norms": cluster_norms,
-                  "switch_times": np.sum(switch_times), "num_windows": num_windows}
+        result = {"logical_errors": int(np.sum(logical_errors)),"cluster_norms": cluster_norms,
+                  "switch_times": int(np.sum(switch_times)), "num_windows": num_windows, 
+                  "erasure_conversion_rate":test.erasure_conversion_rate}
         
 
         print("Sim done.")
@@ -344,15 +373,20 @@ def get_ler_for_decoder_switching(num_shots,shots_per_job,target_switch_rate=5e-
                     "switch_rates": switch_rates,
                     "switch_rate_err": switch_yerr,
                     "total_switch_times": total_switch_times,
-                    "total_windows": total_windows}         
+                    "total_windows": total_windows}       
+    if erasures:
+        dict_to_save["erasure_conversion_rate"] = results['erasure_conversion_rate']  
     
+    script_dir = Path(__file__).resolve().parent
+    output_dir = script_dir / "data" / "decoder_switching_data"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}.txt' #p_2e_minus_3_Gross_only
+    txt_to_save = output_dir / f'/saved_data/decoder_switching_data/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}{'_erasures' if erasures else ""}.txt' #p_2e_minus_3_Gross_only
 
     with open(txt_to_save, 'w') as file:
-        file.write(str(dict_to_save))      
+        json.dump(dict_to_save, txt_to_save)      
 
-
+    print(f"Results save to {txt_to_save}")
     return 
 
 
@@ -1123,13 +1157,23 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 
 if __name__ == "__main__":
-    num_shots = 1_000_000
-    batches = 100
+    # num_shots = 1_000_000
+    num_shots=30_000
+    batches = 10
     shots_per_job = num_shots // batches
     target_switch_rate = 0.01 #  ion-aware
     weak_decoder = 'uf'
-    strong_decoder = 'relay_bp' # change back to tesseract
+    strong_decoder = 'tesseract' # change back to tesseract
     erasures=True
+
+    # run locally
+    get_ler_for_decoder_switching(num_shots=num_shots,
+                                  shots_per_job=shots_per_job,
+                                  target_switch_rate=target_switch_rate,
+                                  weak_decoder=weak_decoder,
+                                  strong_decoder=strong_decoder,
+                                  erasures=erasures,
+                                  ps=[10**(-3.5)])
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
@@ -1143,16 +1187,16 @@ if __name__ == "__main__":
     # )
 
     # run this to plot the results from decoder switching
-    plot_decoder_switching_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots,     # Update to your actual num_shots
-        include_strong=False,
-        include_weak=False,
-        erasures=True,
-        p_range=(10**(-3.5), 10**(-2.5))  # Optional: specify a range of p values to plot
-    )
+    # plot_decoder_switching_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots,     # Update to your actual num_shots
+    #     include_strong=False,
+    #     include_weak=False,
+    #     erasures=True,
+    #     p_range=(10**(-3.5), 10**(-2.5))  # Optional: specify a range of p values to plot
+    # )
 
     # hardware indicator plot
     # plot_switching_gains_vs_switch_rate(

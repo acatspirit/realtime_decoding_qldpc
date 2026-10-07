@@ -245,8 +245,9 @@ class decoder_switching_class:
 
         #------ Collect strong/weak decoders only once per window -----------
         if strong_decoder_option=='tesseract':
-            
-            self.window_dems,self.strong_decoder = configure_tesseract_per_sliding_window(self.window_check_set,self.window_observable_set,self.window_priors_set,strong_decoder_params)
+            no_erasure_window_check_set, no_erasure_window_observable_set, no_erasure_window_prior_set, no_erasure_window_update = self._prepare_windows(circuit)
+            self.window_dems, self.strong_decoder = configure_tesseract_per_sliding_window(no_erasure_window_check_set, no_erasure_window_observable_set, no_erasure_window_prior_set,strong_decoder_params)
+            # self.window_dems,self.strong_decoder = configure_tesseract_per_sliding_window(self.window_check_set,self.window_observable_set,self.window_priors_set,strong_decoder_params)
 
             self.strong_decode_function = [tesseract_wrapper(decoder, dem.num_errors)
                                            for decoder, dem in zip(self.strong_decoder, self.window_dems)]            
@@ -300,7 +301,7 @@ class decoder_switching_class:
         )
         return
 
-    def _prepare_windows(self):
+    def _prepare_windows(self, circuit=None):
         '''
         Prepare the windows for sliding window decoding.
 
@@ -311,8 +312,10 @@ class decoder_switching_class:
         window_update: list of updates per window (?)
         '''
 
-        window_check_set, window_observable_set, window_priors_set, window_update = spacetime(self.circuit, self.h, self.W, self.F, self.num_cor_rounds)
-
+        if circuit == None:
+            window_check_set, window_observable_set, window_priors_set, window_update = spacetime(self.circuit, self.h, self.W, self.F, self.num_cor_rounds)
+        else:
+            window_check_set, window_observable_set, window_priors_set, window_update = spacetime(circuit, self.h, self.W, self.F, self.num_cor_rounds)
 
         return window_check_set, window_observable_set, window_priors_set, window_update 
 

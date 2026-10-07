@@ -78,17 +78,52 @@ def get_erased_mechanisms_from_DEM(dem:stim.DetectorErrorModel, p_cutoff = 0.03)
         if inst.type == "error":
             if inst.args_copy()[0] > p_cutoff:
                 erased_errors[i] = 1
-            else:
-                erased_errors[i] = 0
+
             i+= 1
 
     return erased_errors
 
+def get_erased_mechanisms_from_priors(window_prior_set,cutoff=0.2):
+    #len of priors is num_faults
+
+    # erased_errors_set = []
+
+    # for k in range(len(window_prior_set)):
+
+    #     priors = window_prior_set[k]
+    #     num_faults    = np.shape(priors)[0]
+    #     erased_errors = np.zeros(shape=(num_faults,)).flatten()
+
+    #     locs = priors>cutoff 
+    #     erased_errors[locs] = 1
+    #     erased_errors_set.append(erased_errors)
+
+    erased_errors_set = [
+        (priors > cutoff).astype(np.uint8)
+        for priors in window_prior_set
+    ]
+        
+
+    return erased_errors_set
+
 
 def get_erasure_set(window_check_set, window_observable_set, window_prior_set):
-    window_dems_set = get_window_dems(window_check_set, window_observable_set, window_prior_set)
-    erased_errors_set = []
-    for dem in window_dems_set:
-        erased_errors = get_erased_mechanisms_from_DEM(dem)
-        erased_errors_set.append(erased_errors)
-    return erased_errors_set
+    
+    
+    # window_dems_set = get_window_dems(window_check_set, window_observable_set, window_prior_set)
+    
+    # erased_errors_set = []
+    # for dem in window_dems_set:
+    #     erased_errors = get_erased_mechanisms_from_DEM(dem)
+    #     erased_errors_set.append(erased_errors)
+
+    erased_errors_set_alt = get_erased_mechanisms_from_priors(window_prior_set,cutoff=0.2)
+
+    # for m in range(len(erased_errors_set)):
+    #     one = erased_errors_set[m]
+    #     two = erased_errors_set_alt[m]
+
+    #     if (one != two).any():
+    #         raise Exception("ERROR.")
+
+    return erased_errors_set_alt #erased_errors_set

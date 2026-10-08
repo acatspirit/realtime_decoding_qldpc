@@ -215,7 +215,7 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
         ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] #
     elif weak_decoder=='uf':
         # ps = [1e-4,2e-4,3e-4,4e-4,5e-4]
-        ps = [3e-4]
+        ps = [1e-4,2e-4]
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
         
@@ -384,13 +384,13 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
 
     return 
 
-# code_name = "[[72,12,6]]" 
-code_name = "[[90,8,10]]" 
+code_name = "[[72,12,6]]" 
+# code_name = "[[90,8,10]]" 
 # code_name = "[[126,8,10]]"
 # code_name = "[[144,12,12]]"
 # code_name = "[[162,8,14]]"
 num_shots     = 10_000
-shots_per_job = 500
+shots_per_job = 1000
 
 switch_rate_vs_p_for_erasures(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
 

@@ -397,7 +397,7 @@ def get_ler_for_decoder_switching_dcc(
         shots_per_job=10_000, 
         weak_decoder='uf', 
         strong_decoder='tesseract', 
-        erasures=True,
+        erasure_conversion_rate = 0.7941,
         basis='Z',
         # code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
         code_names = ["[[72,12,6]]", "[[90,8,10]]"],
@@ -413,6 +413,10 @@ def get_ler_for_decoder_switching_dcc(
     weak_decoder: 'bplsd' or 'uf'
     strong_decoder: 'relay_bp' or 'tesseract'
     '''
+    if erasure_conversion_rate > 0:
+        erasures=True
+    else:
+        erasures=False
 
     # file_name = f'cluster_norm_distributions_code_{code_name}_uf_max_shots_100000_p_0.00032_to_0.0007.pkl.gz'
     cutoffs_to_set,_ = get_cutoffs_for_input_switch_rate(target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, p_list=ps, code_names=code_names) # removed num_shots since we don't really care
@@ -497,7 +501,7 @@ def get_ler_for_decoder_switching_dcc(
                                         F=F,
                                         strong_decoder_option=strong_decoder,
                                         weak_decoder_option=weak_decoder,
-                                        erasure_conversion_rate=1e-4
+                                        erasure_conversion_rate=erasure_conversion_rate
                                         # erasure_conversion_rate=0.7941 if erasures else 0.0
                                         )
 

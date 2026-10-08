@@ -1173,7 +1173,7 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 
 if __name__ == "__main__":
-    num_shots = 100_000
+    num_shots = 1_000_000
     # num_shots=30_000
     batches = 100
     shots_per_job = num_shots // batches
@@ -1213,7 +1213,7 @@ if __name__ == "__main__":
     #     erasure_conversion_rate=erasure_conversion_rate
     # )
 
-    # run this to plot the results from decoder switching
+    # # run this to plot the results from decoder switching
     # plot_decoder_switching_results(
     #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
     #     weak_decoder=weak_decoder,
@@ -1221,7 +1221,7 @@ if __name__ == "__main__":
     #     num_shots_max=num_shots,     # Update to your actual num_shots
     #     include_strong=False,
     #     include_weak=True,
-    #     erasure_conversion_rate=1e-4,
+    #     erasure_conversion_rate=erasure_conversion_rate,
     #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
     # )
 

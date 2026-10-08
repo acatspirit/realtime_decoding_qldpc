@@ -589,10 +589,15 @@ def download_from_dcc(remote_path, local_dir, username="am1155", host="dcc-login
         print(f"❌ Error occurred during download. Return code: {e.returncode}")
         print("Check if the remote path is correct and that you are connected to the Duke VPN.")
 
-def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, erasures=True,dcc_data_dir="/hpc/group/brownlab/am1155/realtime_decoding_qldpc/simulation_scripts/data/decoder_switching_data"):
+def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, erasure_conversion_rate,dcc_data_dir="/hpc/group/brownlab/am1155/realtime_decoding_qldpc/simulation_scripts/data/decoder_switching_data"):
     """
     after running on the DCC, converts data that belongs to one task into full statistics version / calculating LERs 
     """
+
+    if erasure_conversion_rate > 0:
+        erasures=True
+    else:
+        erasures=False
 
     # Setup paths using pathlib
     script_dir = Path(__file__).resolve().parent
@@ -603,7 +608,7 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
     
     out_dir = script_dir.parent / "data" / "decoder_switching_results"
     out_dir.mkdir(parents=True, exist_ok=True)
-    txt_to_save = out_dir / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}_erasures_{int(erasures)}.txt'
+    txt_to_save = out_dir / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}_erasures_{erasure_conversion_rate}.txt'
 
     download_from_dcc(
             remote_path=dcc_data_dir + f"/raw_batches_target_{target_switch_rate}/*.json" if not erasures else dcc_data_dir + f"/raw_batches_target_{target_switch_rate}_erasures/*.json",
@@ -750,7 +755,7 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         "weak_decoder": weak_decoder,
         "strong_decoder": strong_decoder,
         "target_switch_rate": target_switch_rate,
-        "erasure_conversion_rate": 0.7941 if erasures else 0.0,
+        "erasure_conversion_rate": erasure_conversion_rate,
         "codes": code_names,
         "ps": ps,
         "r": num_rounds,
@@ -780,13 +785,18 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
         
     return dict_to_save
 
-def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, data_dict=None, include_strong=True, include_weak=True, p_range=None, erasures=True):
+def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, data_dict=None, include_strong=True, include_weak=True, p_range=None, erasure_conversion_rate=0.7941):
     """
     Plots the results from the merged decoder switching data.
     """
+    if erasure_conversion_rate > 0:
+        erasures=True
+    else:
+        erasures=False
+
     script_dir = Path(__file__).resolve().parent
     if data_dict is None:
-        results_file = script_dir.parent / "data" / "decoder_switching_results" / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}_erasures_{int(erasures)}.txt'
+        results_file = script_dir.parent / "data" / "decoder_switching_results" / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}_erasures_{erasure_conversion_rate}.txt'
         
         if not results_file.exists():
             print(f"Results file not found: {results_file}")
@@ -1167,6 +1177,7 @@ if __name__ == "__main__":
     weak_decoder = 'uf'
     strong_decoder = 'relay_bp' # change back to tesseract
     erasures=True
+    erasure_conversion_rate=0.7941
 
     # run locally
     # get_ler_for_decoder_switching(num_shots=num_shots,
@@ -1179,13 +1190,13 @@ if __name__ == "__main__":
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasure_conversion_rate=1e-4)
-    get_ler_for_decoder_switching_dcc(ps = [2e-4,3e-4], 
-                                      num_shots=num_shots, 
-                                      shots_per_job=shots_per_job, 
-                                      target_switch_rate=target_switch_rate, 
-                                      weak_decoder=weak_decoder, 
-                                      strong_decoder=strong_decoder, 
-                                      erasures=erasures)
+    # get_ler_for_decoder_switching_dcc(ps = [2e-4,3e-4], 
+    #                                   num_shots=num_shots, 
+    #                                   shots_per_job=shots_per_job, 
+    #                                   target_switch_rate=target_switch_rate, 
+    #                                   weak_decoder=weak_decoder, 
+    #                                   strong_decoder=strong_decoder, 
+    #                                   erasures=erasures)
     
 
 
@@ -1194,20 +1205,21 @@ if __name__ == "__main__":
     #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
     #     weak_decoder=weak_decoder,
     #     strong_decoder=strong_decoder,
-    #     num_shots_max=num_shots     # Update to your actual num_shots
+    #     num_shots_max=num_shots,     # Update to your actual num_shots
+    #     erasure_conversion_rate=erasure_conversion_rate
     # )
 
     # run this to plot the results from decoder switching
-    # plot_decoder_switching_results(
-    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-    #     weak_decoder=weak_decoder,
-    #     strong_decoder=strong_decoder,
-    #     num_shots_max=num_shots,     # Update to your actual num_shots
-    #     include_strong=False,
-    #     include_weak=True,
-    #     erasures=True,
-    #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
-    # )
+    plot_decoder_switching_results(
+        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+        weak_decoder=weak_decoder,
+        strong_decoder=strong_decoder,
+        num_shots_max=num_shots,     # Update to your actual num_shots
+        include_strong=False,
+        include_weak=True,
+        erasure_conversion_rate=1e-4,
+        p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
+    )
 
     # hardware indicator plot
     # plot_switching_gains_vs_switch_rate(

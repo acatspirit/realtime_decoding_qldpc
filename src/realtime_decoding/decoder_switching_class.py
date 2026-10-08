@@ -282,10 +282,10 @@ class decoder_switching_class:
                                          for decoder in self.weak_decoder] 
         elif weak_decoder_option == 'uf':
             if not decode_with_erasures:
-                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set, erased_errors_set=None)
+                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set,  erased_errors_set=None)
                 self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
             else:
-                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set, erased_errors_set=self.erased_errors_set)
+                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, erased_errors_set=self.erased_errors_set)
                 self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
         else:
             raise NotImplementedError("No other weak decoder besides bplsd and uf are implemented for now.")

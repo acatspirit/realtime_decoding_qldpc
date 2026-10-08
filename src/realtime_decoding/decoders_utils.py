@@ -161,7 +161,7 @@ def configure_bplsd_decoder_per_sliding_window(window_check_set,window_priors_se
 
     return bplsd_decoders
 
-def configure_uf_decoder_per_sliding_window(window_check_set, window_priors_set, erased_errors_set=None,decoder_params: Optional[dict] = None):
+def configure_uf_decoder_per_sliding_window(window_check_set, erased_errors_set=None,):
     '''
     Configure UF for all windows.
 

@@ -166,7 +166,7 @@ class decoder_switching_class:
         self.p_pauli   = (1-erasure_conversion_rate) * p 
         self.p_erasure = erasure_conversion_rate * p # if erasure conversion rate set to 0, this will go to 0 too 
         
-        if erasure_conversion_rate>0:
+        if erasure_conversion_rate>0: # maybe add this as an additional parameter - I included this to fix a bug
             decode_with_erasures = True 
         else:
             decode_with_erasures = False
@@ -254,9 +254,9 @@ class decoder_switching_class:
 
         #------ Collect strong/weak decoders only once per window -----------
         if strong_decoder_option=='tesseract':
-            no_erasure_window_check_set, no_erasure_window_observable_set, no_erasure_window_prior_set, no_erasure_window_update = self._prepare_windows(circuit)
-            self.window_dems, self.strong_decoder = configure_tesseract_per_sliding_window(no_erasure_window_check_set, no_erasure_window_observable_set, no_erasure_window_prior_set,strong_decoder_params)
-            # self.window_dems,self.strong_decoder = configure_tesseract_per_sliding_window(self.window_check_set,self.window_observable_set,self.window_priors_set,strong_decoder_params)
+            # no_erasure_window_check_set, no_erasure_window_observable_set, no_erasure_window_prior_set, no_erasure_window_update = self._prepare_windows(circuit)
+            # self.window_dems, self.strong_decoder = configure_tesseract_per_sliding_window(no_erasure_window_check_set, no_erasure_window_observable_set, no_erasure_window_prior_set,strong_decoder_params)
+            self.window_dems,self.strong_decoder = configure_tesseract_per_sliding_window(self.window_check_set,self.window_observable_set,self.window_priors_set,strong_decoder_params)
 
             self.strong_decode_function = [tesseract_wrapper(decoder, dem.num_errors)
                                            for decoder, dem in zip(self.strong_decoder, self.window_dems)]            

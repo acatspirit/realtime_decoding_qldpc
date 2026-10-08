@@ -398,7 +398,8 @@ def get_ler_for_decoder_switching_dcc(
         strong_decoder='tesseract', 
         erasures=True,
         basis='Z',
-        code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
+        # code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
+        code_names = ["[[72,12,6]]", "[[90,8,10]]"],
         ps = [10**(-3.5), 5e-4, 7e-4],
         num_rounds = 25,
         rel_error_tol = 0.01
@@ -487,17 +488,17 @@ def get_ler_for_decoder_switching_dcc(
         current_batch_size = int(min(chunk_size, target_shots - shots_run))
         print(f"Task {task_id} running batch of {current_batch_size} shots. Total shots so far: {shots_run}/{target_shots}")
         test  = decoder_switching_class(code_name=code_name,
-                                            num_rounds=num_rounds,
-                                            p=p,
-                                            basis=basis,
-                                            num_shots=current_batch_size,
-                                            W=W,
-                                            F=F,
-                                            strong_decoder_option=strong_decoder,
-                                            weak_decoder_option=weak_decoder,
-                                            erasure_conversion_rate=0.7941 if erasures else 0.0,
-                                            decode_with_erasures=erasures
-                                            )
+                                        num_rounds=num_rounds,
+                                        p=p,
+                                        basis=basis,
+                                        num_shots=current_batch_size,
+                                        W=W,
+                                        F=F,
+                                        strong_decoder_option=strong_decoder,
+                                        weak_decoder_option=weak_decoder,
+                                        erasure_conversion_rate=1e-4
+                                        # erasure_conversion_rate=0.7941 if erasures else 0.0
+                                        )
 
         if erasures:
             new_shots,_,c_switch_times,c_logical_errors = test.decode_with_sliding_window_and_decoder_switching_and_erasure(cluster_norm_cutoff=cutoff, rel_error_tol=rel_error_tol)
@@ -1161,30 +1162,39 @@ if __name__ == "__main__":
     # num_shots=30_000
     batches = 100
     shots_per_job = num_shots // batches
-    target_switch_rate = 0.01 #  ion-aware
+    target_switch_rate = 0.005 #  ion-aware
     weak_decoder = 'uf'
     strong_decoder = 'tesseract' # change back to tesseract
     erasures=True
 
     # run locally
-    get_ler_for_decoder_switching(num_shots=num_shots,
-                                  shots_per_job=shots_per_job,
-                                  target_switch_rate=target_switch_rate,
-                                  weak_decoder=weak_decoder,
-                                  strong_decoder=strong_decoder,
-                                  erasures=erasures,
-                                  ps=[10**(-3.5)])
+    # get_ler_for_decoder_switching(num_shots=num_shots,
+    #                               shots_per_job=shots_per_job,
+    #                               target_switch_rate=target_switch_rate,
+    #                               weak_decoder=weak_decoder,
+    #                               strong_decoder=strong_decoder,
+    #                               erasures=erasures,
+    #                               ps=[10**(-3.5)])
 
     # to run on the cluster / get data on cluster
-    # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasures=erasures)
+    # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasure_conversion_rate=1e-4)
+    get_ler_for_decoder_switching_dcc(ps = [1e-4,2e-4], 
+                                      num_shots=num_shots, 
+                                      shots_per_job=shots_per_job, 
+                                      target_switch_rate=target_switch_rate, 
+                                      weak_decoder=weak_decoder, 
+                                      strong_decoder=strong_decoder, 
+                                      erasures=erasures)
+    
+
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
-    merge_dcc_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots     # Update to your actual num_shots
-    )
+    # merge_dcc_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots     # Update to your actual num_shots
+    # )
 
     # run this to plot the results from decoder switching
     # plot_decoder_switching_results(
@@ -1193,7 +1203,7 @@ if __name__ == "__main__":
     #     strong_decoder=strong_decoder,
     #     num_shots_max=num_shots,     # Update to your actual num_shots
     #     include_strong=False,
-    #     include_weak=False,
+    #     include_weak=True,
     #     erasures=True,
     #     p_range=(10**(-3.5), 10**(-2.5))  # Optional: specify a range of p values to plot
     # )

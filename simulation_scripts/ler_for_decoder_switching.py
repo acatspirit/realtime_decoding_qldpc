@@ -32,9 +32,9 @@ sys.path.insert(0, str(script_dir.parent))
 Adjust for UF
 '''
 
-def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_shots=100_000,plot=False, p_list = np.logspace(-3,-2.5,3), norm_order=2):
+def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_shots=100_000,plot=False, p_list = np.logspace(-3,-2.5,3), norm_order=2, code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]):
 
-    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]
+    
     min_order = math.ceil(-np.log10(p_list[0]))
 
     cutoffs_to_set = {}
@@ -153,9 +153,9 @@ def get_ler_for_decoder_switching(num_shots=100_000,
     code_names=[
         "[[72,12,6]]",
         "[[90,8,10]]",
-        "[[126,8,10]]",
-        "[[144,12,12]]",
-        "[[162,8,14]]",
+        # "[[126,8,10]]",
+        # "[[144,12,12]]",
+        # "[[162,8,14]]",
     ],
     ps=[10 ** (-3.5), 5e-4, 7e-4],
     num_rounds=25,
@@ -415,7 +415,7 @@ def get_ler_for_decoder_switching_dcc(
     '''
 
     # file_name = f'cluster_norm_distributions_code_{code_name}_uf_max_shots_100000_p_0.00032_to_0.0007.pkl.gz'
-    cutoffs_to_set,_ = get_cutoffs_for_input_switch_rate(target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, p_list=ps) # removed num_shots since we don't really care
+    cutoffs_to_set,_ = get_cutoffs_for_input_switch_rate(target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, p_list=ps, code_names=code_names) # removed num_shots since we don't really care
 
     # colors = ["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
     task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID"),0)

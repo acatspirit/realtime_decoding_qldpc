@@ -384,8 +384,8 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
 
     return 
 
-code_name = "[[72,12,6]]" 
-# code_name = "[[90,8,10]]" 
+# code_name = "[[72,12,6]]" 
+code_name = "[[90,8,10]]" 
 # code_name = "[[126,8,10]]"
 # code_name = "[[144,12,12]]"
 # code_name = "[[162,8,14]]"

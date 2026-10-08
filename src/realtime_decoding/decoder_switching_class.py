@@ -18,16 +18,24 @@ from src.realtime_decoding.decoders_utils import configure_tesseract_per_sliding
 from src.realtime_decoding.utils import get_erasure_set
 from typing import Optional
 import relay_bp
+from src.realtime_decoding.utils import slice_erasures_to_windows,spacetime_w_window_ranges
+
 
 #Structure of the class:
-#Creates a stim circuit upon initialization, samples from it
+#Creates a stim circuit upon initialization & samples from it
 #Configures strong and weak decoders per window
 #Needs a choise for strong decoder & weak decoder
 
-#Performs
+#For Pauli noise it can perform:
 #i)   batch decoding 
 #ii)  sliding window decoding with one decoder
 #iii) sliding window decoding where it switches from weak to strong decoder, based on cluster norm cutoff
+
+#For erasures it can perform (note uf needs to be the weak decoder):
+#i) sliding window decoding with one decoder
+#ii) sliding window decoding where it switches from weak to strong decoder, based on cluster norm cutoff
+
+
 class uf_wrapper:
     def __init__(self, decoder, erasures, **params):
         """
@@ -112,12 +120,6 @@ class relaybp_wrapper:
 
         return decoded_errors
 
-
-
-#TODO: need some cluster_norm_wrapper which depending on bplsd or union find, or other cluster-based weak decoder collects the soft-output information 
-#      (currently limited in decoder.statistics see weak decoding functions)
-
-#TODO: To make the decoder_switching class more modular we could make it accept the errormodel instead of a value of p 
 
 class decoder_switching_class:
 
@@ -205,7 +207,7 @@ class decoder_switching_class:
 
             detection_events,obs_flips = sampler.sample(shots=1,separate_observables=True) # set only one shot each time
             detection_events = np.array(detection_events, dtype=np.uint8) # update the erasures from the DEM
-            self.circuit = circuit_w_erasure 
+            self.circuit = circuit_w_erasure  
 
 
         else: #Sample from regular circuit 
@@ -236,6 +238,7 @@ class decoder_switching_class:
         self.weak_decoder_params = weak_decoder_params
         self.strong_decoder_params = strong_decoder_params
 
+
         # update the total number of windows for decoding, the size of the last window
         if 2 + num_rounds - W >= 0:
             num_cor_rounds = (2 + num_rounds - W) // F  # num_cor_rounds=num of windows before the last window
@@ -249,6 +252,7 @@ class decoder_switching_class:
         self.num_cor_rounds                                                                           = num_cor_rounds
         self.window_check_set, self.window_observable_set, self.window_priors_set, self.window_update = self._prepare_windows()
         if self.p_erasure > 0:
+            self._get_window_ranges(circuit)        
             self.erased_errors_set = get_erasure_set(self.window_check_set, self.window_observable_set, self.window_priors_set) # get the erasure set for each window, to pass into the uf_wrapper for decoding
             # print(f"the erased errors set first entry is {len(self.erased_errors_set[0].nonzero()[0])}/{len(self.erased_errors_set[0])}, and the length is {len(self.erased_errors_set)}")
 
@@ -278,10 +282,10 @@ class decoder_switching_class:
                                          for decoder in self.weak_decoder] 
         elif weak_decoder_option == 'uf':
             if not decode_with_erasures:
-                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erased_errors_set=None, decoder_params=self.weak_decoder_params)
+                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, erased_errors_set=None, )
                 self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
             else:
-                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erased_errors_set=self.erased_errors_set, decoder_params=self.weak_decoder_params)
+                self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, erased_errors_set=self.erased_errors_set,)
                 self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
         else:
             raise NotImplementedError("No other weak decoder besides bplsd and uf are implemented for now.")
@@ -333,12 +337,35 @@ class decoder_switching_class:
         self.detection_events = detection_events
         self.obs_flips        = obs_flips
         
-        self.window_check_set, self.window_observable_set, self.window_priors_set, self.window_update = self._prepare_windows()
+        # self.window_check_set, self.window_observable_set, self.window_priors_set, self.window_update = self._prepare_windows()
         
-        self.erased_errors_set = get_erasure_set(self.window_check_set, self.window_observable_set, self.window_priors_set) # get the erasure set for each window, to pass into the uf_wrapper for decoding
+        # self.erased_errors_set = get_erasure_set(self.window_check_set, self.window_observable_set, self.window_priors_set) # get the erasure set for each window, to pass into the uf_wrapper for decoding
+        dem = circuit_w_erasure.detector_error_model(flatten_loops=True)
+
+        priors         = np.array([inst.args_copy()[0] for inst in dem if inst.type == "error"])
+        erasures_total = (priors > 0.2).astype(np.uint8)
+        erasures_total = np.asarray(erasures_total)
+
+        #Update also the priors in windows
+        self.window_priors_set = [priors[r[0]:r[1]] for r in self.window_ranges]
 
 
-        self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erased_errors_set=self.erased_errors_set, decoder_params=self.weak_decoder_params)
+        # erased_errors_set_alt = slice_erasures_to_windows(self.window_ranges,erasures_total)
+ 
+        self.erased_errors_set = slice_erasures_to_windows(self.window_ranges,erasures_total)
+
+        #========= Passes the test
+        # for k in range(len(window_priors_set_alt)):
+        #     if (window_priors_set_alt[k]!=self.window_priors_set[k]).any():
+        #         raise Exception("Incorrect splitting of priors in windows.")
+
+        #========= Passes the test
+        # for k in range(len(erased_errors_set_alt)):
+        #     if (erased_errors_set_alt[k]!=self.erased_errors_set[k]).any():
+        #         raise Exception("Incorrect splitting of erasures.")
+
+
+        self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, erased_errors_set=self.erased_errors_set, )
         self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
 
         #--- Configure strong decoder again ------------------------------------------
@@ -359,47 +386,46 @@ class decoder_switching_class:
 
     def reset_for_erasures_only_weak(self):
         '''
-        This can be used for single sliding window when we use the weak (uf) only.
-
+        Re-sample erasures and re-configure the weak decoder.
         '''
-        #-- Re-sample erasures --
+
+        #-- Resample erasures ---------
         
         circuit_w_erasure = add_erasures(self.baseline_circuit, self.p_erasure)
-        sampler = circuit_w_erasure.compile_detector_sampler()
+        sampler           = circuit_w_erasure.compile_detector_sampler()
 
         detection_events,obs_flips = sampler.sample(shots=1,separate_observables=True) # set only one shot each time
-        detection_events = np.array(detection_events, dtype=np.uint8) # update the erasures from the DEM
-        self.circuit = circuit_w_erasure 
+        detection_events           = np.array(detection_events, dtype=np.uint8) # update the erasures from the DEM
+        self.circuit               = circuit_w_erasure 
 
         self.detection_events = detection_events
         self.obs_flips        = obs_flips
-        
-        self.window_check_set, self.window_observable_set, self.window_priors_set, self.window_update = self._prepare_windows()
-        
-        self.erased_errors_set = get_erasure_set(self.window_check_set, self.window_observable_set, self.window_priors_set) # get the erasure set for each window, to pass into the uf_wrapper for decoding
 
+        #-- Get the new priors from the DEM and get the erasures ---------
+        dem            = circuit_w_erasure.detector_error_model(flatten_loops=True)
+        priors         = np.array([inst.args_copy()[0] for inst in dem if inst.type == "error"])
+        self.priors    = priors
+        erasures_total = (priors > 0.2).astype(np.uint8)
+        erasures_total = np.asarray(erasures_total)
+        self.erased_errors_set = slice_erasures_to_windows(self.window_ranges,erasures_total)
 
-        self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, self.window_priors_set,erased_errors_set=self.erased_errors_set, decoder_params=self.weak_decoder_params)
+        
+        #----- Reconfigure the weak decoder --------------------------------------
+        # self.weak_decoder, erasures = configure_uf_decoder_per_sliding_window(self.window_check_set, erased_errors_set=self.erased_errors_set, )
+        
+        erasures = self.erased_errors_set #No need to reconfigure the decoder, it has remained the same
         self.weak_decode_function = [uf_wrapper(decoder, erasure_array) for decoder, erasure_array in zip(self.weak_decoder, erasures)]
-
-        #--- Configure strong decoder again ------------------------------------------
-
-        # if self.strong_decoder_option=='tesseract':
-            
-        #     self.window_dems,self.strong_decoder = configure_tesseract_per_sliding_window(self.window_check_set,self.window_observable_set,self.window_priors_set)
-
-        #     self.strong_decode_function = [tesseract_wrapper(decoder, dem.num_errors)
-        #                                    for decoder, dem in zip(self.strong_decoder, self.window_dems)]            
-
-        # elif self.strong_decoder_option=='relay_bp':
-        #     self.strong_decoder         = configure_relay_bp_per_sliding_window(self.window_check_set, self.window_priors_set)
-        #     self.strong_decode_function = [relaybp_wrapper(decoder)
-        #                                  for decoder in self.strong_decoder] 
 
         return 
 
 
     def reset_for_erasures_strong(self):
+        '''
+        Reconfigure the strong decoder. This function is used for decoder switching under erasures.
+        '''
+
+        #----- Update the priors (the only structure that changes for strong decoder) for shot-to-shot -----------
+        self.window_priors_set = [self.priors[r[0]:r[1]] for r in self.window_ranges]        
 
         if self.strong_decoder_option=='tesseract':
             
@@ -415,6 +441,20 @@ class decoder_switching_class:
 
         return 
 
+    def _get_window_ranges(self,circuit):
+        '''
+        Obtain the window ranges to subsequently split the erasures & priors of the total DEM in windows.
+
+        Note: 
+        We need to be careful about how priors are ordered for the DEM. If the DEM doesn't have events that would be combined,
+        and DEM_wo_erasures produces same ordering as DEM_w_erasures, then the method works fine.
+        This function has been tested and gives the correct priors per window.
+        '''
+        _,_,_,_,window_ranges = spacetime_w_window_ranges(circuit,self.h,self.W,self.F,self.num_cor_rounds)
+        self.window_ranges = window_ranges
+
+        return 
+
     def _prepare_windows(self):
         '''
         Prepare the windows for sliding window decoding.
@@ -423,7 +463,7 @@ class decoder_switching_class:
         window_check_set: list of parity check matrices per window
         window_observable_set: list of observable matrices per window
         window_priors_set: list of priors per window
-        window_update: list of updates per window (?)
+        window_update: list of updates per window 
         '''
 
         window_check_set, window_observable_set, window_priors_set, window_update = spacetime(self.circuit, self.h, self.W, self.F, self.num_cor_rounds)
@@ -706,7 +746,6 @@ class decoder_switching_class:
             
             num_checks   = self.h.shape[0]
             logical_pred = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
-            # logical_pred_single_shot = np.zeros(self.logical.shape[0], dtype=np.uint8) # for erasure decoding, we only decode one shot at a time
     
             cluster_norms_per_shot = []
             switch_times_per_shot  = []
@@ -723,7 +762,7 @@ class decoder_switching_class:
 
             for shot_index in range(self.num_shots):
                 print("shot:",shot_index," out of:",self.num_shots)
-                self.reset_for_erasures_V2() # reset the params so that we increment for a new set of shots
+                self.reset_for_erasures_only_weak() # reset the params so that we increment for a new set of shots
     
                 accumulated_correction = np.zeros(self.window_observable_set[0].shape[0], dtype=np.uint8) # change this so that it's a double index, also with shots
                 syn_update = np.zeros(num_checks, dtype=np.uint8)            
@@ -731,7 +770,7 @@ class decoder_switching_class:
                 cluster_norm_per_window  = []
                 switch_times             = 0
 
-                # flag_prepared_strong = False
+                flag_prepared_strong = False
     
                 for current_window_index in range(num_cor_rounds): #all windows besides last
     
@@ -740,11 +779,10 @@ class decoder_switching_class:
     
                     if cluster_norm>cluster_norm_cutoff:
 
-                        
-                        # if not flag_prepared_strong:
-                        #     self.reset_for_erasures_strong()
+                        if not flag_prepared_strong:
+                            self.reset_for_erasures_strong()
 
-                        # flag_prepared_strong = True 
+                        flag_prepared_strong = True 
                         
                         syn_update_strong, accumulated_correction_strong, convergence_check = self.decode_main_window_w_strong_decoder(W,F, num_checks, current_window_index, 0, syn_update, accumulated_correction)
     
@@ -769,8 +807,8 @@ class decoder_switching_class:
     
                 if cluster_norm>cluster_norm_cutoff:
 
-                    # if not flag_prepared_strong:
-                    #     self.reset_for_erasures_strong()
+                    if not flag_prepared_strong:
+                        self.reset_for_erasures_strong()
 
                     switch_times+=1
                     accumulated_correction = self.decode_last_window_w_strong_decoder(F, num_checks, 0, syn_update, num_cor_rounds, accumulated_correction)
@@ -783,10 +821,10 @@ class decoder_switching_class:
                 cluster_norms_per_shot.append(cluster_norm_per_window)
                 switch_times_per_shot.append(switch_times)
     
-                # failures_cnt += np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot[:])
+                
                 obs_flips_tot[shot_index,:] = self.obs_flips
                 failures_cnt += np.mean(self.obs_flips ^ logical_pred[shot_index,:]) 
-                # print(f"failures this shot: {failures_cnt}, shape of obs: {self.obs_flips.shape}, shape of log {logical_pred.shape}")
+                
     
                 if (shot_index + 1) % shots_to_check == 0 and failures_cnt > 0: # fix this area
                     N = shot_index + 1
@@ -799,7 +837,7 @@ class decoder_switching_class:
                         print("-------- Early exit. total # of shots vs shots run:", (self.num_shots,N))
     
                         return N, cluster_norms_per_shot, switch_times_per_shot, np.mean(obs_flips_tot[:N,:] ^ logical_pred[:N,:], axis=1)
-                        # return N, cluster_norms_per_shot, switch_times_per_shot, np.mean(self.obs_flips[0,:] ^ logical_pred_single_shot,axis=1)             
+                       
     
             
             return self.num_shots, cluster_norms_per_shot,switch_times_per_shot,np.mean(obs_flips_tot ^ logical_pred,axis=1)

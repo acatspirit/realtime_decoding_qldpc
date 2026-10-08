@@ -1,5 +1,73 @@
 import stim
 import numpy as np
+from quits.decoder import detector_error_model_to_matrix
+
+def spacetime_w_window_ranges(circuit, hz, W, F, num_cor_rounds):
+    '''
+    Obtain the spacetime slices of detector error matrix for sliding window decoder
+
+    :param circuit: stim circuit
+    :param hz: X or Z error parity check matrix of the code.
+    :param W: Width of sliding window
+    :param F: Width of overlap between consecutive sliding windows
+    :param num_cor_rounds: number of windows before the last window
+
+    :return window_check_set: a set of sliced spacetime detector error matrix for each window in sliding window decoder
+    :return window_observable_set: a set of sliced observable matrix that marks the observable flips of each fault in each window
+    :return window_priors_set: a set of probability for faults in each window
+    :return window_update: the detector information update for next window of each fault mechanism in each window
+    :return window_ranges: the indices to slice the priors
+    '''
+    if F == 0:
+        raise ValueError("Input parameter F cannot be zero.")
+    model = circuit.detector_error_model(decompose_errors=False)  # detector error model of the circuit
+    check_matrix, observable_matrix, priors = detector_error_model_to_matrix(model)
+    window_check_set = []
+    window_observable_set = []
+    window_priors_set = []
+    window_update = []
+    col_min = 0
+
+    window_ranges = [] 
+    '''Check_matrix for each window'''
+    for k in range(num_cor_rounds):
+        window_check_matrix = check_matrix[k * F * hz.shape[0]:(k * F + W) * hz.shape[0], col_min:]
+        if len(window_check_matrix.indptr) == 1:
+            raise ValueError("There is no noise in one of the decoding window. This means there are redundant detectors that do not check for any error.")
+        col_max = np.max(np.where(np.diff(window_check_matrix.indptr) > 0)[0])  # all the columns that affect the window
+        window_check_matrix = window_check_matrix[:, :col_max + 1]
+        window_check_set.append(window_check_matrix)
+
+        '''corresponding flips of observables: only care about the part we fix'''
+        F_correction = window_check_matrix[:F * hz.shape[0], :]
+        cor_max = np.max(np.where(np.diff(F_correction.indptr) > 0)[0])
+        window_observable_matrix = observable_matrix[:, col_min:cor_max + 1 + col_min]
+        window_observable_set.append(window_observable_matrix)
+
+        window_ranges.append((col_min, col_max + 1 + col_min))
+
+        '''probability of each fault'''
+        window_priors = priors[col_min:col_max + 1 + col_min]
+        window_priors_set.append(window_priors)
+        '''updating the detector flips for the next window'''
+        updated_info = check_matrix[(k + 1) * F * hz.shape[0]:((k + 1) * F + 1) * hz.shape[0], col_min:cor_max + 1 + col_min]
+        col_min = (cor_max + 1) + col_min
+        window_update.append(updated_info)
+    
+    '''last window check matrix'''
+    last_window_check_matrix = check_matrix[F * num_cor_rounds * hz.shape[0]:, col_min:]
+    window_check_set.append(last_window_check_matrix)
+    '''last window observable flip'''
+    last_window_observable_matrix = observable_matrix[:, col_min:]
+    window_observable_set.append(last_window_observable_matrix)
+    '''last window prior'''
+    last_window_priors = priors[col_min:]
+    window_priors_set.append(last_window_priors)
+
+    window_ranges.append((col_min,len(priors)))
+
+    return window_check_set, window_observable_set, window_priors_set, window_update,window_ranges
+
 
 def chk_obs_priors_to_dem(chk,obs,priors):
     '''Get the DEM given the parity check matrix, observables matrix and priors.
@@ -127,3 +195,22 @@ def get_erasure_set(window_check_set, window_observable_set, window_prior_set):
     #         raise Exception("ERROR.")
 
     return erased_errors_set_alt #erased_errors_set
+
+
+def slice_erasures_to_windows(window_ranges, erasures_total, cutoff = 0.2):
+    '''
+    Inputs:
+        window_ranges: a list of tuples (r[0],r[1]) indicating how we should slice windows -- extracted from spacetime function 
+        erasures_total: a vector of 0/1 of size equal to the total num of errors in the entire dem/pcm
+        cutoff: cutoff prob (0.5 should correspond to erasures)
+
+    Output:
+        erased_error_set: erasures split per window.
+    '''
+
+    erased_errors_set = [
+        (erasures_total[r[0]:r[1]] > cutoff).astype(np.uint8)
+        for r in window_ranges
+    ]
+
+    return erased_errors_set

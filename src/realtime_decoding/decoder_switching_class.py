@@ -761,7 +761,7 @@ class decoder_switching_class:
             obs_flips_tot = np.zeros((self.num_shots, self.logical.shape[0]), dtype=np.uint8)
 
             for shot_index in range(self.num_shots):
-                print("shot:",shot_index," out of:",self.num_shots)
+                # print("shot:",shot_index," out of:",self.num_shots)
                 self.reset_for_erasures_only_weak() # reset the params so that we increment for a new set of shots
     
                 accumulated_correction = np.zeros(self.window_observable_set[0].shape[0], dtype=np.uint8) # change this so that it's a double index, also with shots
@@ -983,7 +983,7 @@ class decoder_switching_class:
                 cluster_norms_per_shot = []
     
                 for shot_index in range(self.num_shots):
-                    print("shot:",shot_index," out of:",self.num_shots)
+                    # print("shot:",shot_index," out of:",self.num_shots)
                     self.reset_for_erasures_only_weak()
     
                     accumulated_correction = np.zeros(num_logicals, dtype=np.uint8)

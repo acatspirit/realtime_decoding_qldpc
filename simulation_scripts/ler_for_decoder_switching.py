@@ -50,7 +50,7 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_s
             txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
         elif weak_decoder=='uf':
             # txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_{np.round(p_list[-1],min_order+1)}.pkl.gz'
-            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_10000_w_erasures.pkl.gz'
+            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_10000_w_erasures.txt'
             # txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_0.0007.pkl.gz'
 
         if Path(txt_to_load).name.endswith('.pkl.gz'):

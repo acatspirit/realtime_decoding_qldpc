@@ -6,4 +6,4 @@ __pycache__/
 .DS_Store
 
 data/raw/*
-data/cluster_norm_statistics/*.txt
+data/cluster_norm_statistics/cluster_norm_distributions_code_*_uf_max_shots_500000.txt

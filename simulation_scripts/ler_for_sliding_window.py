@@ -719,9 +719,9 @@ def get_ler_for_sliding_window_dcc(
             F=F,
             strong_decoder_option=strong_dec,
             weak_decoder_option=weak_dec,
-            decode_with_erasures=erasures,
-            erasure_conversion_rate=0.7941 if erasures else 0
-
+            # decode_with_erasures=erasures,
+            # erasure_conversion_rate=0.7941 if erasures else 0
+            erasures_conversion_rate=1e-4
         )    
         
         # Run the sliding window function and unpack based on option

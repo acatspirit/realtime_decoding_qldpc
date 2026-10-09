@@ -622,7 +622,7 @@ def get_ler_for_sliding_window_dcc(
         shots_per_job=10_000, 
         norm_order=2, 
         rel_error_tol=0.01,
-        erasures=True,
+        erasure_conversion_rate=0.7941,
         basis='Z',
         code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
         ps = [10**(-3.5), 5e-4, 7e-4],
@@ -636,6 +636,10 @@ def get_ler_for_sliding_window_dcc(
     '''
     print(f"starting LER calculation")
     chunk_size = 0.1*shots_per_job
+    if erasure_conversion_rate > 0:
+        erasures=True
+    else:
+        erasures=False
     # Handle local testing fallback natively
     task_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", 0))
     
@@ -671,7 +675,7 @@ def get_ler_for_sliding_window_dcc(
     # Setup directories
     script_dir = Path(__file__).resolve().parent
     if erasures:
-        output_dir = script_dir / "data" / "sliding_window_data" / f"raw_batches_{decoder_name}_{decoder_option}_erasures"
+        output_dir = script_dir / "data" / "sliding_window_data" / f"raw_batches_{decoder_name}_{decoder_option}_erasures_{erasure_conversion_rate}"
     else:
         output_dir = script_dir / "data" / "sliding_window_data" / f"raw_batches_{decoder_name}_{decoder_option}"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -721,7 +725,7 @@ def get_ler_for_sliding_window_dcc(
             weak_decoder_option=weak_dec,
             # decode_with_erasures=erasures,
             # erasure_conversion_rate=0.7941 if erasures else 0
-            erasures_conversion_rate=1e-4
+            erasures_conversion_rate=erasure_conversion_rate
         )    
         
         # Run the sliding window function and unpack based on option
@@ -821,10 +825,14 @@ def download_from_dcc(remote_path, local_dir, username="am1155", host="dcc-login
         print(f"❌ Error occurred during download. Return code: {e.returncode}")
         print("Check if the remote path is correct and that you are connected to the Duke VPN.")
 
-def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max, erasures=True, dcc_data_dir="/hpc/group/brownlab/am1155/realtime_decoding_qldpc/simulation_scripts/data/sliding_window_data"):
+def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max, erasure_conversion_rate=0.7941, dcc_data_dir="/hpc/group/brownlab/am1155/realtime_decoding_qldpc/simulation_scripts/data/sliding_window_data"):
     """
     After running on the DCC, converts data that belongs to one task into a full statistics dictionary.
     """
+    if erasure_conversion_rate > 0:
+        erasures=True
+    else:
+        erasures=False
 
     # Setup paths using pathlib
     script_dir = Path(__file__).resolve().parent
@@ -835,7 +843,7 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     
     out_dir = script_dir.parent / "data" / "sliding_window_results"
     out_dir.mkdir(parents=True, exist_ok=True)
-    txt_to_save = out_dir / f'sliding_window_{decoder_name}_{decoder_option}_max_shots_{num_shots_max}_erasures_{int(erasures)}.txt'
+    txt_to_save = out_dir / f'sliding_window_{decoder_name}_{decoder_option}_max_shots_{num_shots_max}_erasures_{erasure_conversion_rate}.txt'
 
     download_from_dcc(
             remote_path=dcc_data_dir + f"/raw_batches_{decoder_name}_{decoder_option}_erasures/*.json" if erasures else f"/raw_batches_{decoder_name}_{decoder_option}/*.json",
@@ -963,7 +971,7 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
         "codes": code_names,
         "ps": ps,
         "r": num_rounds,
-        "erasure_conversion_rate": 0.7941 if erasures else 0,
+        "erasure_conversion_rate":erasure_conversion_rate,
         "total_errors": total_errors,
         "shots": total_shots,
         "pL@r": ler_results,
@@ -987,18 +995,18 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     return dict_to_save
 
 if __name__ == "__main__":
-    num_shots      = 1_000_000
+    num_shots      = 10_000_000
     batches        = 100
     weak_decoder   = 'uf'
     strong_decoder = 'relay_bp'
     decoder_option = 'weak'
-    p_list = [10**(-3.5), 5e-4, 7e-4]
+    p_list = [1e-4, 2e-4, 3e-4]
     decoder_name = weak_decoder if decoder_option == 'weak' else strong_decoder
     # cutoff=0.8
 
-    # get_ler_for_sliding_window_dcc(decoder_name=decoder_name, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasures=True,norm_order=2, rel_error_tol=0.01)
+    get_ler_for_sliding_window_dcc(decoder_name=decoder_name, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasures=True,norm_order=2, rel_error_tol=0.01)
 
-    merge_dcc_results_sliding_window(decoder_name=decoder_name, decoder_option=decoder_option, num_shots_max=num_shots)
+    # merge_dcc_results_sliding_window(decoder_name=decoder_name, decoder_option=decoder_option, num_shots_max=num_shots)
 
 
     # txt_to_load = sys.path[-1] + f'/saved_data/single_sliding_window_{strong_decoder}_max_shots_{num_shots}.txt'

@@ -1173,9 +1173,9 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 
 if __name__ == "__main__":
-    num_shots = 100_000
+    num_shots = 500_000
     # num_shots=30_000
-    batches = 100
+    batches = 200
     shots_per_job = num_shots // batches
     target_switch_rate = 0.005 #  ion-aware
     weak_decoder = 'uf'

@@ -1173,7 +1173,7 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 
 if __name__ == "__main__":
-    num_shots = 1_000_000
+    num_shots = 100_000
     # num_shots=30_000
     batches = 100
     shots_per_job = num_shots // batches
@@ -1181,7 +1181,7 @@ if __name__ == "__main__":
     weak_decoder = 'uf'
     strong_decoder = 'relay_bp' # change back to tesseract
     erasures=True
-    erasure_conversion_rate=0.7941
+    erasure_conversion_rate=1e-4
 
     # run locally
     # get_ler_for_decoder_switching(num_shots=num_shots,
@@ -1194,13 +1194,13 @@ if __name__ == "__main__":
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasure_conversion_rate=1e-4)
-    get_ler_for_decoder_switching_dcc(ps = [2e-4,3e-4], 
-                                      num_shots=num_shots, 
-                                      shots_per_job=shots_per_job, 
-                                      target_switch_rate=target_switch_rate, 
-                                      weak_decoder=weak_decoder, 
-                                      strong_decoder=strong_decoder, 
-                                      erasure_conversion_rate=erasure_conversion_rate)
+    # get_ler_for_decoder_switching_dcc(ps = [2e-4,3e-4], 
+    #                                   num_shots=num_shots, 
+    #                                   shots_per_job=shots_per_job, 
+    #                                   target_switch_rate=target_switch_rate, 
+    #                                   weak_decoder=weak_decoder, 
+    #                                   strong_decoder=strong_decoder, 
+    #                                   erasure_conversion_rate=erasure_conversion_rate)
     
 
 
@@ -1213,17 +1213,17 @@ if __name__ == "__main__":
     #     erasure_conversion_rate=erasure_conversion_rate
     # )
 
-    # # run this to plot the results from decoder switching
-    # plot_decoder_switching_results(
-    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-    #     weak_decoder=weak_decoder,
-    #     strong_decoder=strong_decoder,
-    #     num_shots_max=num_shots,     # Update to your actual num_shots
-    #     include_strong=False,
-    #     include_weak=True,
-    #     erasure_conversion_rate=erasure_conversion_rate,
-    #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
-    # )
+    # run this to plot the results from decoder switching
+    plot_decoder_switching_results(
+        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+        weak_decoder=weak_decoder,
+        strong_decoder=strong_decoder,
+        num_shots_max=num_shots,     # Update to your actual num_shots
+        include_strong=False,
+        include_weak=True,
+        erasure_conversion_rate=erasure_conversion_rate,
+        p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
+    )
 
     # hardware indicator plot
     # plot_switching_gains_vs_switch_rate(

@@ -1,5 +1,6 @@
 import sys
 import os
+import gzip
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
 
 
@@ -190,9 +191,9 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
 
      
 
-    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.pkl.gz'
 
-    with open(txt_to_save, "wb") as file:
+    with gzip.open(txt_to_save, "wb") as file:
         pickle.dump(dict_to_save, file)
 
     #to load do:
@@ -202,7 +203,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     return 
 
 
-def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=10_000, shots_per_job=5_000,norm_order=2):
+def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=10_000, shots_per_job=5_000,norm_order=2, erasure_conversion_rate=0.7941):
 
     basis      = 'Z' #basis determining the memory experiment for the BB codes
     
@@ -215,7 +216,7 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
         ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] #
     elif weak_decoder=='uf':
         # ps = [1e-4,2e-4,3e-4,4e-4,5e-4]
-        ps = [1e-4,2e-4]
+        ps = [1e-4,2e-4, 3e-4]
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
         
@@ -237,7 +238,7 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
                                             F=F,
                                             strong_decoder_option=strong_decoder,
                                             weak_decoder_option=weak_decoder,
-                                            erasure_conversion_rate=0.7941)    
+                                            erasure_conversion_rate=erasure_conversion_rate)    
         
         new_shots,cluster_norms,logical_errors = test.decode_with_sliding_window_and_erasure(decoder_option=decoder_option,norm_order=norm_order,
                                                                                  rel_error_tol=rel_error_tol) 
@@ -367,13 +368,14 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
                     'cluster_norms': cluster_norms,
                     'switch_rates': switch_rates,
                     'cutoffs': cutoffs,
-                    'all_cluster_norms_per_p': all_data
+                    'all_cluster_norms_per_p': all_data,
+                    'erasure_conversion_rate': erasure_conversion_rate
 
     }
 
      
 
-    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_w_erasures.txt'
+    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_w_erasures_{erasure_conversion_rate}.txt'
 
     with open(txt_to_save, "wb") as file:
         pickle.dump(dict_to_save, file)
@@ -385,14 +387,17 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
     return 
 
 # code_name = "[[72,12,6]]" 
-code_name = "[[90,8,10]]" 
+# code_name = "[[90,8,10]]" 
 # code_name = "[[126,8,10]]"
 # code_name = "[[144,12,12]]"
 # code_name = "[[162,8,14]]"
-num_shots     = 10_000
-shots_per_job = 1000
+num_shots     = 100_000
+shots_per_job = 5000
 
-switch_rate_vs_p_for_erasures(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
+code_names = ["[[72,12,6]]" ,"[[90,8,10]]", "[[126,8,10]]" , "[[144,12,12]]" , "[[162,8,14]]"]
+
+for code_name in code_names:
+    switch_rate_vs_p_for_erasures(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
 
 
 # weak_decoder = 'uf'

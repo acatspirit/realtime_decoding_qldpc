@@ -846,7 +846,7 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     txt_to_save = out_dir / f'sliding_window_{decoder_name}_{decoder_option}_max_shots_{num_shots_max}_erasures_{erasure_conversion_rate}.txt'
 
     download_from_dcc(
-            remote_path=dcc_data_dir + f"/raw_batches_{decoder_name}_{decoder_option}_erasures/*.json" if erasures else f"/raw_batches_{decoder_name}_{decoder_option}/*.json",
+            remote_path=dcc_data_dir + f"/raw_batches_{decoder_name}_{decoder_option}_erasures_{erasure_conversion_rate}/*.json" if erasures else f"/raw_batches_{decoder_name}_{decoder_option}/*.json",
             local_dir=input_dir
         )
     
@@ -995,7 +995,7 @@ def merge_dcc_results_sliding_window(decoder_name, decoder_option, num_shots_max
     return dict_to_save
 
 if __name__ == "__main__":
-    num_shots      = 1_000_000
+    num_shots      = 100_000
     batches        = 100
     weak_decoder   = 'uf'
     strong_decoder = 'relay_bp'
@@ -1004,9 +1004,9 @@ if __name__ == "__main__":
     decoder_name = weak_decoder if decoder_option == 'weak' else strong_decoder
     # cutoff=0.8
 
-    get_ler_for_sliding_window_dcc(decoder_name=decoder_name, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasure_conversion_rate=0.7941,norm_order=2, rel_error_tol=0.01)
+    # get_ler_for_sliding_window_dcc(decoder_name=decoder_name, num_shots=num_shots, shots_per_job=num_shots//batches, ps=p_list,erasure_conversion_rate=0.7941,norm_order=2, rel_error_tol=0.01)
 
-    # merge_dcc_results_sliding_window(decoder_name=decoder_name, decoder_option=decoder_option, num_shots_max=num_shots)
+    merge_dcc_results_sliding_window(decoder_name=decoder_name, decoder_option=decoder_option, num_shots_max=num_shots)
 
 
     # txt_to_load = sys.path[-1] + f'/saved_data/single_sliding_window_{strong_decoder}_max_shots_{num_shots}.txt'

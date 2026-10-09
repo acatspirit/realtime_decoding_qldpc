@@ -1,0 +1,1 @@
+{'basis': None, 'decoder_name': 'uf', 'decoder_option': 'weak', 'codes': [], 'ps': [], 'r': None, 'erasure_conversion_rate': 0.7941, 'total_errors': {}, 'shots': {}, 'pL@r': {}, 'std_pL@r': {}, 'epsilons': {}, 'std_epsilons': {}}

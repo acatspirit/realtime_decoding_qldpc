@@ -50,8 +50,8 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_s
             txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
         elif weak_decoder=='uf':
             # txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_{np.round(p_list[-1],min_order+1)}.pkl.gz'
-            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_50000_w_erasures.txt'
-            # txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_0.0007.pkl.gz'
+            # txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_50000_w_erasures.txt' # with erasure conversion rate 0.7941 to get clusters
+            txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_0.0007.pkl.gz'
 
         if Path(txt_to_load).name.endswith('.pkl.gz'):
             with gzip.open(txt_to_load, "rb") as file:
@@ -1194,13 +1194,13 @@ if __name__ == "__main__":
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasure_conversion_rate=1e-4)
-    # get_ler_for_decoder_switching_dcc(ps = [2e-4,3e-4], 
-    #                                   num_shots=num_shots, 
-    #                                   shots_per_job=shots_per_job, 
-    #                                   target_switch_rate=target_switch_rate, 
-    #                                   weak_decoder=weak_decoder, 
-    #                                   strong_decoder=strong_decoder, 
-    #                                   erasure_conversion_rate=erasure_conversion_rate)
+    get_ler_for_decoder_switching_dcc(ps = [10**(-3.5)], 
+                                      num_shots=num_shots, 
+                                      shots_per_job=shots_per_job, 
+                                      target_switch_rate=target_switch_rate, 
+                                      weak_decoder=weak_decoder, 
+                                      strong_decoder=strong_decoder, 
+                                      erasure_conversion_rate=erasure_conversion_rate)
     
 
 
@@ -1214,16 +1214,16 @@ if __name__ == "__main__":
     # )
 
     # run this to plot the results from decoder switching
-    plot_decoder_switching_results(
-        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots,     # Update to your actual num_shots
-        include_strong=False,
-        include_weak=True,
-        erasure_conversion_rate=erasure_conversion_rate,
-        p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
-    )
+    # plot_decoder_switching_results(
+    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots,     # Update to your actual num_shots
+    #     include_strong=False,
+    #     include_weak=True,
+    #     erasure_conversion_rate=erasure_conversion_rate,
+    #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
+    # )
 
     # hardware indicator plot
     # plot_switching_gains_vs_switch_rate(

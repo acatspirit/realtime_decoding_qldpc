@@ -946,13 +946,13 @@ def plot_decoder_switching_results(target_switch_rate, weak_decoder, strong_deco
 
 
 
-def plot_decoder_switching_results_switch_rate(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, data_dict=None, include_strong_and_weak=True, erasures=True):
+def plot_decoder_switching_results_switch_rate(target_switch_rate, weak_decoder, strong_decoder, num_shots_max, data_dict=None, include_strong_and_weak=True, erasure_conversion_rate=0.7941):
     """
     Plots the results from the merged decoder switching data.
     """
     if data_dict is None:
         script_dir = Path(__file__).resolve().parent
-        results_file = script_dir.parent / "data" / "decoder_switching_results" / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}_erasures_{int(erasures)}.txt'
+        results_file = script_dir.parent / "data" / "decoder_switching_results" / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}_erasures_{erasure_conversion_rate}.txt'
         
         if not results_file.exists():
             print(f"Results file not found: {results_file}")
@@ -1195,13 +1195,13 @@ if __name__ == "__main__":
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasure_conversion_rate=1e-4)
-    get_ler_for_decoder_switching_dcc(ps = [2e-4], 
-                                      num_shots=num_shots, 
-                                      shots_per_job=shots_per_job, 
-                                      target_switch_rate=target_switch_rate, 
-                                      weak_decoder=weak_decoder, 
-                                      strong_decoder=strong_decoder, 
-                                      erasure_conversion_rate=erasure_conversion_rate)
+    # get_ler_for_decoder_switching_dcc(ps = [2e-4], 
+    #                                   num_shots=num_shots, 
+    #                                   shots_per_job=shots_per_job, 
+    #                                   target_switch_rate=target_switch_rate, 
+    #                                   weak_decoder=weak_decoder, 
+    #                                   strong_decoder=strong_decoder, 
+    #                                   erasure_conversion_rate=erasure_conversion_rate)
     
 
 
@@ -1221,10 +1221,19 @@ if __name__ == "__main__":
     #     strong_decoder=strong_decoder,
     #     num_shots_max=num_shots,     # Update to your actual num_shots
     #     include_strong=False,
-    #     include_weak=True,
+    #     include_weak=False,
     #     erasure_conversion_rate=erasure_conversion_rate,
     #     p_range=(10**(-4), 10**(-3.5))  # Optional: specify a range of p values to plot
     # )
+
+    # plot with the switching rate
+    plot_decoder_switching_results_switch_rate(
+        target_switch_rate=target_switch_rate,
+        weak_decoder=weak_decoder,
+        strong_decoder=strong_decoder,
+        num_shots_max=num_shots,
+        include_strong_and_weak=False
+    )
 
     # hardware indicator plot
     # plot_switching_gains_vs_switch_rate(

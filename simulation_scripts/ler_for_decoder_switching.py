@@ -1178,7 +1178,7 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 
 
 if __name__ == "__main__":
-    num_shots = 10_000
+    num_shots = 5_000_000
     # num_shots=30_000
     batches = 100
     shots_per_job = num_shots // batches

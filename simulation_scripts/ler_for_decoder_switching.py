@@ -531,8 +531,8 @@ def get_ler_for_decoder_switching_dcc(
                     "r": num_rounds,
                     "shots_run": int(shots_run),
                     "logical_errors": float(logical_errors),
-                    "switch_times": switch_times,
-                    "num_windows": num_windows
+                    "switch_times": float(switch_times),
+                    "num_windows": int(num_windows)
                 }              
 
         if erasures:
@@ -1199,24 +1199,24 @@ if __name__ == "__main__":
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasure_conversion_rate=1e-4)
-    get_ler_for_decoder_switching_dcc(ps = [2e-4], 
-                                      num_shots=num_shots, 
-                                      shots_per_job=shots_per_job, 
-                                      target_switch_rate=target_switch_rate, 
-                                      weak_decoder=weak_decoder, 
-                                      strong_decoder=strong_decoder, 
-                                      erasure_conversion_rate=erasure_conversion_rate)
+    # get_ler_for_decoder_switching_dcc(ps = [2e-4], 
+    #                                   num_shots=num_shots, 
+    #                                   shots_per_job=shots_per_job, 
+    #                                   target_switch_rate=target_switch_rate, 
+    #                                   weak_decoder=weak_decoder, 
+    #                                   strong_decoder=strong_decoder, 
+    #                                   erasure_conversion_rate=erasure_conversion_rate)
     
 
 
     # run this once you have stuff from the cluster, download by uncommenting below, comment the get_ler_for_decoder_switching_dcc line above, and run this script again
-    # merge_dcc_results(
-    #     target_switch_rate=target_switch_rate, # Update with the switch rate you ran
-    #     weak_decoder=weak_decoder,
-    #     strong_decoder=strong_decoder,
-    #     num_shots_max=num_shots,     # Update to your actual num_shots
-    #     erasure_conversion_rate=erasure_conversion_rate
-    # )
+    merge_dcc_results(
+        target_switch_rate=target_switch_rate, # Update with the switch rate you ran
+        weak_decoder=weak_decoder,
+        strong_decoder=strong_decoder,
+        num_shots_max=num_shots,     # Update to your actual num_shots
+        erasure_conversion_rate=erasure_conversion_rate
+    )
 
     # run this to plot the results from decoder switching
     # plot_decoder_switching_results(

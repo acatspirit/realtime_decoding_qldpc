@@ -771,7 +771,7 @@ def get_ler_for_sliding_window_dcc(
             "p": float(p),
             "r": int(num_rounds),
             "shots_run": int(shots_run),
-            "logical_errors": int(logical_errors),
+            "logical_errors": logical_errors,
             "num_windows": int(num_windows)
         }
 

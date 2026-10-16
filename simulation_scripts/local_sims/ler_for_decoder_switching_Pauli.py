@@ -286,7 +286,7 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
                     "total_windows": total_windows}         
     
 
-    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3.txt' 
+    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3.txt' 
 
     # with open(txt_to_save, 'w') as file:
     #     file.write(str(dict_to_save))      
@@ -563,7 +563,7 @@ def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='re
                     "total_windows": total_windows}         
     
 
-    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}.txt' 
+    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}.txt' 
 
     with open(txt_to_save, 'w') as file:
         file.write(str(dict_to_save))      

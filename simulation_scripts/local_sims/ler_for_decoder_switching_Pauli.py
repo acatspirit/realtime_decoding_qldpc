@@ -13,11 +13,13 @@ from src.realtime_decoding.decoder_switching_class import decoder_switching_clas
 import pickle 
 
 '''
-Script to run simulations for decoder switching considering only Pauli noise (no leakage or erasures).
-Results are saved in the folder: saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}
+Run decoder simulations considering only the ionic-Pauli noise (no leakage or erasures).
 
-Cluster norms ar e
+Results are saved in the folder: 
+saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}
 
+Cluster norm distributions are loaded from:
+saved_data/cluster_norm_statistics 
 '''
 
 

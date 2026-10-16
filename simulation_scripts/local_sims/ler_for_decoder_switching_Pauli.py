@@ -22,7 +22,6 @@ Cluster norm distributions are loaded from:
 saved_data/cluster_norm_statistics 
 '''
 
-
 #============= bplsd as weak decoder ============================================
 
 def get_cutoffs_for_input_switch_rate_bplsd(target_switch_rate,plot=False):

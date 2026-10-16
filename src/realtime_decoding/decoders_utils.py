@@ -22,10 +22,15 @@ def collect_default_decoder_params(decoder):
 
     if decoder=='tesseract': # make params a little worse
         #We could change some of these parameters
-        decoder_params = {'det_beam': 30, # test larger too, was 10 
-                          'pqlimit': 100_000, # ? try increasing , test first, was 50_000
-                          'beam_climbing': True,# good
-                          'no_revisit_dets': True} # good
+        # decoder_params = {'det_beam': 30, # test larger too, was 10 
+        #                   'pqlimit': 100_000, # ? try increasing , test first, was 50_000
+        #                   'beam_climbing': True,# good
+        #                   'no_revisit_dets': True} # good
+
+        decoder_params = {'det_beam': 10, 
+                          'pqlimit': 50_000, 
+                          'beam_climbing': True,
+                          'no_revisit_dets': True} 
 
     elif decoder=='relay_bp':
         decoder_params =  {

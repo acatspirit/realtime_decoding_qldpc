@@ -34,7 +34,8 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     if weak_decoder == 'bplsd':
         ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] #
     elif weak_decoder=='uf':
-        ps = [1e-4,2e-4,3e-4,4e-4,5e-4]
+        # ps = [1e-4,2e-4,3e-4,4e-4,5e-4]
+        ps = np.logspace(-4,-3.5,6)
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
         
@@ -191,10 +192,12 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
 
      
 
-    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.pkl.gz'
+    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
 
-    with gzip.open(txt_to_save, "wb") as file:
-        pickle.dump(dict_to_save, file)
+    # with gzip.open(txt_to_save, "wb") as file:
+    #     pickle.dump(dict_to_save, file)
+    with open(txt_to_save, "wb") as file:
+        pickle.dump(dict_to_save, file)    
 
     #to load do:
     # with open(txt_to_load, "rb") as file:
@@ -388,16 +391,18 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
 
 # code_name = "[[72,12,6]]" 
 # code_name = "[[90,8,10]]" 
-# code_name = "[[126,8,10]]"
+# code_name = "[[126,8,10]]" 
 # code_name = "[[144,12,12]]"
 # code_name = "[[162,8,14]]"
 num_shots     = 100_000
 shots_per_job = 5000
 
-code_names = ["[[72,12,6]]" ,"[[90,8,10]]", "[[126,8,10]]" , "[[144,12,12]]" , "[[162,8,14]]"]
+# p = np.logspace(-4,-3.5,6)
+# print(p)
+# code_names = ["[[72,12,6]]" ,"[[90,8,10]]", "[[126,8,10]]" , "[[144,12,12]]" , "[[162,8,14]]"]
 
-for code_name in code_names:
-    switch_rate_vs_p_for_erasures(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
+# for code_name in code_names:
+#     switch_rate_vs_p_for_erasures(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
 
 
 # weak_decoder = 'uf'

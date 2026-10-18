@@ -296,10 +296,11 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
     return 
 
 
-bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-3, strong_decoder='relay_bp',num_shots=20_000,shots_per_job=2_000)
+# bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-3, strong_decoder='relay_bp',num_shots=20_000,shots_per_job=2_000)
 
 
 #========== uf as weak decoder ===============================================================
+import zipfile
 
 def get_cutoffs_for_input_switch_rate_uf(target_switch_rate,plot=False):
     '''
@@ -326,10 +327,15 @@ def get_cutoffs_for_input_switch_rate_uf(target_switch_rate,plot=False):
     cnt=0
     for code_name in code_names:
     
-        txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+        txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics_final/uf_compressed/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt.zip'
 
-        with open(txt_to_load, "rb") as file:
-            data = pickle.load(file)
+        with zipfile.ZipFile(txt_to_load, "r") as z:
+            
+            with z.open(z.namelist()[0], "r") as file:
+                data = pickle.load(file)
+
+        # with open(txt_to_load, "rb") as file:
+        #     data = pickle.load(file)
 
         data_per_code.append(data)
 
@@ -564,14 +570,14 @@ def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='re
 
     txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}.txt' 
 
-    with open(txt_to_save, 'w') as file:
-        file.write(str(dict_to_save))      
+    # with open(txt_to_save, 'w') as file:
+    #     file.write(str(dict_to_save))      
 
     return 
 
 
 
-uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='tesseract', num_shots = 10_000_000, shots_per_job = 500_000)
+uf_to_strong_w_target_switch_rate(target_switch_rate=5e-3,strong_decoder='tesseract', num_shots = 50_000, shots_per_job = 10_000)
 
 
 

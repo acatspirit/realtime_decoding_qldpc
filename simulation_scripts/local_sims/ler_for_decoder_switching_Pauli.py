@@ -331,7 +331,6 @@ def get_cutoffs_for_input_switch_rate_uf(target_switch_rate,plot=False):
         with open(txt_to_load, "rb") as file:
             data = pickle.load(file)
 
-        print("code_name:",code_name,"ok")
         data_per_code.append(data)
 
         ps = data['ps']
@@ -380,7 +379,7 @@ def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='re
     #Run decoder switching protocol:
     
     basis       = "Z"
-    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"]
+    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"] #
     ps         = np.logspace(-4,-3.5,6)
     num_rounds = 25
 
@@ -572,7 +571,7 @@ def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='re
 
 
 
-uf_to_strong_w_target_switch_rate(target_switch_rate=1e-3,strong_decoder='tesseract', num_shots = 2_000_000, shots_per_job = 200_000)
+uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='tesseract', num_shots = 10_000_000, shots_per_job = 500_000)
 
 
 

@@ -1,7 +1,8 @@
 from quits.qldpc_code import BbCode
 from quits import ErrorModel
-import stim
 import deltakit_stim
+import stim
+
 import numpy as np
 
 def fix_bb_circuit_for_sliding_window(original_circuit, num_rounds):
@@ -198,7 +199,7 @@ def create_bb_codes_circuit_ionic_model(code_name: str, p: float, num_rounds: in
 
     return labeled_circuit, bb
 
-
+#TODO: CHECK FOR BUG ON WHICH QUBITS ARE LEAKED.
 def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_leak = 1e-5):
     '''Add independent leakage errors on the qubits, assuming a fixed leakage error rate per round of p_leak.
        Note, leakage errors are put at the beginning of each round: 
@@ -223,10 +224,10 @@ def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_le
           In this way, we contain the leakage features, but we do not exploit whether or not there was leakage.
           We could do some post-selection thing.
     '''
-
+    # print("circuit:",circuit)
     new_circuit = deltakit_stim.Circuit()
 
-    targets = [stim.GateTarget(k) for k in range(circuit.num_qubits)]  #These are all the qubits in the circuit
+    targets = [deltakit_stim.GateTarget(k) for k in range(circuit.num_qubits)]  #These are all the qubits in the circuit
 
     max_det= circuit.num_detectors-1 #max detector in original circuit --- we will append leakage-herald detectors starting from max_det+1 as a coordinate
 
@@ -238,10 +239,12 @@ def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_le
     for inst in circuit.flattened():
 
         if inst.name == "MR": #intermediate measurements of ancilla
+            temp = inst.targets_copy()
+            temp = [deltakit_stim.GateTarget(x.value) for x in temp]
 
-            new_circuit.append(name="HERALD_LEAKAGE_EVENT",targets=inst.targets_copy())              #Can only have herald on ancillas that will be measured
-            new_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy()) #Apply MR
-            new_circuit.append(name="LEAKAGE",targets=targets,arg=p_leak)                            #Leak again ALL QUBITS in the beginning of next round
+            new_circuit.append(name="HERALD_LEAKAGE_EVENT",targets=temp)              #Can only have herald on ancillas that will be measured
+            new_circuit.append(name=inst.name,targets=temp,arg=inst.gate_args_copy()) #Apply MR
+            new_circuit.append(name="LEAKAGE",targets=targets,arg=p_leak)                                  #Leak again ALL QUBITS in the beginning of next round
 
 
             #----Append the leakage-herald detectors (first coord index > max_detector in regular circuit)
@@ -250,11 +253,11 @@ def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_le
             if time_slice==0: #for the time_slice=0 ignore half of the detectors, probably outcomes are non-deterministic...
 
                 for k in range(num_recs_any_but_last//2, num_recs_any_but_last):
-                    new_circuit.append("DETECTOR",stim.target_rec(-num_recs_any_but_last-k-1),(cnt,time_slice))
+                    new_circuit.append("DETECTOR",deltakit_stim.target_rec(-num_recs_any_but_last-k-1),(cnt,time_slice))
                     cnt+=1
             else:
                 for k in range(num_recs_any_but_last):
-                    new_circuit.append("DETECTOR",stim.target_rec(-num_recs_any_but_last-k-1),(cnt,time_slice))
+                    new_circuit.append("DETECTOR",deltakit_stim.target_rec(-num_recs_any_but_last-k-1),(cnt,time_slice))
                     cnt+=1
 
             time_slice+=1
@@ -262,24 +265,66 @@ def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_le
             
         elif inst.name=="R": #Reset of all qubits @ beginning of experiment
             
-              
-            new_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy()) #Apply R
-            new_circuit.append(name="LEAKAGE",targets=inst.targets_copy(),arg=p_leak)                #Leak qubits 
+            temp = inst.targets_copy()
+            temp = [deltakit_stim.GateTarget(x.value) for x in temp]
+
+            new_circuit.append(name=inst.name,targets=temp,arg=inst.gate_args_copy()) #Apply R
+            new_circuit.append(name="LEAKAGE",targets=temp,arg=p_leak)                #Leak qubits 
 
 
         elif inst.name=="M": #final data qubit measurements 
-            new_circuit.append(name="HERALD_LEAKAGE_EVENT",targets=inst.targets_copy())               #Herald the leakage on data qubit measurements
-            new_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())  #Measure the data qubits
+            temp = inst.targets_copy()
+            temp = [deltakit_stim.GateTarget(x.value) for x in temp]
+            
+            new_circuit.append(name="HERALD_LEAKAGE_EVENT",targets=temp)               #Herald the leakage on data qubit measurements
+            new_circuit.append(name=inst.name,targets=temp,arg=inst.gate_args_copy())  #Measure the data qubits
 
             #Add again the leakage detectors
 
             for k in range(num_recs_any_but_last):
-                new_circuit.append("DETECTOR",stim.target_rec(-num_recs_any_but_last-k-1),(cnt,time_slice))
+                new_circuit.append("DETECTOR",deltakit_stim.target_rec(-num_recs_any_but_last-k-1),(cnt,time_slice))
                 cnt+=1            
 
 
         else: #any other instruction
-            new_circuit.append(name=inst.name,targets=inst.targets_copy(),arg=inst.gate_args_copy())  #All other instructions remain invariant
+
+            temp = inst.targets_copy()
+            if temp and isinstance(temp[0],stim.GateTarget) and inst.name!="DETECTOR" and inst.name!="OBSERVABLE_INCLUDE": #not empty also
+                
+                temp = [deltakit_stim.GateTarget(x.value) for x in temp]
+                new_circuit.append(name=inst.name,targets=temp,arg=inst.gate_args_copy())
+            elif inst.name=='TICK':
+                
+                new_circuit.append(name=inst.name)
+            
+            elif inst.name=="DEPOLARIZE1" and not temp: #This is a bug from quits empty targets so skip
+                continue
+
+            elif inst.name=="DETECTOR":
+                
+                temp = inst.targets_copy()
+                if temp[0].is_measurement_record_target:
+                    
+                    temp = [deltakit_stim.target_rec(x.value) for x in temp]
+                else:
+
+                    temp = [[deltakit_stim.target_rec(x.value) for x in sublist]
+                            for sublist in temp]
+                    
+                new_circuit.append(name="DETECTOR",targets=temp,arg = inst.gate_args_copy())
+
+            elif inst.name=="OBSERVABLE_INCLUDE":
+
+                temp = inst.targets_copy()
+                
+                temp = [deltakit_stim.target_rec(x.value) for x in temp]
+                
+                new_circuit.append(name=inst.name,targets=temp,arg=inst.gate_args_copy())
+
+            else:
+                raise Exception("Other instruction.")
+            
+            
 
         
     #Need to update the regular dets for time-slice>1
@@ -314,7 +359,7 @@ def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_le
                 if len(targets)==2: #Bulk dets
 
                     val_to_shift = targets[1].value
-                    new_targets = [targets[0],stim.target_rec(val_to_shift-num_recs_any_but_last)]
+                    new_targets = [targets[0],deltakit_stim.target_rec(val_to_shift-num_recs_any_but_last)]
 
                 if len(targets)>2: #Last round dets from final data measurements (last record is 18 values)
                     
@@ -327,7 +372,7 @@ def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_le
                     
                     new_targets = targets 
                     val_to_shift = vals[loc]
-                    new_targets[loc] = stim.target_rec(val_to_shift-num_recs_any_but_last)
+                    new_targets[loc] = deltakit_stim.target_rec(val_to_shift-num_recs_any_but_last)
 
                 final_circuit.append("DETECTOR",new_targets,coords)
 

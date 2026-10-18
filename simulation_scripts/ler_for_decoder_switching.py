@@ -1180,7 +1180,7 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 if __name__ == "__main__":
     num_shots = 5_000_000
     # num_shots=30_000
-    batches = 500
+    batches = 250
     shots_per_job = num_shots // batches
     target_switch_rate = 0.005 #  ion-aware is 0.01
     weak_decoder = 'uf'
@@ -1199,13 +1199,13 @@ if __name__ == "__main__":
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasure_conversion_rate=1e-4)
-    # get_ler_for_decoder_switching_dcc(ps = [2e-4], 
-    #                                   num_shots=num_shots, 
-    #                                   shots_per_job=shots_per_job, 
-    #                                   target_switch_rate=target_switch_rate, 
-    #                                   weak_decoder=weak_decoder, 
-    #                                   strong_decoder=strong_decoder, 
-    #                                   erasure_conversion_rate=erasure_conversion_rate)
+    get_ler_for_decoder_switching_dcc(ps = [3e-4,5e-4], 
+                                      num_shots=num_shots, 
+                                      shots_per_job=shots_per_job, 
+                                      target_switch_rate=target_switch_rate, 
+                                      weak_decoder=weak_decoder, 
+                                      strong_decoder=strong_decoder, 
+                                      erasure_conversion_rate=erasure_conversion_rate)
     
 
 
@@ -1231,13 +1231,13 @@ if __name__ == "__main__":
     # )
 
     # plot with the switching rate
-    plot_decoder_switching_results_switch_rate(
-        target_switch_rate=target_switch_rate,
-        weak_decoder=weak_decoder,
-        strong_decoder=strong_decoder,
-        num_shots_max=num_shots,
-        include_strong_and_weak=False
-    )
+    # plot_decoder_switching_results_switch_rate(
+    #     target_switch_rate=target_switch_rate,
+    #     weak_decoder=weak_decoder,
+    #     strong_decoder=strong_decoder,
+    #     num_shots_max=num_shots,
+    #     include_strong_and_weak=False
+    # )
 
     # hardware indicator plot
     # plot_switching_gains_vs_switch_rate(

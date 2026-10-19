@@ -73,12 +73,12 @@ def chk_obs_priors_to_dem(chk,obs,priors):
     '''Get the DEM given the parity check matrix, observables matrix and priors.
     
     Inputs:
-    chk: detector error matrix (or parity check matrix) (size # of dets x of faults)
-    obs: 0/1 array of logical observables (whether the logical observable is flipped by the k-th fault) (size # of observables x # of faults)
-    priors: probs per fault (for each column of chk, the detectors in the k-th fault column and the observables in the k-th fault column which are 1, are flipped with some prob)
+        chk: detector error matrix (or parity check matrix) (size # of dets x of faults)
+        obs: 0/1 array of logical observables (whether the logical observable is flipped by the k-th fault) (size # of observables x # of faults)
+        priors: probs per fault (for each column of chk, the detectors in the k-th fault column and the observables in the k-th fault column which are 1, are flipped with some prob)
 
     Outputs:
-    DEM: detector error model
+        DEM: detector error model
     '''
 
     num_faults   = np.shape(chk)[1]
@@ -111,12 +111,12 @@ def get_window_dems(window_check_set, window_observable_set, window_priors_set):
     '''Get the DEMs per window, given check matrix, observable matrix and priors per window.
     
     Input:
-    window_check_set: list of check matrices per window
-    window_observable_set: list of observable matrices per window
-    window_priors_set: list of priors per window
+        window_check_set: list of check matrices per window
+        window_observable_set: list of observable matrices per window
+        window_priors_set: list of priors per window
 
     Outputs:
-    window_dems_set: list of dems per window
+        window_dems_set: list of dems per window
     '''
 
     N = len(window_check_set)
@@ -135,8 +135,10 @@ def get_window_dems(window_check_set, window_observable_set, window_priors_set):
 
 
 def get_erased_mechanisms_from_DEM(dem:stim.DetectorErrorModel, p_cutoff = 0.03):
-    """ Given a DEM, get the error mechanisms where erasures occurred. This is set by a cutoff, since erasures
-        produce an error mechanism with p=0.5. General rule - cutoff should be p_max error?
+    """ 
+    Given a DEM, get the error mechanisms where erasures occurred. This is set by a cutoff, since erasures
+    produce an error mechanism with p=0.5. General rule - cutoff should be p_max error?
+    
     """ 
 
     erased_errors = np.zeros(shape=(dem.num_errors,)).flatten()
@@ -152,19 +154,15 @@ def get_erased_mechanisms_from_DEM(dem:stim.DetectorErrorModel, p_cutoff = 0.03)
     return erased_errors
 
 def get_erased_mechanisms_from_priors(window_prior_set,cutoff=0.2):
-    #len of priors is num_faults
+    ''''
+    Get the erased locations (0.5 rates) from the windowed prior rates.
 
-    # erased_errors_set = []
-
-    # for k in range(len(window_prior_set)):
-
-    #     priors = window_prior_set[k]
-    #     num_faults    = np.shape(priors)[0]
-    #     erased_errors = np.zeros(shape=(num_faults,)).flatten()
-
-    #     locs = priors>cutoff 
-    #     erased_errors[locs] = 1
-    #     erased_errors_set.append(erased_errors)
+    Input:
+        window_prior_set: list of priors (probabilities) per sliding window
+        cutoff: above which value to consider erased locations
+    Output:
+        erased_error_set: list of 0/1 arrays indicating the erased locations
+    '''
 
     erased_errors_set = [
         (priors > cutoff).astype(np.uint8)
@@ -176,7 +174,9 @@ def get_erased_mechanisms_from_priors(window_prior_set,cutoff=0.2):
 
 
 def get_erasure_set(window_check_set, window_observable_set, window_prior_set):
-    
+    '''
+    Obtain the erasure locations per sliding window.
+    '''
     
     # window_dems_set = get_window_dems(window_check_set, window_observable_set, window_prior_set)
     
@@ -199,6 +199,8 @@ def get_erasure_set(window_check_set, window_observable_set, window_prior_set):
 
 def slice_erasures_to_windows(window_ranges, erasures_total, cutoff = 0.2):
     '''
+    Given erasure locations from a total DEM slice them into windows.
+
     Inputs:
         window_ranges: a list of tuples (r[0],r[1]) indicating how we should slice windows -- extracted from spacetime function 
         erasures_total: a vector of 0/1 of size equal to the total num of errors in the entire dem/pcm

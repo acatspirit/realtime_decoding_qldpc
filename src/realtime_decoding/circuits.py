@@ -33,15 +33,18 @@ def fix_bb_circuit_for_sliding_window(original_circuit, num_rounds):
 
 
 def create_bb_codes_circuit(code_name: str, p: float, num_rounds: int, basis: str):
-    
-    '''Maybe we should compare codes that have the same # of logical qubits??
-    This is because we call logical failure even if one out of k qubits has a logical error.
-    So we should have a fixed k as well.
-    
-    So:
-     [[72,12,6]], [[144,12,12]], [[288,12,18]]
-     [[90,8,10]], [[162,8,14]], [[180,8,16]]
+    '''
+    Function that creates the syndrome extraction circuit for bivariate bicycle codes, for uniform depolarizing rates.
 
+    Input:
+        code_name: "[[n,k,d]]" format, see dictionary of codes below
+        p: physical error rate for idling, SPAM, single-qubit and two-qubit errors
+        num_rounds: number of syndrome extraction cycles
+        basis: "Z" or "X" for Z-memory or X-memory
+
+    Output:
+        circuit: the stim circuit
+        bb: dictionary with contains information about the bb code, e.g., parity check matrix, logical operators
     '''
 
     bb_codes_dict = { "[[98,6,12]]": {'l': 7, 'm': 7, 'A_x_pows': [3], 'A_y_pows': [5,6], 'B_x_pows': [3,5], 'B_y_pows': [2]}, 
@@ -63,18 +66,6 @@ def create_bb_codes_circuit(code_name: str, p: float, num_rounds: int, basis: st
                  "[[288,24,12]]": {'l':12, 'm':12, 'A_x_pows': [6], 'A_y_pows': [1,2], 'B_x_pows': [2,4], 'B_y_pows':[3]},
                  "[[784,24,24]]": {'l':28, 'm':14, 'A_x_pows': [26], 'A_y_pows': [6,8], 'B_x_pows': [9,20], 'B_y_pows':[7]} 
                 }
-
-
-    # d_dict = { 6:{'l':6, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},    #this is [[72,12,6]]
-    #             10: {'l':15, 'm':3, 'A_x_pows': [9], 'A_y_pows': [1,2], 'B_x_pows': [2,7], 'B_y_pows':[0]}, #this is [[90,8,10]]
-    #              12:{'l':12, 'm':6, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [1,2], 'B_y_pows':[3]},  #this is [[144,12,12]]
-                
-    #              14:{'l':3, 'm':27, 'A_x_pows': [0], 'A_y_pows': [10,14], 'B_x_pows': [1,2], 'B_y_pows':[12]},  #this is [[162,8,14]]
-    #             16:{'l':6, 'm':15, 'A_x_pows': [3], 'A_y_pows': [1,2], 'B_x_pows': [4,5], 'B_y_pows':[6]},  #this is [[180,8,16]]
-                
-    #             18:{'l':12, 'm':12, 'A_x_pows': [3], 'A_y_pows': [2,7], 'B_x_pows': [1,2], 'B_y_pows':[3]},  #this is [[288,12,18]]
-    #             24:{'l':28, 'm':14, 'A_x_pows': [26], 'A_y_pows': [6,8], 'B_x_pows': [9,20], 'B_y_pows':[7]}} #this is [[784,24,24]]
-    
 
 
     # https://arxiv.org/pdf/2408.10001 some codes taken from this paper (k=8 codes taken from there)
@@ -135,15 +126,20 @@ def create_bb_codes_circuit(code_name: str, p: float, num_rounds: int, basis: st
 
 
 def create_bb_codes_circuit_ionic_model(code_name: str, p: float, num_rounds: int, basis: str, p_pauli=None, idling_erasures=False):
-    
-    '''Maybe we should compare codes that have the same # of logical qubits??
-    This is because we call logical failure even if one out of k qubits has a logical error.
-    So we should have a fixed k as well.
-    
-    So:
-     [[72,12,6]], [[144,12,12]], [[288,12,18]]
-     [[90,8,10]], [[162,8,14]], [[180,8,16]]
+    '''
+    Function that creates the syndrome extraction circuit for bivariate bicycle codes under trapped-ion aware noise model.
 
+    Input:
+        code_name: "[[n,k,d]]" format, see dictionary of codes below
+        p: physical error rate for idling, SPAM, single-qubit and two-qubit errors
+        num_rounds: number of syndrome extraction cycles
+        basis: "Z" or "X" for Z-memory or X-memory
+        p_pauli: None or some value. if None, it's trapped-ion noise model with "p" being the 2-qubit error rate. Otherwise, p_pauli is the 2-qubit error rate.
+        idling_erasures: if True set the erasure rate to p_pauli/100 otherwise to p/100
+
+    Output:
+        circuit: the stim circuit
+        bb: dictionary with contains information about the bb code, e.g., parity check matrix, logical operators
     '''
 
     bb_codes_dict = { "[[98,6,12]]": {'l': 7, 'm': 7, 'A_x_pows': [3], 'A_y_pows': [5,6], 'B_x_pows': [3,5], 'B_y_pows': [2]}, 
@@ -199,10 +195,11 @@ def create_bb_codes_circuit_ionic_model(code_name: str, p: float, num_rounds: in
 
     return labeled_circuit, bb
 
-#TODO: CHECK FOR BUG ON WHICH QUBITS ARE LEAKED.
+
 def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_leak = 1e-5):
-    '''Add independent leakage errors on the qubits, assuming a fixed leakage error rate per round of p_leak.
-       Note, leakage errors are put at the beginning of each round: 
+    '''
+    Add independent leakage errors on the qubits, assuming a fixed leakage error rate per round of p_leak.
+    Note, leakage errors are put at the beginning of each round: 
        -after instruction "R" for first round,
        -after "MR" in subsequent rounds where we apply p_leak on each qubit independently.
        -We also add heralded_leakage_event before each "MR" or "M" qubit (so we assume we can herald it)
@@ -213,18 +210,9 @@ def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_le
         p_leak:  the leakage rate (default is chosen for trapped ions based on https://arxiv.org/pdf/2604.19481)
     Outputs:
         new_circuit: a deltakit_stim circuit which includes also leakage errors (leakage errors are also depicted in rates of dem)
-
-
-    NOTE: IF leakage is combined with loss, we need to be extra careful, cause we might not be able to sample independently erasures and loss.
-          For example, if a leaked qubit interacts with lost qubit, the loss propagates to the leaked qubit.
-    
-    TODO: Think more how we can combine loss + leakage + Pauli errors. Or we will study loss and leakage as independent mechanisms.
-
-    NOTE: This will only be used to sample det events, but we will use the leakage-unaware dem, + restrict det events only on regular detectors.
-          In this way, we contain the leakage features, but we do not exploit whether or not there was leakage.
-          We could do some post-selection thing.
+        det_types: dictionary with keys 'regular_dets' and 'leakage_dets' and values the detectors
     '''
-    # print("circuit:",circuit)
+    
     new_circuit = deltakit_stim.Circuit()
 
     targets = [deltakit_stim.GateTarget(k) for k in range(circuit.num_qubits)]  #These are all the qubits in the circuit
@@ -389,7 +377,6 @@ def add_independent_leakage_errors_per_round(circuit: stim.Circuit, n: int, p_le
         else:
             final_circuit.append(inst)
 
-    #I think this circuit is now correct.
     #Now, output also the names of dets which are leakage detectors or regular detectors.
 
     det_types = {"regular_dets": regular_dets, "leakage_dets": leakage_dets}
@@ -490,7 +477,17 @@ def drop_leakage_dets(circuit: deltakit_stim.Circuit, det_types: dict):
 
 
 def add_erasures(circuit:stim.Circuit, p, gate_erasures=True, idling_erasures=False):
-    """ Add erasures to the input circuit according to the mechanism indicated
+    """ 
+    Add erasures with probability p, after each 2-qubit gate. Each qubit is sent to the maximally mixed state.
+    
+    Input:
+        circuit: the original stim circuit
+        p: the erasure probability
+        gate_erasures: True to add erasures after each two-qubit gate
+        idling_erasures: default False (to be implemented if we convert those to erasures too)
+
+    Output:
+        final_circuit: the updated circuit w/ erasures
     """
 
     final_circuit = stim.Circuit()

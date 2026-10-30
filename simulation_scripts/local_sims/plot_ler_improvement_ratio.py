@@ -18,42 +18,93 @@ def merge_results_to_existing_dict(data1,data2, update_switch_times=False):
     '''
     If we have 2 dictionaries where 1 has same dictionaries of physical error rates, we combine ler results into existing dictionary (data1)
     '''
-    #update the total errors, shots, pL@r and std_pL@r
-    error_dict=data2['total_errors']
 
-    for key,val in error_dict.items():
-
-        for key2 in data1['total_errors'].keys():
-            if key==key2:
-                data1['total_errors'][key2] += val 
-                
-    #update the # of shots
-    shot_dict = data2['shots']
-    for key,val in shot_dict.items():
-        
-        for key2 in data1['shots'].keys():
-            if key==key2:        
-                data1['shots'][key2]+=val 
-                
+    #============= Start with checks ===============================
 
     r2 = data2['r'] #pL @ r = num_errors/num_shots
     r1 = data1['r']
     if r1!=r2:
-        raise ValueError("Cannot combine.")
+        raise ValueError("Cannot combine because dictionaries. Total # of rounds does not match.")
+
+
+    if "target_switch_rate" in data1:
+        if data1['target_switch_rate']!=data2['target_switch_rate']:
+            raise ValueError("Cannot combine because dictionaries. Switch rates do not match.")
+
+    if data1['basis']!=data2['basis']:
+        raise ValueError("Cannot combine because dictionaries correspond to different bases.")
+
+    if "strong_decoder" in data1 and "weak_decoder" in data1:
+
+        if data1['strong_decoder']!=data2['strong_decoder'] or data1['weak_decoder']!=data2['weak_decoder']:
+            raise ValueError("Cannot combine dictionaries. Decoder combinations do not match.")
+
+    #============= End of checks ==========================================================
+    
+
+    #update the total errors, shots, pL@r and std_pL@r
+    error_dict = data2['total_errors'] #dictionary with keys (code_name,p) and values the raw # of logical errors (averaged over qubits)
+
+    keys_in_data1 = data1['total_errors'].keys()
+    
+    #Add total errors from data2 into data1
+    for key in keys_in_data1:
+        if key in error_dict:
+            data1['total_errors'][key] += error_dict[key]
+
+    shot_dict = data2['shots'] #dictionary with keys (code_name,p) and values the # of shots 
+
+    #Add # of shots from data2 to data1
+    for key in keys_in_data1:
+        if key in shot_dict:
+            data1['shots'][key]+=shot_dict[key]
+
+
+    # for key,val in error_dict.items():
+    #     for key2 in data1['total_errors'].keys():
+    #         if key==key2:
+    #             data1['total_errors'][key2] += val 
+                
+    #Update the # of shots
+    
+
+    #Add keys in data1 that only exist in data2
+    keys_in_data2 = error_dict.keys()
+    for key in keys_in_data2:
+        if key not in data1['total_errors']:
+            data1['total_errors'][key] = error_dict[key]
+            data1['shots'][key] = shot_dict[key]
+
+
+    # #Add keys in data1 that only exist in data2
+    # for key in keys_in_data2:
+    #     if key not in data1['shots']:
+    #         data1['shots'][key] = shot_dict[key]
+    
+
+    # for key,val in shot_dict.items():
+        
+    #     for key2 in data1['shots'].keys():
+    #         if key==key2:        
+    #             data1['shots'][key2]+=val 
+                
 
     #update the pL@r  = num_errors/num_shots 
-    for key,val in data1['pL@r'].items():
+    
+    # for key,val in data1['pL@r'].items():
+    for key in data1['total_errors'].keys():
 
         data1['pL@r'][key] = data1['total_errors'][key]/data1['shots'][key]
     
     #update the std for pL@r
-    for key in data1['std_pL@r'].keys():
+    # for key in data1['std_pL@r'].keys():
+    for key in data1['total_errors'].keys():
 
         y = data1['pL@r'][key]
         data1['std_pL@r'][key] = np.sqrt(y*(1-y)/data1['shots'][key])
 
     
-    #update the epsilons
+    #Update the epsilons
     for key in data1['epsilons'].keys(): #code_name is key
 
         temp_dict_epsilons = data1['epsilons'][key].copy() #key is p, value is epsilon 
@@ -81,8 +132,15 @@ def merge_results_to_existing_dict(data1,data2, update_switch_times=False):
 
         for key in data2['total_switch_times'].keys():
 
-            data1['total_switch_times'][key] += data2['total_switch_times'][key]
-            data1['total_windows'][key]      += data2['total_windows'][key]
+            try:
+                data1['total_switch_times'][key] += data2['total_switch_times'][key]
+            except KeyError:
+                data1['total_switch_times'][key] = data2['total_switch_times'][key]
+
+            try:
+                data1['total_windows'][key]      += data2['total_windows'][key]
+            except KeyError:
+                data1['total_windows'][key]      = data2['total_windows'][key]
 
         #now update the switch_rates:
         for key in data2['switch_rates'].keys():
@@ -217,6 +275,23 @@ def get_decoder_switching_data_bplsd_to_relaybp(target_switch_rate=5e-3):
 
         data1=merge_results_to_existing_dict(data1,data2)
 
+        num_shots = 600_000
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_relay_bp/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_Gross_only.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2)
+
+        num_shots = 180_000
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_relay_bp/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2)        
+
+
 
     elif target_switch_rate==1e-3:
 
@@ -236,8 +311,19 @@ def get_decoder_switching_data_bplsd_to_relaybp(target_switch_rate=5e-3):
 
         data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)
 
+        num_shots = 400_000
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_relay_bp/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_Gross_only.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)
+
+
     elif target_switch_rate==1e-2:
 
+        #This is for p=3e-3
         num_shots = 400_000
         file1 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_relay_bp/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_3e_minus_3.txt'
         
@@ -251,6 +337,13 @@ def get_decoder_switching_data_bplsd_to_relaybp(target_switch_rate=5e-3):
         with open(file2,"r") as f:
             data2 = eval(f.read())
 
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)
+
+        num_shots = 2_000_000
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_relay_bp/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3.txt'
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
 
         data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)
 
@@ -281,6 +374,51 @@ def get_decoder_switching_data_bplsd_to_tesseract(target_switch_rate=5e-3):
 
         data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)
 
+        num_shots = 500_000
+
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_126_8_10.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)
+
+
+        num_shots = 2_000_000
+
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_162_8_14.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)
+
+        num_shots = 2_000_000
+
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_Gross_only.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)
+
+        num_shots = 2_000_000
+
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_Gross_only_V2.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)        
+
+        num_shots = 2_400_000
+
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_162_8_14.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)
 
     elif target_switch_rate==1e-3:
 
@@ -322,7 +460,7 @@ def get_decoder_switching_data_bplsd_to_tesseract(target_switch_rate=5e-3):
         data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)      
 
     elif target_switch_rate==1e-2:
-
+        #This is for p=3e-3
         num_shots = 200_000
         file1 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_3e_minus_3.txt'
         
@@ -346,6 +484,39 @@ def get_decoder_switching_data_bplsd_to_tesseract(target_switch_rate=5e-3):
 
         data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)      
 
+        num_shots = 8_000_000
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)      
+
+        num_shots = 900_000
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)      
+        
+        num_shots = 2_400_000
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_Gross_only.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)      
+
+
+        num_shots = 9_000_000
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_162_8_14.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)      
+
 
     return data1
 
@@ -359,7 +530,7 @@ def plot_LER_improvement_bplsd(strong_decoder):
 
     fig,ax = plt.subplots(figsize=(5, 4))
 
-    p = 3e-3 #pick a fixed physical error rate
+    p = 2e-3 #pick a fixed physical error rate
     code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"] #,"[[144,12,12]]"
 
 
@@ -386,11 +557,14 @@ def plot_LER_improvement_bplsd(strong_decoder):
         
             epsilon_weak     = data_bplsd['epsilons'][code_name][p]
             epsilon_err_weak = data_bplsd['std_epsilons'][code_name][p]
+            # print("eps weak pm std:",(epsilon_weak,epsilon_err_weak))
 
             #Get the same key of data_switching
 
             epsilon_switch     = data_switching['epsilons'][code_name][p]
             epsilon_err_switch = data_switching['std_epsilons'][code_name][p]
+
+            print("eps switch pm std:",(epsilon_switch,epsilon_err_switch), "for switch rate:",switch_rate, "for code:",code_name)
 
             delta_epsilon = epsilon_weak/epsilon_switch
 
@@ -439,7 +613,7 @@ def plot_LER_improvement_bplsd(strong_decoder):
     ax.set_xlabel("$p_s$")
 
     ax.set_yscale('log')
-    ax.set_title(f"$p={p}$",fontsize=14)
+    ax.set_title(rf"$p={p}$, BP-LSD $\rightarrow$ Relay-BP",fontsize=14)
     
 
     #========= Plot the switch frequency also ================
@@ -448,7 +622,7 @@ def plot_LER_improvement_bplsd(strong_decoder):
     plt.tight_layout()
     plt.show()
 
-    # fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/ler_improv_weak_bplsd_strong_{strong_decoder}.pdf",bbox_inches='tight')
+    fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/ler_improv_weak_bplsd_strong_{strong_decoder}_p_{p}.pdf",bbox_inches='tight')
 
     return 
 
@@ -595,11 +769,11 @@ def plot_LER_improvement_uf(strong_decoder):
 def get_beam_search_data_lower_ps(option):
 
     if option==1:
-        file = sys.path[-1] + f'/saved_data/single_decoder_sliding/beamsearch/single_sliding_window_beam8_230iters_max_shots_50000_lower_ps.txt'
+        file = sys.path[-1] + f'/saved_data/single_decoder_sliding/beamsearch/single_sliding_window_beam8_230iters_max_shots_100000.txt'
         with open(file,"r") as f:
             data1 = eval(f.read())    
     elif option==2:
-        file = sys.path[-1] + f'/saved_data/single_decoder_sliding/beamsearch/single_sliding_window_beam32_340iters_max_shots_100000_lower_ps.txt'
+        file = sys.path[-1] + f'/saved_data/single_decoder_sliding/beamsearch/single_sliding_window_beam32_340iters_max_shots_1000000.txt'
         with open(file,"r") as f:
             data1 = eval(f.read())    
 
@@ -614,8 +788,8 @@ def plot_LER_improvement_over_BeamSearch(strong_decoder,option):
 
     fig,ax = plt.subplots(figsize=(5, 4))
 
-    p = 3e-3 #pick a fixed physical error rate
-    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"] #,"[[144,12,12]]"
+    p = 2e-3 #pick a fixed physical error rate
+    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"] 
 
 
     #================= Plot bplsd =======================================================
@@ -704,7 +878,10 @@ def plot_LER_improvement_over_BeamSearch(strong_decoder,option):
     ax.set_xlabel("$p_s$")
 
     ax.set_yscale('log')
-    ax.set_title(f"$p={p}$",fontsize=14)
+    if strong_decoder=='tesseract':
+        ax.set_title(rf"$p={p}$, BP-LSD $\rightarrow$ Tesseract",fontsize=14)
+    else:
+        ax.set_title(rf"$p={p}$, BP-LSD $\rightarrow$ Relay-BP",fontsize=14)
     
 
     #========= Plot the switch frequency also ================
@@ -718,4 +895,4 @@ def plot_LER_improvement_over_BeamSearch(strong_decoder,option):
     return 
 
 
-plot_LER_improvement_over_BeamSearch('tesseract',option=1)
+plot_LER_improvement_over_BeamSearch('tesseract',option=2)

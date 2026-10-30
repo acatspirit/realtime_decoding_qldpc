@@ -457,7 +457,17 @@ def get_decoder_switching_data_bplsd_to_tesseract(target_switch_rate=5e-3):
         with open(file2,"r") as f:
             data2 = eval(f.read())
 
-        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)      
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)     
+
+        num_shots = 2_400_000
+
+
+        file2 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_Gross_only.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)              
 
     elif target_switch_rate==1e-2:
         #This is for p=3e-3
@@ -772,10 +782,27 @@ def get_beam_search_data_lower_ps(option):
         file = sys.path[-1] + f'/saved_data/single_decoder_sliding/beamsearch/single_sliding_window_beam8_230iters_max_shots_100000.txt'
         with open(file,"r") as f:
             data1 = eval(f.read())    
+
+        file2 = sys.path[-1] + f'/saved_data/single_decoder_sliding/beamsearch/single_sliding_window_beam8_230iters_max_shots_200000_p_2e_minus_3.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=False)      
+
+            
     elif option==2:
         file = sys.path[-1] + f'/saved_data/single_decoder_sliding/beamsearch/single_sliding_window_beam32_340iters_max_shots_1000000.txt'
         with open(file,"r") as f:
             data1 = eval(f.read())    
+
+        file2 = sys.path[-1] + f'/saved_data/single_decoder_sliding/beamsearch/single_sliding_window_beam32_340iters_max_shots_2000000_p_2e_minus_3.txt'
+        
+        with open(file2,"r") as f:
+            data2 = eval(f.read())
+
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=False)      
+
 
     return data1
 
@@ -890,7 +917,7 @@ def plot_LER_improvement_over_BeamSearch(strong_decoder,option):
     plt.tight_layout()
     plt.show()
 
-    # fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/decoder_switch_vs_beam_option_{option}_strong_decoder_{strong_decoder}.pdf",bbox_inches='tight')
+    fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/decoder_switch_vs_beam_option_{option}_strong_decoder_{strong_decoder}_p_{p}.pdf",bbox_inches='tight')
 
     return 
 

@@ -637,7 +637,7 @@ def plot_LER_improvement_bplsd(strong_decoder):
     return 
 
 
-plot_LER_improvement_bplsd('relay_bp')
+# plot_LER_improvement_bplsd('relay_bp')
 
 
 #=============  LER improvement for uf weak ======================
@@ -756,10 +756,8 @@ def plot_LER_improvement_uf(strong_decoder):
 
     ax.set_yscale('log')
     mantissa, exponent = f"{p:.2e}".split("e")
-    ax.set_title(
-        rf"$p={mantissa}\times 10^{{{int(exponent)}}}$",
-        fontsize=14
-    )    
+    strong_decoder_name = {"tesseract": "Tesseract", "relay_bp": "Relay-BP"}.get(strong_decoder, strong_decoder)
+    ax.set_title(rf"$p={mantissa}\times 10^{{{int(exponent)}}}$, UF $\rightarrow$ {strong_decoder_name}",fontsize=14)
 
 
     plt.tight_layout()
@@ -770,7 +768,7 @@ def plot_LER_improvement_uf(strong_decoder):
     return 
 
 
-# plot_LER_improvement_uf("relay_bp")
+plot_LER_improvement_uf("tesseract")
 
 
 #========== LER improvement of switching over beamsearch ========
@@ -922,4 +920,4 @@ def plot_LER_improvement_over_BeamSearch(strong_decoder,option):
     return 
 
 
-plot_LER_improvement_over_BeamSearch('tesseract',option=2)
+# plot_LER_improvement_over_BeamSearch('tesseract',option=2)

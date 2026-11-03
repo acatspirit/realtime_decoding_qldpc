@@ -15,7 +15,7 @@ plt.rcParams["font.family"] = "Microsoft Sans Serif"
 from numpy import array
 
 
-#===== To load bplsd results ===============
+#===== To load uf results ===============
 def get_uf_data():
 
     file = sys.path[-1] + f'/saved_data/single_decoder_sliding/uf/single_sliding_window_uf_max_shots_1000000_logspace.txt'
@@ -48,7 +48,7 @@ def plot_decoder_switching_benchmarks(strong_decoder,plotted_quantity,target_swi
 
     colors = ["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
 
-    fig,ax = plt.subplots(1,2,figsize=(7.5,5))
+    fig,ax = plt.subplots(1,2,figsize=(8,5))
 
     #================= Plot uf =======================================================
 
@@ -214,7 +214,7 @@ def plot_decoder_switching_benchmarks(strong_decoder,plotted_quantity,target_swi
     return 
 
 
-plot_decoder_switching_benchmarks(strong_decoder='tesseract',plotted_quantity='epsilons',target_switch_rate=1e-2)
+plot_decoder_switching_benchmarks(strong_decoder='tesseract',plotted_quantity='epsilons',target_switch_rate=1e-3)
 
 
 

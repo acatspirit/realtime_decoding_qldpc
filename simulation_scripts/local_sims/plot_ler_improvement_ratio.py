@@ -453,7 +453,7 @@ def plot_LER_improvement_bplsd(strong_decoder):
     return 
 
 
-# plot_LER_improvement_bplsd('relay_bp')
+plot_LER_improvement_bplsd('relay_bp')
 
 
 #=============  LER improvement for uf weak ======================
@@ -718,4 +718,4 @@ def plot_LER_improvement_over_BeamSearch(strong_decoder,option):
     return 
 
 
-plot_LER_improvement_over_BeamSearch('tesseract',option=1)
+# plot_LER_improvement_over_BeamSearch('tesseract',option=1)

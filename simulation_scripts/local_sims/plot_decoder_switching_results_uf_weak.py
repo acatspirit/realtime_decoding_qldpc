@@ -209,12 +209,14 @@ def plot_decoder_switching_benchmarks(strong_decoder,plotted_quantity,target_swi
     plt.tight_layout()
     plt.show()
 
+
+    # fig.savefig(f"/Users/ariannameinking/Documents/Brown_Research/realtime_decoding_qldpc/data/plots/uf_{strong_decoder}_switching_benchmark_ps_{target_switch_rate}_with_switch_rate_11_3_26.pdf",bbox_inches='tight')
     # fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/decoder_switching_benchmarks_ps_{target_switch_rate}_strong_{strong_decoder}.pdf",bbox_inches='tight')
 
     return 
 
 
-plot_decoder_switching_benchmarks(strong_decoder='tesseract',plotted_quantity='epsilons',target_switch_rate=1e-3)
+plot_decoder_switching_benchmarks(strong_decoder='relay_bp',plotted_quantity='epsilons',target_switch_rate=1e-3)
 
 
 

@@ -763,12 +763,14 @@ def plot_LER_improvement_uf(strong_decoder):
     plt.tight_layout()
     plt.show()
 
+
+    # fig.savefig(f"/Users/ariannameinking/Documents/Brown_Research/realtime_decoding_qldpc/data/plots/ler_improvement_uf_to_{strong_decoder}_11_3.pdf",bbox_inches='tight')
     # fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/ler_improv_weak_bplsd_strong_{strong_decoder}.pdf",bbox_inches='tight')
 
     return 
 
 
-plot_LER_improvement_uf("tesseract")
+plot_LER_improvement_uf("relay_bp")
 
 
 #========== LER improvement of switching over beamsearch ========

@@ -1,5 +1,5 @@
 '''
-Plot bplsd->tesseract or relay-bp
+Plot bplsd->tesseract or relay-bp decoder switching plots
 '''
 import sys
 import os
@@ -366,7 +366,17 @@ def get_decoder_switching_data_bplsd_to_tesseract(target_switch_rate=5e-3):
         with open(file2,"r") as f:
             data2 = eval(f.read())
 
-        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)            
+        data1=merge_results_to_existing_dict(data1,data2,update_switch_times=True)          
+
+    elif target_switch_rate==1e-2:
+
+        num_shots = 8_000_000
+
+
+        file1 = sys.path[-1] + f'/saved_data/decoder_switching_data/bplsd_to_tesseract/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3.txt'
+        
+        with open(file1,"r") as f:
+            data1 = eval(f.read())
 
 
     return data1
@@ -504,6 +514,7 @@ def plot_decoder_switching_benchmarks(strong_decoder,plotted_quantity,target_swi
     elif strong_decoder=='tesseract':
         data = get_decoder_switching_data_bplsd_to_tesseract(target_switch_rate)
 
+    ps = data['ps']
 
     if plotted_quantity=='epsilons':
         
@@ -627,12 +638,12 @@ def plot_decoder_switching_benchmarks(strong_decoder,plotted_quantity,target_swi
     plt.tight_layout()
     plt.show()
 
-    # fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/decoder_switching_benchmarks_ps_{target_switch_rate}_strong_{strong_decoder}.pdf",bbox_inches='tight')
+    fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/decoder_switching_benchmarks_ps_{target_switch_rate}_strong_{strong_decoder}.pdf",bbox_inches='tight')
 
     return 
 
 
-
-plot_decoder_switching_benchmarks(strong_decoder='relay_bp',plotted_quantity='epsilons',target_switch_rate=5e-3)
+#Choose relay_bp or tesseract, and p_s = 1e-3 or 5e-3
+plot_decoder_switching_benchmarks(strong_decoder='tesseract',plotted_quantity='epsilons',target_switch_rate=5e-3)
 
 

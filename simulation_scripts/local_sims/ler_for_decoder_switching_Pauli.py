@@ -102,9 +102,9 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
     #Run decoder switching protocol:
     
     basis       = "Z"
-    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"]
+    code_names = ["[[162,8,14]]"] #"[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"
     # ps         = [2e-3,3e-3,4e-3,5e-3]  
-    ps         = [3e-3]  
+    ps         = [2e-3,]  #3e-3,4e-3,5e-3
     num_rounds = 25
 
     def process_one_round_value(code_name,p,num_shots,cutoff):
@@ -286,17 +286,17 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
                     "total_windows": total_windows}         
     
 
-    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3.txt' 
+    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_162_8_14.txt' 
 
-    # with open(txt_to_save, 'w') as file:
-    #     file.write(str(dict_to_save))      
+    with open(txt_to_save, 'w') as file:
+        file.write(str(dict_to_save))      
 
 
 
     return 
 
 
-# bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-3, strong_decoder='relay_bp',num_shots=20_000,shots_per_job=2_000)
+bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2, strong_decoder='tesseract',num_shots=9_000_000,shots_per_job=200_000)
 
 
 #========== uf as weak decoder ===============================================================
@@ -570,14 +570,14 @@ def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='re
 
     txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}.txt' 
 
-    # with open(txt_to_save, 'w') as file:
-    #     file.write(str(dict_to_save))      
+    with open(txt_to_save, 'w') as file:
+        file.write(str(dict_to_save))      
 
     return 
 
 
 
-uf_to_strong_w_target_switch_rate(target_switch_rate=5e-3,strong_decoder='tesseract', num_shots = 50_000, shots_per_job = 10_000)
+# uf_to_strong_w_target_switch_rate(target_switch_rate=2e-2,strong_decoder='tesseract', num_shots = 2_000_000, shots_per_job = 500_000)
 
 
 

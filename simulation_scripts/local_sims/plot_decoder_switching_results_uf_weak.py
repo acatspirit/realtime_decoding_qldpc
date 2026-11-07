@@ -33,6 +33,8 @@ def get_decoder_switching_data_uf_to_strong(target_switch_rate=5e-3,strong_decod
         num_shots      = 2_000_000
     elif target_switch_rate==5e-3:
         num_shots      = 2_000_000
+    elif target_switch_rate==2e-2:
+        num_shots      = 2_000_000
 
     weak_decoder   = 'uf'
 

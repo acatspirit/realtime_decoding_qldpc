@@ -1014,7 +1014,6 @@ def plot_decoder_switching_benchmarks(strong_decoder,plotted_quantity,target_swi
 
 
 
-
     plt.tight_layout()
     plt.show()
 

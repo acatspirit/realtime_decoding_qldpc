@@ -16,8 +16,6 @@ from src.realtime_decoding.decoder_switching_class import decoder_switching_clas
 
 
 
-
-
 # '''no fit, just invert the expression to see if it stays constant'''
 # def plot_ler_per_SEC_for_different_rds(num_shots=10_000,weak_decoder='bplsd',strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2):
 #     '''
@@ -255,7 +253,9 @@ from src.realtime_decoding.decoder_switching_class import decoder_switching_clas
 
 # plot_ler_per_SEC_for_different_rds(num_shots=num_shots,weak_decoder=weak_decoder,strong_decoder=strong_decoder,decoder_option= decoder_option)
 
-def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_job=10_000,p_leak=0,weak_decoder='bplsd',strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2):
+def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_job=10_000,p_leak=0,weak_decoder='bplsd',
+                                                 strong_decoder='relay_bp',decoder_option= 'weak',norm_order=2,
+                                                 beamsearch_option=1):
     '''
     Get the ler per syndrome extraction cycle (\epsilon). This quantity is calculated by simulating some fixed r
     and then extracting epsilon = 1-(1-p_L)^{1/r}.
@@ -267,11 +267,11 @@ def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_
         strong_decoder: 'relay_bp' or 'tesseract'
         decoder_option: 'weak' or 'strong' to pick the weak/strong decoder for sliding window
         norm_order: order for calculating the cluster norm
-        
+        beamsearch_option: if one choose beam8_230iters, else choose beam32_340iters
     '''
 
     basis      = 'Z' #basis determining the memory experiment for the BB codes
-    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]  
+    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"] 
 
     num_rounds = 25
     max_shots_above_8e_minus3 = 15_000 #this can be adjusted
@@ -296,7 +296,8 @@ def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_
                                             F=F,
                                             strong_decoder_option=strong_decoder,
                                             weak_decoder_option=weak_decoder,
-                                            p_leak=p_leak)    
+                                            p_leak=p_leak,
+                                            beamsearch_option=beamsearch_option)    
         if decoder_option=='strong':
             new_shots,logical_errors = test.decode_with_sliding_window(decoder_option=decoder_option,norm_order=norm_order)
         else:
@@ -407,13 +408,16 @@ def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_
                     "std_epsilons":errs_in_eps_to_save}
     
     
+    # if decoder_label=='beamsearch':
+    #     if beamsearch_option==1:
+    #         txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_beam8_230iters_max_shots_{num_shots}_p_2e_minus_3.txt'
+    #     else:
+    #         txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_beam32_340iters_max_shots_{num_shots}_p_2e_minus_3.txt'
+    # else:
+    #     txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_{decoder_label}_max_shots_{num_shots}.txt'
 
-    
-    # txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_{decoder_label}_max_shots_{num_shots}_logspace.txt'
-    txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_{decoder_label}_max_shots_{num_shots}.txt'
-
-    with open(txt_to_save, 'w') as file:
-        file.write(str(dict_to_save))      
+    # with open(txt_to_save, 'w') as file:
+    #     file.write(str(dict_to_save))      
 
     # To load the data simply do:
     # with open(txt_to_load,"r") as f:
@@ -438,15 +442,21 @@ def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_
     return 
 
 
-num_shots     = 500_000
+num_shots     = 200_000
 shots_per_job = 50_000
+
+#------- For UF ------------------------------------
 # ps            = np.logspace(-4,-3.5,6) #logspace for uf
 ps            = [1e-4, 2e-4, 3e-4, 4e-4, 5e-4, 6e-4, 7e-4, 8e-4, 9e-4, 1e-3, 2e-3, 3e-3]
+#------- For beamsearch ----------------------------
+# ps = [2e-3,] #3e-3,4e-3,5e-3
+
 
 get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=num_shots,shots_per_job=shots_per_job,p_leak=0,
                                              weak_decoder='uf',
-                                             strong_decoder='relay_bp',
-                                             decoder_option= 'weak')
+                                             strong_decoder='beamsearch',
+                                             decoder_option= 'weak',
+                                             beamsearch_option=1)
 
 
 

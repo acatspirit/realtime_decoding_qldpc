@@ -2,6 +2,12 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..'))) #move one level back out of the src file (or i guess for arianna's package 2 levels)
 
+# ROOT = os.path.abspath(
+#     os.path.join(os.path.dirname(__file__), "..", ".." )
+# )
+
+# sys.path.append(ROOT)
+# sys.path.append(os.path.join(ROOT, "BeamSearchDecoder"))
 
 
 from src.realtime_decoding.utils import get_window_dems, get_erased_mechanisms_from_DEM
@@ -11,8 +17,11 @@ from tesseract_decoder import tesseract
 import relay_bp
 import numpy as np
 from scipy.sparse import csr_matrix
-import py_wrapper.py_decoder as uf
-# from uf_decoder.py_wrapper import py_decoder as uf
+# import py_wrapper.py_decoder as uf
+from uf_decoder.py_wrapper import py_decoder as uf
+from BeamSearchDecoder.beamsearch import BeamSearchDecoder
+
+
 """
 Helper functions for configuring decoders. Set parameters in this file for decoders
 """
@@ -52,6 +61,24 @@ def collect_default_decoder_params(decoder):
 
     elif decoder == 'uf':
         decoder_params = {'num_qubits':0}    # there are no params to pass to UF
+
+    elif decoder == 'beamsearch8_230iters':
+
+        decoder_params = {'max_bp_iters': 230,
+                          'beam_width': 8,
+                          'initial_iters': 30,
+                          'iters_per_round': 20,
+                          'max_rounds': 10,
+                          'num_results': 1}
+        
+    elif decoder == 'beamsearch32_340iters':
+     
+        decoder_params = {'max_bp_iters': 340,
+                          'beam_width': 32,
+                          'initial_iters': 40,
+                          'iters_per_round': 30,
+                          'max_rounds': 10,
+                          'num_results': 1}
 
 
     return decoder_params
@@ -95,6 +122,38 @@ def configure_tesseract_per_sliding_window(window_check_set, window_observable_s
         compiled_decoders.append(decoder)
 
     return window_dems,compiled_decoders
+
+def configure_beamsearch_per_sliding_window(window_check_set, window_observable_set, window_priors_set, decoder_params: Optional[dict] = None, beamsearch_option = 1):
+
+    if beamsearch_option==1:
+        defaults = collect_default_decoder_params('beamsearch8_230iters')
+    else:
+        defaults = collect_default_decoder_params('beamsearch32_340iters')
+
+    if decoder_params is None:
+        decoder_params = {}
+
+    for key, value in defaults.items():
+        decoder_params.setdefault(key, value)
+
+    # window_dems = get_window_dems(window_check_set, window_observable_set, window_priors_set)
+
+    beamsearch_decoders = []
+    
+    for k in range(len(window_check_set)):
+
+        decoder = BeamSearchDecoder(pcm = window_check_set[k],         
+                                    error_channel= window_priors_set[k],          
+                                    max_rounds=decoder_params['max_rounds'],
+                                    beam_width=decoder_params['beam_width'],
+                                    num_results=decoder_params['num_results'],
+                                    iters_per_round=decoder_params['iters_per_round'],
+                                    initial_iters=decoder_params['initial_iters'],
+                                    )
+
+        beamsearch_decoders.append(decoder)
+
+    return beamsearch_decoders
 
 
 def configure_relay_bp_per_sliding_window(window_check_set, window_priors_set, decoder_params: Optional[dict] = None):

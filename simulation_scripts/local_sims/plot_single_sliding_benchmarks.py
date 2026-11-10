@@ -238,8 +238,6 @@ def plot_single_sliding_benchmarks(plotted_quantity):
 
             n, k, d = map(int, code_name.strip("[]").split(","))
 
-
-
             ax[0].errorbar(
                 ps, y, yerr=yerr,
                 label=f"{code_name}",
@@ -280,10 +278,6 @@ def plot_single_sliding_benchmarks(plotted_quantity):
     data                    = data_tesseract
     ps                      = data['ps']
 
-
-    # print("Tesseract:")
-    # print(data['epsilons']['[[162,8,14]]'])
-    # print(data['std_epsilons']['[[162,8,14]]'])
     
     if plotted_quantity=='epsilons':
         
@@ -349,8 +343,6 @@ def plot_single_sliding_benchmarks(plotted_quantity):
             yerr = np.array([data["std_epsilons"][code_name][p] for p in ps]) #std_epsilons
 
             n, k, d = map(int, code_name.strip("[]").split(","))
-
-
 
             ax[2].errorbar(
                 ps, y, yerr=yerr,
@@ -445,8 +437,7 @@ def plot_single_sliding_benchmarks(plotted_quantity):
             ax[k].set_ylabel("LER per SEC")
 
         ax[k].set_title(f"{decoders[k]}",fontsize=15)
-        # ax[k].set_ylim([1e-8,1e-1])
-
+        
         if k!=3:
             ax[k].set_xticks([2e-3, 4e-3, 6e-3, 8e-3, 1e-2])
             ax[k].set_xticklabels([
@@ -473,12 +464,10 @@ def plot_single_sliding_benchmarks(plotted_quantity):
             ax[k].set_xlabel(r"physical error rate ($\times 10^{-4}$)")
             ax[k].minorticks_off() 
 
-
-        # ax[k].set_ylim([1e-30,1e-1])
     plt.tight_layout()
     plt.show()
 
-    fig.savefig("/Users/evatakou/Desktop/Figs_realtime/from_python/single_sliding_benchmarks.pdf",bbox_inches='tight')
+    # fig.savefig("/Users/evatakou/Desktop/Figs_realtime/from_python/single_sliding_benchmarks.pdf",bbox_inches='tight')
 
     return 
 

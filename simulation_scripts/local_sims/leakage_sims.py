@@ -3,7 +3,6 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))) #move to level before sims file
 import numpy as np
 
-
 from matplotlib import pyplot as plt
 import matplotlib
 matplotlib.rcParams.update({'font.size': 17})
@@ -11,8 +10,6 @@ plt.rcParams["font.family"] = "Microsoft Sans Serif"
 
 from joblib import Parallel, delayed
 from src.realtime_decoding.decoder_switching_class import decoder_switching_class
-
-
 import pickle 
 
 def get_cutoffs_for_input_switch_rate(target_switch_rate,plot=False):
@@ -463,7 +460,7 @@ def get_ler_per_SEC(p_leak=1e-5,num_shots=100_000,shots_per_job=10_000,weak_deco
     else:
         decoder_label = strong_decoder
     
-    txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_{decoder_label}_max_shots_{num_shots}_p_3e_minus_3_p_leak_{p_leak}.txt' #single_sliding_window_{decoder_label}_max_shots_{num_shots}_p_3e_minus_3_p_leak_{p_leak}.txt
+    txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_{decoder_label}_max_shots_{num_shots}_p_3e_minus_3_p_leak_{p_leak}.txt' 
 
     # with open(txt_to_save, 'w') as file:
     #     file.write(str(dict_to_save))      
@@ -493,5 +490,5 @@ def get_ler_per_SEC(p_leak=1e-5,num_shots=100_000,shots_per_job=10_000,weak_deco
 
 
 
-#Run this
+#Run this for single-sliding decoder w/ leakage
 get_ler_per_SEC(p_leak=1e-5,num_shots=5000,shots_per_job=500,weak_decoder='bplsd',strong_decoder='relay_bp',decoder_option= 'strong',norm_order=2)

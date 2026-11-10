@@ -14,19 +14,23 @@ from src.realtime_decoding.decoder_switching_class import decoder_switching_clas
 from quits import sliding_window_bplsd_circuit_mem
 
 
-def run_specific_round_sliding_window_weak(num_shots=10_000):
-
+def compare_our_sliding_w_QUITS_for_bplsd(num_shots=10_000):
+    '''
+    Run single decoder sliding window for bplsd, and check if ler results are the same as for QUITS package. 
+    
+    Input: 
+        num_shots: max shots for memory experiment
+        
+    '''
 
     strong_decoder = 'relay_bp'
     weak_decoder   = 'bplsd'
+    basis          = 'Z'
+    num_rounds     = 18 
 
-    code_names = ["[[72,12,6]]", "[[90,8,10]]]", "[[126,8,10]]", ]   
-    
-    ps = [3e-3,4e-3,5e-3]
 
-    basis                 = 'Z'
-    
-    num_rounds        = 22 
+    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", ]       
+    ps         = [2e-3,3e-3,]
 
     def process_one_round_value(code_name,p,num_shots):
         
@@ -47,13 +51,14 @@ def run_specific_round_sliding_window_weak(num_shots=10_000):
                                             W=W,
                                             F=F,
                                             strong_decoder_option=strong_decoder,
-                                            weak_decoder_option=weak_decoder)    
+                                            weak_decoder_option=weak_decoder,
+                                            p_leak=0)    
 
         zcheck_samples = test.detection_events
         
-        new_shots,_,logical_errors = test.decode_with_sliding_window(decoder_option='weak',norm_order=2)
+        new_shots,_,logical_errors = test.decode_with_sliding_window(decoder_option='weak',norm_order=2, rel_error_tol=0.001)
 
-        #---Redo calculation w/ QUITS ---- should get the same -----
+        #---Redo calculation w/ QUITS ----
         
         logical_pred_quits = sliding_window_bplsd_circuit_mem(zcheck_samples,test.circuit,
                                          test.h,test.logical,W=W,F=F,max_iter=30,lsd_order=0,bp_method='product_sum',
@@ -64,6 +69,9 @@ def run_specific_round_sliding_window_weak(num_shots=10_000):
                   "shots_quits":num_shots}
 
         print("Sim done.")
+
+        if np.sum(np.mean(test.obs_flips ^ logical_pred_quits,axis=1) - logical_errors) !=0:
+            raise Exception("Results are different.")
 
         return code_name,p,new_shots,result
 
@@ -83,8 +91,7 @@ def run_specific_round_sliding_window_weak(num_shots=10_000):
 
     results = Parallel(n_jobs=-1,verbose=10,)(delayed(process_one_round_value)(code_name,p,shots) for code_name, p,shots in tasks)      
 
-
-
+    
     total_errors  = {}
     total_shots   = {}
 
@@ -186,8 +193,5 @@ def run_specific_round_sliding_window_weak(num_shots=10_000):
     return 
 
 
-run_specific_round_sliding_window_weak(num_shots=400)
-
-
-
+compare_our_sliding_w_QUITS_for_bplsd(num_shots=400)
 

@@ -14,7 +14,7 @@ from src.realtime_decoding.helper_cluster_tools import * # figure out the improt
 
 # fix the imports
 from src.realtime_decoding.circuits import create_bb_codes_circuit, create_bb_codes_circuit_ionic_model, add_independent_leakage_errors_per_round, add_erasures
-from src.realtime_decoding.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params
+from src.realtime_decoding.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params ,configure_beamsearch_per_sliding_window
 from src.realtime_decoding.utils import get_erasure_set
 from typing import Optional
 import relay_bp
@@ -120,6 +120,18 @@ class relaybp_wrapper:
 
         return decoded_errors
 
+class BeamSearch_wrapper:
+
+    def __init__(self,decoder):
+
+        self.decoder=decoder 
+
+    def __call__(self,syndrome):
+        
+        decoded_errors = self.decoder.decode(syndrome)
+
+        return decoded_errors
+
 
 class decoder_switching_class:
 
@@ -131,7 +143,8 @@ class decoder_switching_class:
                  p_leak = 0,
                  erasure_conversion_rate = 0, #Default no erasures, select 0.7941 for Ba+, or 0.9509 for Ca+ 
                  noise_model = "ionic",
-                 idling_erasures=False):
+                 idling_erasures=False,
+                 beamsearch_option=1):
         
         '''
         Inputs:
@@ -270,9 +283,15 @@ class decoder_switching_class:
             self.strong_decode_function = [relaybp_wrapper(decoder)
                                          for decoder in self.strong_decoder] 
 
+        elif strong_decoder_option=='beamsearch':
+
+            self.strong_decoder = configure_beamsearch_per_sliding_window(self.window_check_set,self.window_observable_set,self.window_priors_set, strong_decoder_params, beamsearch_option=beamsearch_option)
+            self.strong_decode_function = [BeamSearch_wrapper(decoder)
+                                          for decoder in self.strong_decoder] 
+
 
         else:
-            raise NotImplementedError("No other strong decoder besides tesseract or relay-bp is implemented for now. Choose from tesseract or relay_bp.")
+            raise NotImplementedError("No other strong decoder besides tesseract or relay-bp, or beamsearc is implemented for now. Choose from tesseract or relay_bp or beamsearch.")
         
 
         if weak_decoder_option=='bplsd':
@@ -662,6 +681,7 @@ class decoder_switching_class:
 
 
         for shot_index in range(self.num_shots):
+            # print("shot:",shot_index,"out of:",self.num_shots)
 
             accumulated_correction = np.zeros(self.window_observable_set[0].shape[0], dtype=np.uint8) # change this so that it's a double index, also with shots
             syn_update = np.zeros(num_checks, dtype=np.uint8)            

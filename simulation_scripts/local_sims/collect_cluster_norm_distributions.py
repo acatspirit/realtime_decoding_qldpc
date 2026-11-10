@@ -1,7 +1,6 @@
 import sys
 import os
-import gzip
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..'))) #move to level before sims file
 
 
 import numpy as np
@@ -13,28 +12,28 @@ from joblib import Parallel, delayed
 from src.realtime_decoding.decoder_switching_class import decoder_switching_class
 import pickle 
 
-'''For a specific code, check how the switch rate changes as a function of physical error rates
-
--Adjust the path to save the data
--Adjust the physical error rate range for uf
--Run the simulation once per code_name (see at the bottom)
--Cluster norm data can be loaded using the function "get_cutoffs_for_input_switch_rate" in ler_for_decoder_switching.py
-to determine the target cutoff.
-'''
 
 def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=10_000, shots_per_job=5_000,norm_order=2):
+    '''
+    Collect cluster norms for weak decoder under Pauli noise, and save the cluster norm data.
 
-    basis      = 'Z' #basis determining the memory experiment for the BB codes
+    Input:
+        code_name: "[[n,k,d]]" (see circuits.py for acceptable inputs)
+        weak_decoder: 'bplsd' or 'uf'
+        num_shots: total # of shots to run to collect the cluster norms
+        shots_per_job: the # of shots per worker (for parallel processing)
+        norm_order: the cluster norm order
     
+    '''
+    basis          = 'Z' #basis determining the memory experiment for the BB codes
     decoder_option = 'weak'
     strong_decoder = 'relay_bp' #doesnt matter
-    num_rounds = 25
-    rel_error_tol = 0.01 #10%
+    num_rounds     = 25
+    rel_error_tol  = 0.01 #if less than 10% relative error in p_L(r) is achieved, we have early exit
 
     if weak_decoder == 'bplsd':
-        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] #
+        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] 
     elif weak_decoder=='uf':
-        # ps = [1e-4,2e-4,3e-4,4e-4,5e-4]
         ps = np.logspace(-4,-3.5,6)
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
@@ -43,7 +42,6 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
 
         n, k, d = map(int, code_name.strip("[]").split(","))
         
-
         nbuffer = d            #Buffer region
         F       = d//2         #Commit region
         W       = nbuffer + F  #Entire window
@@ -105,7 +103,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
         total_shots[(code_name,p)]  += shot
         error_per_case[(code_name,p)] = np.concatenate((error_per_case[(code_name,p)],temp),axis=0)
             
-    
+    #========== To plot histogram ===================================================================
     fig, ax = plt.subplots(2,1)
 
     colors=["tab:blue","tab:orange","tab:green","tab:red","tab:purple","tab:brown","tab:pink"]
@@ -180,6 +178,8 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     plt.show()  
     plt.savefig(sys.path[-1] + f'/data/cluster_norm_statistics/histogram_cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.pdf', dpi=300)          
 
+    #============ To save the data ====================================================
+
     dict_to_save = {'code_name': code_name,
                     'ps': ps,
                     'decoder': weak_decoder,
@@ -187,16 +187,12 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
                     'cluster_norms': cluster_norms,
                     'switch_rates': switch_rates,
                     'cutoffs': cutoffs,
-                    'all_cluster_norms_per_p': all_data
+                    'all_cluster_norms_per_p': all_data}
 
-    }
 
-     
+    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics_final/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
 
-    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
 
-    # with gzip.open(txt_to_save, "wb") as file:
-    #     pickle.dump(dict_to_save, file)
     with open(txt_to_save, "wb") as file:
         pickle.dump(dict_to_save, file)    
 
@@ -207,19 +203,29 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     return 
 
 
-def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=10_000, shots_per_job=5_000,norm_order=2, erasure_conversion_rate=0.7941):
+def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='uf',num_shots=10_000, shots_per_job=5_000,norm_order=2, erasure_conversion_rate=0.7941):
+    '''
+    Collect cluster norms for weak decoder under Pauli + erasure errors, and save the cluster norm data.
 
-    basis      = 'Z' #basis determining the memory experiment for the BB codes
-    
+    Input:
+        code_name: "[[n,k,d]]" (see circuits.py for acceptable inputs)
+        weak_decoder: 'bplsd' or 'uf'
+        num_shots: total # of shots to run to collect the cluster norms
+        shots_per_job: the # of shots per worker (for parallel processing)
+        norm_order: the cluster norm order
+        erasure_conversion_rate: the conversion rate for 2-qubit errors w/ total rate p (p_e = Re * p, p_pauli = (1-Re) * p )
+
+    '''
+
+    basis          = 'Z' #basis determining the memory experiment for the BB codes
     decoder_option = 'weak'
     strong_decoder = 'relay_bp' #doesnt matter
-    num_rounds = 25
-    rel_error_tol = 0.01 #10%
+    num_rounds     = 25
+    rel_error_tol  = 0.01 #10%
 
     if weak_decoder == 'bplsd':
-        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] #
+        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] 
     elif weak_decoder=='uf':
-        # ps = [1e-4,2e-4,3e-4,4e-4,5e-4]
         ps = [1e-4,2e-4, 3e-4]
 
     def process_one_round_value(code_name,p,num_shots,norm_order):
@@ -379,7 +385,7 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
 
      
 
-    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_w_erasures_{erasure_conversion_rate}.txt'
+    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics_final/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_w_erasures_{erasure_conversion_rate}.txt'
 
     with open(txt_to_save, "wb") as file:
         pickle.dump(dict_to_save, file)
@@ -396,21 +402,10 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='bplsd
 # code_name = "[[144,12,12]]"
 # code_name = "[[162,8,14]]"
 num_shots     = 100_000
-shots_per_job = 5000
+shots_per_job = 10_000
 
-# p = np.logspace(-4,-3.5,6)
-# print(p)
-# code_names = ["[[72,12,6]]" ,"[[90,8,10]]", "[[126,8,10]]" , "[[144,12,12]]" , "[[162,8,14]]"]
 
 # for code_name in code_names:
 #     switch_rate_vs_p_for_erasures(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
 
 
-# weak_decoder = 'uf'
-
-# txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_w_erasures.txt'
-
-# with open(txt_to_load, "rb") as file:
-#     data = pickle.load(file)
-
-# print(data['switch_rates'])

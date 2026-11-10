@@ -10,7 +10,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..','..
 # sys.path.append(os.path.join(ROOT, "BeamSearchDecoder"))
 
 
-from src.realtime_decoding.utils import get_window_dems, get_erased_mechanisms_from_DEM
+from src.realtime_decoding.utils import get_window_dems
 from ldpc.bplsd_decoder import BpLsdDecoder
 from typing import Optional
 from tesseract_decoder import tesseract

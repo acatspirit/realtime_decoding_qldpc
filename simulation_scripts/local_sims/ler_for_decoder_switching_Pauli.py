@@ -11,6 +11,7 @@ plt.rcParams["font.family"] = "Microsoft Sans Serif"
 from joblib import Parallel, delayed
 from src.realtime_decoding.decoder_switching_class import decoder_switching_class
 import pickle 
+import zipfile
 
 '''
 Run decoder simulations considering only the ionic-Pauli noise (no leakage or erasures).
@@ -19,7 +20,7 @@ Results are saved in the folder:
 saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}
 
 Cluster norm distributions are loaded from:
-saved_data/cluster_norm_statistics 
+saved_data/cluster_norm_statistics_final
 '''
 
 #============= bplsd as weak decoder ============================================
@@ -27,6 +28,7 @@ saved_data/cluster_norm_statistics
 def get_cutoffs_for_input_switch_rate_bplsd(target_switch_rate,plot=False):
     '''
     Get the cluster norm cutoffs from the cluster norm distributions that achieve a target switch rate.
+    The weak decoder is bplsd. Cluster norms were obtained from the Pauli-only ionic noise model.
     
     Input: 
         target_siwtch_rate: the target switch rate to achieve
@@ -93,19 +95,30 @@ def get_cutoffs_for_input_switch_rate_bplsd(target_switch_rate,plot=False):
 
 
 def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='relay_bp', num_shots = 100_000, shots_per_job = 10_000):
+    '''
+    Get the lers for bplsd to tesseract of relay-bp switching, for some fixed target switch rate p_s. 
+
+    Input:
+        target_switch_rate: target switch rate to switch to strong decoder
+        strong_decoder: 'relay_bp' or 'tesseract'
+        num_shots: max # of shots to run simulations
+        shots_per_job: # of shots for each worker for parallel processing
+
+        
+    '''
 
     weak_decoder='bplsd'
+    basis       = "Z"
+    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"]
+    ps         = [2e-3,3e-3,4e-3,5e-3]  
+    num_rounds = 25
+
+
     cutoffs_to_set,_ = get_cutoffs_for_input_switch_rate_bplsd(target_switch_rate=target_switch_rate)
+
 
     colors = ["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
 
-    #Run decoder switching protocol:
-    
-    basis       = "Z"
-    code_names = ["[[162,8,14]]"] #"[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"
-    # ps         = [2e-3,3e-3,4e-3,5e-3]  
-    ps         = [2e-3,]  #3e-3,4e-3,5e-3
-    num_rounds = 25
 
     def process_one_round_value(code_name,p,num_shots,cutoff):
         
@@ -253,7 +266,6 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
         cnt+=1 
 
     
-
     ax[1].set_ylabel("$p_{switch}$")
     ax[1].set_xlabel("physical error rate")
     ax[1].set_title(f"for $p_s$: {target_switch_rate}")
@@ -261,8 +273,6 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
     ax[1].set_xscale('log')
     ax[1].legend(fontsize=9)
 
-
-  
 
     plt.tight_layout()
     plt.show()
@@ -286,12 +296,10 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
                     "total_windows": total_windows}         
     
 
-    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_p_2e_minus_3_162_8_14.txt' 
+    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}.txt' 
 
     with open(txt_to_save, 'w') as file:
         file.write(str(dict_to_save))      
-
-
 
     return 
 
@@ -300,7 +308,7 @@ bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2, strong_decoder='te
 
 
 #========== uf as weak decoder ===============================================================
-import zipfile
+
 
 def get_cutoffs_for_input_switch_rate_uf(target_switch_rate,plot=False):
     '''
@@ -376,18 +384,29 @@ def get_cutoffs_for_input_switch_rate_uf(target_switch_rate,plot=False):
 
 
 def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='relay_bp', num_shots = 100_000, shots_per_job = 10_000):
+    '''
+    Get the lers for uf to tesseract of relay-bp switching, for some fixed target switch rate p_s. 
+
+    Input:
+        target_switch_rate: target switch rate to switch to strong decoder
+        strong_decoder: 'relay_bp' or 'tesseract'
+        num_shots: max # of shots to run simulations
+        shots_per_job: # of shots for each worker for parallel processing
+
+        
+    '''
 
     weak_decoder='uf'
+    basis       = "Z"
+    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"] 
+    ps         = np.logspace(-4,-3.5,6)
+    num_rounds = 25
+
     cutoffs_to_set,_ = get_cutoffs_for_input_switch_rate_uf(target_switch_rate=target_switch_rate)
 
     colors = ["tab:blue","tab:orange","tab:green","tab:red","tab:purple"]
 
     #Run decoder switching protocol:
-    
-    basis       = "Z"
-    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"] #
-    ps         = np.logspace(-4,-3.5,6)
-    num_rounds = 25
 
     def process_one_round_value(code_name,p,num_shots,cutoff):
         

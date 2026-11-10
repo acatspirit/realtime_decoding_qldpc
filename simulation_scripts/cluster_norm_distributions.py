@@ -177,7 +177,8 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     cbar.set_label(r"$p_{\rm switch}$")
 
     plt.tight_layout()
-    plt.show()            
+    plt.show()  
+    plt.savefig(sys.path[-1] + f'/data/cluster_norm_statistics/histogram_cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.pdf', dpi=300)          
 
     dict_to_save = {'code_name': code_name,
                     'ps': ps,

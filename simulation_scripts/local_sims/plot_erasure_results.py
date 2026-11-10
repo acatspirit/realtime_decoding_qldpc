@@ -383,10 +383,11 @@ def plot_decoder_switching_benchmarks(strong_decoder,plotted_quantity,target_swi
 
     # 2. Add the custom legend to ax[0]
     ax[0].legend(handles=style_legend_elements, bbox_to_anchor=(0.5, 1.15), 
-    loc='lower left', fontsize=12, frameon=True) 
+    loc='lower center', fontsize=18, frameon=True) 
     ax[1].legend(handles=grayscale_handles_right, bbox_to_anchor=(0.5, 1.15), 
-    loc='lower left', fontsize=12, frameon=True)
-    ax[1].set_title(f"target $p_s=$ {target_switch_rate}",fontsize=15)
+    loc='lower center', fontsize=18, frameon=True)
+    ax[1].set_title(f"target $p_s=$ {target_switch_rate}",fontsize=20)
+    ax[1].set_ylabel("$p_s$", fontsize=20)
 
 
 
@@ -400,4 +401,4 @@ def plot_decoder_switching_benchmarks(strong_decoder,plotted_quantity,target_swi
 
 
 
-plot_decoder_switching_benchmarks(strong_decoder='tesseract',plotted_quantity='epsilons',target_switch_rate=5e-3)                                  
+plot_decoder_switching_benchmarks(strong_decoder='relay_bp',plotted_quantity='epsilons',target_switch_rate=5e-3)                                  

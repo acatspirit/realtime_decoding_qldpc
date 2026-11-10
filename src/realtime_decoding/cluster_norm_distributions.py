@@ -2,7 +2,8 @@ import sys
 import os
 # sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) #move to level before sims file
 
-
+import zipfile
+import pickle
 import numpy as np
 from matplotlib import pyplot as plt
 import matplotlib
@@ -257,8 +258,29 @@ if __name__ == '__main__':
     num_shots = 10_000
     norm_order = 2
 
-    get_cluster_norm_distributions_and_switch_probs(
+    input_cluster_norms_path = "/Users/ariannameinking/Documents/Brown_Research/realtime_decoding_qldpc/saved_data/cluster_norm_statistics_final/uf_compressed/cluster_norm_distributions_code_[[72,12,6]]_uf_max_shots_50000_w_erasures.txt.zip" 
+    
+
+    with zipfile.ZipFile(input_cluster_norms_path, 'r') as zip_ref:
+        with zip_ref.open(zip_ref.namelist()[0], "r") as file:
+            data = pickle.load(file)
+    # get_cluster_norm_distributions_and_switch_probs(
+    #     weak_decoder=weak_decoder,
+    #     num_shots=num_shots,
+    #     norm_order=norm_order
+    # )
+
+    code_names = ["[[72,12,6]]"] #, "[[90,8,10]]" ,"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"]
+
+    plot_cluster_norm_distributions_and_switch_probs(
+        code_names = code_names,
+        p          = data["ps"][0],
+        num_rounds = 25,
+        num_shots  = 50000,
+        switch_rate= 5e-3,
         weak_decoder=weak_decoder,
-        num_shots=num_shots,
-        norm_order=norm_order
+        norm_order=norm_order,
+        basis="Z",
+        strong_decoder='relay_bp',
+        input_cluster_norms=data["cluster_norms"]
     )

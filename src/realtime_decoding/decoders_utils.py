@@ -26,15 +26,18 @@ from BeamSearchDecoder.beamsearch import BeamSearchDecoder
 Helper functions for configuring decoders. Set parameters in this file for decoders
 """
 
-
 def collect_default_decoder_params(decoder):
+    '''
+    Set the default parameters for each decoder. 
 
+    Input:
+        decoder: 'tesseract', 'relay_bp', 'bplsd', 'uf', 'beamsearch8_230iters' or 'beamsearch32_340iters'
+    
+    Output:
+        decoder_params: dictionary with the key-value pairs the inputs and values for configuring the various decoders.
+
+    '''
     if decoder=='tesseract': # make params a little worse
-        #We could change some of these parameters
-        # decoder_params = {'det_beam': 30, # test larger too, was 10 
-        #                   'pqlimit': 100_000, # ? try increasing , test first, was 50_000
-        #                   'beam_climbing': True,# good
-        #                   'no_revisit_dets': True} # good
 
         decoder_params = {'det_beam': 10, 
                           'pqlimit': 50_000, 
@@ -88,15 +91,14 @@ def configure_tesseract_per_sliding_window(window_check_set, window_observable_s
     '''Compile tesseract decoder for all windows.
 
     Inputs:
-    window_check_set: list of check matrices per window
-    window_observable_set: list of observables matrices per window
-    window_priors_set: list of priors per window:
-    decoder_params: dictionary of decoder parameters with key 'det_beam' (default is 3)
-
+        window_check_set: list of check matrices per window
+        window_observable_set: list of observables matrices per window
+        window_priors_set: list of priors per window:
+        decoder_params: dictionary of decoder parameters with key 'det_beam' (default is 3)
 
     Outputs:
-    window_dems: dem per window
-    compiled_decoders: list of tesseract decoders per window
+        window_dems: dem per window
+        compiled_decoders: list of tesseract decoders per window
 
     '''
     
@@ -124,7 +126,21 @@ def configure_tesseract_per_sliding_window(window_check_set, window_observable_s
     return window_dems,compiled_decoders
 
 def configure_beamsearch_per_sliding_window(window_check_set, window_observable_set, window_priors_set, decoder_params: Optional[dict] = None, beamsearch_option = 1):
+    '''
+    Configure beamsearch decoder for all windows.
 
+    Inputs:
+        window_check_set: list of check matrices per window
+        window_observable_set: list of observables matrices per window
+        window_priors_set: list of priors per window:    
+        decoder_params: dictionary of decoder parameters with keys: 'bp_method', 'max_bp_iters', 'schedule', 'lsd_method', 'lsd_order'
+        (if some key(s) is/are missing defaults to 'product_sum', 30, 'serial', 'lsd_cs', 0 )
+        beamsearch_option: 1 for beamsearch8_230iters or sth else for beamsearch32_340iters
+    
+    Outputs:
+        compiled_decoders: list of beamsearch decoders per window
+    '''
+    
     if beamsearch_option==1:
         defaults = collect_default_decoder_params('beamsearch8_230iters')
     else:
@@ -157,7 +173,19 @@ def configure_beamsearch_per_sliding_window(window_check_set, window_observable_
 
 
 def configure_relay_bp_per_sliding_window(window_check_set, window_priors_set, decoder_params: Optional[dict] = None):
+    '''
+    Configure relay-bp for all windows.
 
+    Inputs:
+        window_check_set: list of check matrices per window
+        window_observable_set: list of observables matrices per window
+        window_priors_set: list of priors per window:    
+        decoder_params: dictionary of decoder parameters with keys: 'bp_method', 'max_bp_iters', 'schedule', 'lsd_method', 'lsd_order'
+        (if some key(s) is/are missing defaults to 'product_sum', 30, 'serial', 'lsd_cs', 0 )
+    
+    Outputs:
+        compiled_decoders: list of relay-bp decoders per window
+    '''
     defaults = collect_default_decoder_params('relay_bp')
 
     if decoder_params is None:
@@ -188,14 +216,14 @@ def configure_bplsd_decoder_per_sliding_window(window_check_set,window_priors_se
     Configure bplsd for all windows.
 
     Inputs:
-    window_check_set: list of check matrices per window
-    window_observable_set: list of observables matrices per window
-    window_priors_set: list of priors per window:    
-    decoder_params: dictionary of decoder parameters with keys: 'bp_method', 'max_bp_iters', 'schedule', 'lsd_method', 'lsd_order'
-    (if some key(s) is/are missing defaults to 'product_sum', 30, 'serial', 'lsd_cs', 0 )
+        window_check_set: list of check matrices per window
+        window_observable_set: list of observables matrices per window
+        window_priors_set: list of priors per window:    
+        decoder_params: dictionary of decoder parameters with keys: 'bp_method', 'max_bp_iters', 'schedule', 'lsd_method', 'lsd_order'
+        (if some key(s) is/are missing defaults to 'product_sum', 30, 'serial', 'lsd_cs', 0 )
     
     Outputs:
-    bplsd_decoders: list of bplsd decoders per window
+        bplsd_decoders: list of bplsd decoders per window
     '''
 
     defaults = collect_default_decoder_params('bplsd')
@@ -230,13 +258,12 @@ def configure_uf_decoder_per_sliding_window(window_check_set, erased_errors_set=
     Configure UF for all windows.
 
     Inputs:
-    window_check_set: list of check matrices per window
-    window_observable_set: list of observables matrices per window
-    window_priors_set: list of priors per window
-    decoder_params: dictionary of decoder parameters (not used for UF)
+        window_check_set: list of check matrices per window
+        erased_errors_set: list of erasures per window
 
     Outputs:
-    uf_decoders: list of UF decoders per window
+        uf_decoders: list of UF decoders per window
+        erasure_array: list of erasures per window 
     '''
 
     uf_decoders = []

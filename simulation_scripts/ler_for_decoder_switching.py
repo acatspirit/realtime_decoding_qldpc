@@ -47,7 +47,7 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_s
     for code_name in code_names: 
 
         if weak_decoder == 'bplsd':
-            txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+            txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_bp_schedule_parallel.txt'
         elif weak_decoder=='uf':
             # txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_{np.round(p_list[-1],min_order+1)}.pkl.gz'
             txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_50000_w_erasures.txt' # with erasure conversion rate 0.7941 to get clusters
@@ -386,7 +386,7 @@ def get_ler_for_decoder_switching(num_shots=100_000,
     output_dir = script_dir / "data" / "decoder_switching_data"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    txt_to_save = output_dir / f'/saved_data/decoder_switching_data/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_erasures_{erasure_conversion_rate}.txt' #p_2e_minus_3_Gross_only
+    txt_to_save = output_dir / f'/saved_data/decoder_switching_data/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_erasures_{erasure_conversion_rate}_bp_schedule_parallel.txt' #p_2e_minus_3_Gross_only
 
     with open(txt_to_save, 'w') as file:
         json.dump(dict_to_save, txt_to_save)      
@@ -403,8 +403,8 @@ def get_ler_for_decoder_switching_dcc(
         strong_decoder='tesseract', 
         erasure_conversion_rate = 0.7941,
         basis='Z',
-        # code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
-        code_names = ["[[72,12,6]]", "[[90,8,10]]"],
+        code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"],
+        # code_names = ["[[72,12,6]]", "[[90,8,10]]"],
         ps = [10**(-3.5), 5e-4, 7e-4],
         num_rounds = 25,
         rel_error_tol = 0.01
@@ -457,7 +457,7 @@ def get_ler_for_decoder_switching_dcc(
     if erasures:
         output_dir = script_dir / "data" / "decoder_switching_data" / f"raw_batches_target_{target_switch_rate}_erasures"
     else:
-        output_dir = script_dir / "data" / "decoder_switching_data" / f"raw_batches_target_{target_switch_rate}"
+        output_dir = script_dir / "data" / "decoder_switching_data" / f"raw_batches_target_{target_switch_rate}_bp_schedule_parallel"
     output_dir.mkdir(parents=True, exist_ok=True)
     
     file_name = output_dir / f"task_{task_id}_{code_name}_p{p:.6f}.json"
@@ -612,14 +612,14 @@ def merge_dcc_results(target_switch_rate, weak_decoder, strong_decoder, num_shot
     if erasures:
         input_dir = script_dir / "decoder_switching_data_temp" / f"raw_batches_target_{target_switch_rate}_erasures"
     else:
-        input_dir = script_dir / "decoder_switching_data_temp" / f"raw_batches_target_{target_switch_rate}"
+        input_dir = script_dir / "decoder_switching_data_temp" / f"raw_batches_target_{target_switch_rate}_bp_schedule_parallel"
     
     out_dir = script_dir.parent / "data" / "decoder_switching_results"
     out_dir.mkdir(parents=True, exist_ok=True)
-    txt_to_save = out_dir / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}_erasures_{erasure_conversion_rate}.txt'
+    txt_to_save = out_dir / f'decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots_max}_erasures_{erasure_conversion_rate}_bp_schedule_parallel.txt'
 
     download_from_dcc(
-            remote_path=dcc_data_dir + f"/raw_batches_target_{target_switch_rate}/*.json" if not erasures else dcc_data_dir + f"/raw_batches_target_{target_switch_rate}_erasures/*.json",
+            remote_path=dcc_data_dir + f"/raw_batches_target_{target_switch_rate}_bp_schedule_parallel/*.json" if not erasures else dcc_data_dir + f"/raw_batches_target_{target_switch_rate}_erasures/*.json",
             local_dir=input_dir
         )
     
@@ -1180,13 +1180,14 @@ def plot_switching_gains_vs_switch_rate(weak_decoder, strong_decoder, p_physical
 if __name__ == "__main__":
     num_shots = 5_000_000
     # num_shots=30_000
-    batches = 250
+    batches = 50
     shots_per_job = num_shots // batches
-    target_switch_rate = 0.005 #  ion-aware is 0.01
-    weak_decoder = 'uf'
-    strong_decoder = 'relay_bp' # change back to tesseract
-    erasures=True
-    erasure_conversion_rate=0.7941
+    target_switch_rate = 0.01 #  ion-aware is 0.01
+    weak_decoder = 'bplsd'
+    strong_decoder = 'tesseract' # change back to tesseract
+    erasures=False
+    # erasure_conversion_rate=0.7941
+    erasure_conversion_rate=0
 
     # run locally
     # get_ler_for_decoder_switching(num_shots=num_shots,
@@ -1199,7 +1200,7 @@ if __name__ == "__main__":
 
     # to run on the cluster / get data on cluster
     # get_ler_for_decoder_switching_dcc(ps = [10**(-3.5), 5e-4, 7e-4], num_shots=num_shots, shots_per_job=shots_per_job, target_switch_rate=target_switch_rate, weak_decoder=weak_decoder, strong_decoder=strong_decoder, erasure_conversion_rate=1e-4)
-    get_ler_for_decoder_switching_dcc(ps = [3e-4,5e-4], 
+    get_ler_for_decoder_switching_dcc(ps = [2e-3,3e-3,4e-3,5e-3], 
                                       num_shots=num_shots, 
                                       shots_per_job=shots_per_job, 
                                       target_switch_rate=target_switch_rate, 

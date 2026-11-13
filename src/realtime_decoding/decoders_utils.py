@@ -57,12 +57,8 @@ def collect_default_decoder_params(decoder):
         decoder_params = {
             'bp_method': 'product_sum',
             'max_bp_iters': 30,
-<<<<<<< HEAD
-            'schedule': 'parallel', # updated 11/12/26 for speed
-=======
             # 'schedule': 'serial',
             'schedule': 'parallel',
->>>>>>> d8ee777 (updates)
             'lsd_method': 'lsd_cs',
             'lsd_order': 0,
         }    

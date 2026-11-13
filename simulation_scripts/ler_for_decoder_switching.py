@@ -47,7 +47,7 @@ def get_cutoffs_for_input_switch_rate(target_switch_rate,weak_decoder='uf',num_s
     for code_name in code_names: 
 
         if weak_decoder == 'bplsd':
-            txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_bp_schedule_parallel.txt'
+            txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics_final/bplsd/cluster_norm_distributions_code_{code_name}_bplsd_max_shots_100000_bp_schedule_parallel.txt'
         elif weak_decoder=='uf':
             # txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_p_{np.round(p_list[0], min_order+1)}_to_{np.round(p_list[-1],min_order+1)}.pkl.gz'
             txt_to_load = sys.path[-1] + f'/data/cluster_norm_statistics/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_50000_w_erasures.txt' # with erasure conversion rate 0.7941 to get clusters

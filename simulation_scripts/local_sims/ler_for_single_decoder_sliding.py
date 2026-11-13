@@ -408,16 +408,16 @@ def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_
                     "std_epsilons":errs_in_eps_to_save}
     
     
-    # if decoder_label=='beamsearch':
-    #     if beamsearch_option==1:
-    #         txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_beam8_230iters_max_shots_{num_shots}_p_2e_minus_3.txt'
-    #     else:
-    #         txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_beam32_340iters_max_shots_{num_shots}_p_2e_minus_3.txt'
-    # else:
-    #     txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_{decoder_label}_max_shots_{num_shots}.txt'
+    if decoder_label=='beamsearch':
+        if beamsearch_option==1:
+            txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_beam8_230iters_max_shots_{num_shots}_p_2e_minus_3.txt'
+        else:
+            txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_beam32_340iters_max_shots_{num_shots}_p_2e_minus_3.txt'
+    else:
+        txt_to_save = sys.path[-1] + f'/saved_data/single_decoder_sliding/{decoder_label}/single_sliding_window_{decoder_label}_max_shots_{num_shots}_bp_schedule_parallel.txt'
 
-    # with open(txt_to_save, 'w') as file:
-    #     file.write(str(dict_to_save))      
+    with open(txt_to_save, 'w') as file:
+        file.write(str(dict_to_save))      
 
     # To load the data simply do:
     # with open(txt_to_load,"r") as f:
@@ -432,10 +432,10 @@ def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_
     plt.tight_layout()
 
     
-    # figure_plot = sys.path[-1] + f'/saved_data/single_sliding_window_{decoder_label}_max_shots_{num_shots}.pdf'
+    figure_plot = sys.path[-1] + f'/saved_data/single_sliding_window_{decoder_label}_max_shots_{num_shots}_bp_schedule_parallel.pdf'
     
 
-    # fig.savefig(figure_plot,bbox_inches='tight')
+    fig.savefig(figure_plot,bbox_inches='tight')
 
     plt.show()        
 
@@ -446,15 +446,16 @@ num_shots     = 200_000
 shots_per_job = 50_000
 
 #------- For UF ------------------------------------
-# ps            = np.logspace(-4,-3.5,6) #logspace for uf
-ps            = [1e-4, 2e-4, 3e-4, 4e-4, 5e-4, 6e-4, 7e-4, 8e-4, 9e-4, 1e-3, 2e-3, 3e-3]
+# ps            = np.logspace(-4,-3.5,6) #lo
+# space for uf
+# ps            = [2e-4, 3e-4, 4e-4, 5e-4, 6e-4, 7e-4, 8e-4, 9e-4, 1e-3, 2e-3, 3e-3]
 #------- For beamsearch ----------------------------
-# ps = [2e-3,] #3e-3,4e-3,5e-3
+ps = [2e-3, 3e-3, 4e-3, 5e-3, 6e-3, 7e-3, 8e-3, 9e-3, 1e-2]
 
 
 get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=num_shots,shots_per_job=shots_per_job,p_leak=0,
-                                             weak_decoder='uf',
-                                             strong_decoder='beamsearch',
+                                             weak_decoder='bplsd',
+                                             strong_decoder='tesseract',
                                              decoder_option= 'weak',
                                              beamsearch_option=1)
 

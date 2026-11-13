@@ -17,9 +17,9 @@ from tesseract_decoder import tesseract
 import relay_bp
 import numpy as np
 from scipy.sparse import csr_matrix
-# import py_wrapper.py_decoder as uf
-from uf_decoder.py_wrapper import py_decoder as uf
-from BeamSearchDecoder.beamsearch import BeamSearchDecoder
+import py_wrapper.py_decoder as uf
+# from uf_decoder.py_wrapper import py_decoder as uf
+# from BeamSearchDecoder.beamsearch import BeamSearchDecoder
 
 
 """
@@ -57,7 +57,7 @@ def collect_default_decoder_params(decoder):
         decoder_params = {
             'bp_method': 'product_sum',
             'max_bp_iters': 30,
-            'schedule': 'serial',
+            'schedule': 'parallel', # updated 11/12/26 for speed
             'lsd_method': 'lsd_cs',
             'lsd_order': 0,
         }    

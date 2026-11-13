@@ -304,7 +304,7 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
     return 
 
 
-bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2, strong_decoder='tesseract',num_shots=9_000_000,shots_per_job=200_000)
+bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2, strong_decoder='tesseract',num_shots=5_000_000,shots_per_job=500_000)
 
 
 #========== uf as weak decoder ===============================================================

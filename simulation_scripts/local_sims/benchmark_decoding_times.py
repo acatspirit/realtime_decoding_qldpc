@@ -202,14 +202,13 @@ def configure_decoder_for_timing_test(code_name,p,num_shots,decoder_option,num_r
         
         decoder = BpLsdDecoder(chk,
                             error_channel=priors,
-                            # bp_method= defaults['bp_method'],
-                            bp_method = 'minimum_sum',
+                            bp_method= defaults['bp_method'],
+                            # bp_method = 'minimum_sum',
                             max_iter=defaults['max_bp_iters'],
-                            schedule=defaults['schedule'],
+                            schedule='parallel',#defaults['schedule'],
                             lsd_method=defaults['lsd_method'],
                             lsd_order=defaults['lsd_order'])
 
-        
     return decoder,det_events,chk
 
 def run_timing_test(num_rounds=25,num_shots=100,decoder_option='relay_bp',):
@@ -223,7 +222,7 @@ def run_timing_test(num_rounds=25,num_shots=100,decoder_option='relay_bp',):
 
         ps = [1e-4, 2e-4, 5e-4, 1e-3, 3e-3]
     else:
-        ps = [1e-4, 5e-4, 1e-3, 3e-3, ]
+        ps = [1e-4, 5e-4, 1e-3, 3e-3] 
 
     tasks = [
         (code_name, p)
@@ -370,7 +369,7 @@ def run_timing_test(num_rounds=25,num_shots=100,decoder_option='relay_bp',):
     
 
     
-    txt_to_save = sys.path[-1] + f'/saved_data/timings/decoding_times_{decoder_option}_shots_{num_shots}.txt'
+    txt_to_save = sys.path[-1] + f'/saved_data/timings/decoding_times_{decoder_option}_shots_{num_shots}_bp_schedule_parallel.txt'
 
     with open(txt_to_save, 'w') as file:
         file.write(str(dict_to_save))   
@@ -386,7 +385,7 @@ def run_timing_test(num_rounds=25,num_shots=100,decoder_option='relay_bp',):
 
     return 
 
-# run_timing_test(num_shots=50_000,decoder_option='uf',)
+# run_timing_test(num_shots=50_000,decoder_option='bplsd',)
 
 
 def plot_timings():
@@ -401,7 +400,7 @@ def plot_timings():
         sys.path[-1] + f'/saved_data/timings/decoding_times_beamsearch_option_2_shots_{num_shots}.txt', #beam32_340iters
         sys.path[-1] + f'/saved_data/timings/decoding_times_tesseract_shots_{num_shots}.txt', #tesseract 
         sys.path[-1] + f'/saved_data/timings//decoding_times_relay_bp_shots_{num_shots}.txt', #relay-bp 
-        sys.path[-1] + f'/saved_data/timings//decoding_times_bplsd_shots_{num_shots}.txt', #bp-lsd 
+        sys.path[-1] + f'/saved_data/timings//decoding_times_bplsd_shots_{num_shots}_bp_schedule_parallel.txt', #bp-lsd 
         sys.path[-1] + f'/saved_data/timings//decoding_times_uf_shots_{num_shots}.txt' #uf    
     ]
 
@@ -460,7 +459,7 @@ def plot_timings():
     plt.tight_layout()
     plt.show()
 
-    fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/Timings_all_decoders.pdf",bbox_inches='tight')
+    # fig.savefig(f"/Users/evatakou/Desktop/Figs_realtime/from_python/Timings_all_decoders.pdf",bbox_inches='tight')
 
     return 
 

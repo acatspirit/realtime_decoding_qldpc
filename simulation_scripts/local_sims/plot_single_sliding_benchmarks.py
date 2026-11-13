@@ -432,6 +432,8 @@ def plot_single_sliding_benchmarks(plotted_quantity):
         ax[k].set_yscale('log')
         ax[k].set_xscale('log')
         ax[k].legend(fontsize=10)
+        # ax[k].set_ylim([1e-9,5e-2])
+        ax[k].set_ylim([1e-6,1e-3])
         
         if k==0:
             ax[k].set_ylabel("LER per SEC")
@@ -447,7 +449,7 @@ def plot_single_sliding_benchmarks(plotted_quantity):
             r"8",
             r"10",
             ])
-            ax[k].minorticks_off() 
+            # ax[k].minorticks_off() 
 
             ax[k].set_xlabel(r"physical error rate ($\times 10^{-3}$)")
         else:

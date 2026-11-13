@@ -395,7 +395,7 @@ def plot_decoder_switching_benchmarks(strong_decoder,plotted_quantity,target_swi
     plt.tight_layout()
     plt.show()
 
-    fig.savefig(f"/Users/ariannameinking/Documents/Brown_Research/realtime_decoding_qldpc/data/plots/decoder_switching_benchmarks_ps_{target_switch_rate}_strong_{strong_decoder}_erasure.pdf",bbox_inches='tight')
+    # fig.savefig(f"/Users/ariannameinking/Documents/Brown_Research/realtime_decoding_qldpc/data/plots/decoder_switching_benchmarks_ps_{target_switch_rate}_strong_{strong_decoder}_erasure.pdf",bbox_inches='tight')
    
     return 
 

@@ -770,7 +770,7 @@ def plot_LER_improvement_uf(strong_decoder):
     return 
 
 
-plot_LER_improvement_uf("relay_bp")
+# plot_LER_improvement_uf("relay_bp")
 
 
 #========== LER improvement of switching over beamsearch ========
@@ -911,9 +911,6 @@ def plot_LER_improvement_over_BeamSearch(strong_decoder,option):
         ax.set_title(rf"$p={p}$, BP-LSD $\rightarrow$ Relay-BP",fontsize=14)
     
 
-    #========= Plot the switch frequency also ================
-
-    # ax.set_ylim([1e-2,1e2])
     plt.tight_layout()
     plt.show()
 
@@ -922,4 +919,4 @@ def plot_LER_improvement_over_BeamSearch(strong_decoder,option):
     return 
 
 
-# plot_LER_improvement_over_BeamSearch('tesseract',option=2)
+plot_LER_improvement_over_BeamSearch('tesseract',option=1)

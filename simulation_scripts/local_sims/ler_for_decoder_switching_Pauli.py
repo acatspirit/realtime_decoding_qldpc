@@ -51,7 +51,7 @@ def get_cutoffs_for_input_switch_rate_bplsd(target_switch_rate,plot=False):
     cnt=0
     for code_name in code_names:
     
-        txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics_final/bplsd/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+        txt_to_load = sys.path[-1] + f'/saved_data/cluster_norm_statistics_final/bplsd/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_bp_schedule_parallel.txt'
 
         with open(txt_to_load, "rb") as file:
             data = pickle.load(file)
@@ -109,8 +109,8 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
 
     weak_decoder='bplsd'
     basis       = "Z"
-    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"]
-    ps         = [2e-3,3e-3,4e-3,5e-3]  
+    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"] 
+    ps         = [2e-3,3e-3,4e-3,5e-3]  #
     num_rounds = 25
 
 
@@ -296,7 +296,7 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
                     "total_windows": total_windows}         
     
 
-    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}.txt' 
+    txt_to_save = sys.path[-1] + f'/saved_data/decoder_switching_data/{weak_decoder}_to_{strong_decoder}/decoder_switching_target_ps_{target_switch_rate}_weak_{weak_decoder}_strong_{strong_decoder}_max_shots_{num_shots}_bp_schedule_parallel.txt' 
 
     with open(txt_to_save, 'w') as file:
         file.write(str(dict_to_save))      
@@ -304,7 +304,8 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
     return 
 
 
-bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2, strong_decoder='tesseract',num_shots=9_000_000,shots_per_job=200_000)
+bplsd_to_strong_w_target_switch_rate(target_switch_rate=5e-3, strong_decoder='tesseract',num_shots=1_500_000,shots_per_job=250_000)
+
 
 
 #========== uf as weak decoder ===============================================================
@@ -383,7 +384,7 @@ def get_cutoffs_for_input_switch_rate_uf(target_switch_rate,plot=False):
     return cutoffs_to_set,data_per_code
 
 
-def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='relay_bp', num_shots = 100_000, shots_per_job = 10_000):
+def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='relay_bp', num_shots = 10_000, shots_per_job = 2_000):
     '''
     Get the lers for uf to tesseract of relay-bp switching, for some fixed target switch rate p_s. 
 

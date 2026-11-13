@@ -14,7 +14,9 @@ from src.realtime_decoding.helper_cluster_tools import * # figure out the improt
 
 # fix the imports
 from src.realtime_decoding.circuits import create_bb_codes_circuit, create_bb_codes_circuit_ionic_model, add_independent_leakage_errors_per_round, add_erasures
-from src.realtime_decoding.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, collect_default_decoder_params ,configure_beamsearch_per_sliding_window
+from src.realtime_decoding.decoders_utils import configure_tesseract_per_sliding_window, configure_bplsd_decoder_per_sliding_window, \
+                                                 configure_relay_bp_per_sliding_window, configure_uf_decoder_per_sliding_window, \
+                                                    collect_default_decoder_params ,configure_beamsearch_per_sliding_window
 from src.realtime_decoding.utils import get_erasure_set
 from typing import Optional
 import relay_bp
@@ -148,23 +150,23 @@ class decoder_switching_class:
         
         '''
         Inputs:
-        code_name: code_name of bb code of the form "[[n,k,d]]" (see circuits.py)
-        num_rounds: # of syndrome extraction rounds
-        p: physical error rate
-        basis: 'Z' or 'X'
-        num_shots: number of shots for memory experiment
-        W: size of total window
-        F: size of commit region
-        strong_decoder_option: option to choose strong decoder from 'tesseract' or 'relay_bp'
-        weak_decoder_option: option to choose weak decoder from 'uf' or 'bplsd'
-        strong_decoder_params: dictionary with strong decoder parameters 
-        weak_decoder_params: dictionary with weak decoder parameters 
-        p_leak: leakage error rate per qubit, for each round (default set to 0)
-        noise_model: "ionic" or "standard"
-        erasure_conversion_rate: the ratio of erasures to total error rate
-        idling_erasures : whether to add erasures to idling gates (default False)
+            code_name: code_name of bb code of the form "[[n,k,d]]" (see circuits.py)
+            num_rounds: # of syndrome extraction rounds
+            p: physical error rate
+            basis: 'Z' or 'X'
+            num_shots: max number of shots for memory experiment
+            W: size of total window
+            F: size of commit region
+            strong_decoder_option: option to choose strong decoder from 'tesseract' or 'relay_bp'
+            weak_decoder_option: option to choose weak decoder from 'uf' or 'bplsd'
+            strong_decoder_params: dictionary with strong decoder parameters 
+            weak_decoder_params: dictionary with weak decoder parameters 
+            p_leak: leakage error rate per qubit, for each round (default set to 0)
+            noise_model: "ionic" or "standard"
+            erasure_conversion_rate: the ratio, Re, of erasures to total error rate (p_e = Re * p)
+            idling_erasures : whether to add erasures to idling gates (default False)
 
-        ---decoder_params are optional. default parameters can be found in decoders_utils.py---
+            ---decoder_params are optional. default parameters can be found in decoders_utils.py---
         '''
 
         # STORE THESE SO THAT WE CAN RESET
@@ -681,7 +683,6 @@ class decoder_switching_class:
 
 
         for shot_index in range(self.num_shots):
-            # print("shot:",shot_index,"out of:",self.num_shots)
 
             accumulated_correction = np.zeros(self.window_observable_set[0].shape[0], dtype=np.uint8) # change this so that it's a double index, also with shots
             syn_update = np.zeros(num_checks, dtype=np.uint8)            

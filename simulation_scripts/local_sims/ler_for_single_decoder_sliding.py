@@ -271,7 +271,7 @@ def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_
     '''
 
     basis      = 'Z' #basis determining the memory experiment for the BB codes
-    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"] 
+    code_names = ["[[72,12,6]]", "[[90,8,10]]", "[[126,8,10]]", ] #"[[126,8,10]]", "[[144,12,12]]", "[[162,8,14]]"
 
     num_rounds = 25
     max_shots_above_8e_minus3 = 15_000 #this can be adjusted
@@ -419,9 +419,6 @@ def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_
     with open(txt_to_save, 'w') as file:
         file.write(str(dict_to_save))      
 
-    # To load the data simply do:
-    # with open(txt_to_load,"r") as f:
-    #     data = eval(f.read())
 
     ax.set_xlabel("$p$")
     ax.set_ylabel("LER per SEC")
@@ -434,28 +431,29 @@ def get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=100_000,shots_per_
     
     figure_plot = sys.path[-1] + f'/saved_data/single_sliding_window_{decoder_label}_max_shots_{num_shots}_bp_schedule_parallel.pdf'
     
-
-    fig.savefig(figure_plot,bbox_inches='tight')
+    # fig.savefig(figure_plot,bbox_inches='tight')
 
     plt.show()        
 
     return 
 
 
-num_shots     = 200_000
-shots_per_job = 50_000
+num_shots     = 20_000
+shots_per_job = 5_000
 
 #------- For UF ------------------------------------
 # ps            = np.logspace(-4,-3.5,6) #lo
 # space for uf
 # ps            = [2e-4, 3e-4, 4e-4, 5e-4, 6e-4, 7e-4, 8e-4, 9e-4, 1e-3, 2e-3, 3e-3]
 #------- For beamsearch ----------------------------
-ps = [2e-3, 3e-3, 4e-3, 5e-3, 6e-3, 7e-3, 8e-3, 9e-3, 1e-2]
+# ps = [2e-3,3e-3,4e-3,5e-3] 
+
+ps = [2e-3,] 
 
 
 get_ler_per_SEC_eps_extracted_from_one_round(ps,num_shots=num_shots,shots_per_job=shots_per_job,p_leak=0,
                                              weak_decoder='bplsd',
-                                             strong_decoder='tesseract',
+                                             strong_decoder='beamsearch',
                                              decoder_option= 'weak',
                                              beamsearch_option=1)
 

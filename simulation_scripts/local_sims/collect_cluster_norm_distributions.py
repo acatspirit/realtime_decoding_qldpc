@@ -32,7 +32,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
     rel_error_tol  = 0.01 #if less than 10% relative error in p_L(r) is achieved, we have early exit
 
     if weak_decoder == 'bplsd':
-        ps = [2e-3,3e-3,4e-3,5e-3,6e-3,7e-3] 
+        ps = [2e-3,3e-3,4e-3,5e-3,]#6e-3,7e-3 
     elif weak_decoder=='uf':
         ps = np.logspace(-4,-3.5,6)
 
@@ -190,7 +190,7 @@ def switch_rate_vs_p(code_name = "[[72,12,6]]", weak_decoder='bplsd',num_shots=1
                     'all_cluster_norms_per_p': all_data}
 
 
-    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics_final/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}.txt'
+    txt_to_save = sys.path[-1] + f'/saved_data/cluster_norm_statistics_final/cluster_norm_distributions_code_{code_name}_{weak_decoder}_max_shots_{num_shots}_bp_schedule_parallel.txt'
 
 
     with open(txt_to_save, "wb") as file:
@@ -396,15 +396,19 @@ def switch_rate_vs_p_for_erasures(code_name = "[[72,12,6]]", weak_decoder='uf',n
 
     return 
 
-# code_name = "[[72,12,6]]" 
-# code_name = "[[90,8,10]]" 
-# code_name = "[[126,8,10]]" 
-# code_name = "[[144,12,12]]"
-# code_name = "[[162,8,14]]"
+code_name = "[[72,12,6]]" 
+code_name = "[[90,8,10]]" 
+code_name = "[[126,8,10]]" 
+code_name = "[[144,12,12]]"
+code_name = "[[162,8,14]]"
 num_shots     = 100_000
 shots_per_job = 10_000
 
 
+switch_rate_vs_p(code_name=code_name,
+                 weak_decoder='bplsd',
+                 num_shots=100_000,
+                 shots_per_job=10_000)
 # for code_name in code_names:
 #     switch_rate_vs_p_for_erasures(code_name = code_name, weak_decoder='uf',num_shots=num_shots,shots_per_job = shots_per_job,norm_order=2)
 

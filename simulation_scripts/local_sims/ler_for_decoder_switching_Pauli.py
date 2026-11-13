@@ -109,8 +109,8 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
 
     weak_decoder='bplsd'
     basis       = "Z"
-    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"]
-    ps         = [2e-3,3e-3,4e-3,5e-3]  
+    code_names = ["[[72,12,6]]","[[90,8,10]]","[[126,8,10]]","[[144,12,12]]","[[162,8,14]]"] 
+    ps         = [2e-3,3e-3,4e-3,5e-3]  #
     num_rounds = 25
 
 
@@ -304,7 +304,7 @@ def bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder=
     return 
 
 
-bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2, strong_decoder='tesseract',num_shots=5_000_000,shots_per_job=500_000)
+bplsd_to_strong_w_target_switch_rate(target_switch_rate=1e-2, strong_decoder='tesseract',num_shots=9_000_000,shots_per_job=200_000)
 
 
 #========== uf as weak decoder ===============================================================
@@ -383,7 +383,7 @@ def get_cutoffs_for_input_switch_rate_uf(target_switch_rate,plot=False):
     return cutoffs_to_set,data_per_code
 
 
-def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='relay_bp', num_shots = 100_000, shots_per_job = 10_000):
+def uf_to_strong_w_target_switch_rate(target_switch_rate=1e-2,strong_decoder='relay_bp', num_shots = 10_000, shots_per_job = 2_000):
     '''
     Get the lers for uf to tesseract of relay-bp switching, for some fixed target switch rate p_s. 
 
